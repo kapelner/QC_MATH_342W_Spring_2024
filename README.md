@@ -83,20 +83,21 @@ My lectures are scanned in as PDF files contributed by students and myself.
 
 * Midterm I - Omit topics we did not cover
 
-[(practice exam 1](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm1/midterm1.pdf) [(solutions)](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm1/midterm1_solutions.pdf)\
-[(practice exam 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 1)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm1/midterm1_solutions.pdf)\
-[(practice exam 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 2)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm1/midterm1_solutions.pdf)\
-[(practice exam 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm1/midterm1_solutions.pdf)\
-[(practice exam 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1_solutions.pdf)\
+[(practice exam 1](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 1)](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm1/midterm1_solutions.pdf)\
+[(practice exam 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm1/midterm1_solutions.pdf)\
+[(practice exam 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm1/midterm1_solutions.pdf)\
+[(practice exam 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm1/midterm1_solutions.pdf)\
+[(practice exam 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1_solutions.pdf)\
 
 
 * Midterm II
-[(practice exam 1)](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm2/midterm2.pdf) [(solutions)](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm2/midterm2_solutions.pdf) \
-[(practice exam 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 1)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm2/midterm2_solutions.pdf)\
-[(practice exam 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 2)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm2/midterm2_solutions.pdf)\
-[(practice exam 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm2/midterm2_solutions.pdf) Omit everything after 3e\
-[(practice exam 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm2/midterm2_solutions.pdf) Omit 3, 4, 6a, c, d, e, f, g\
-[(practice exam 6)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/final/final.pdf) [(practice exam solutions 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/final/final_solutions.pdf) Omit 1a, 2, anything after 3d
+
+[(practice exam 1)](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 1)](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm2/midterm2_solutions.pdf)\
+[(practice exam 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm2/midterm2_solutions.pdf)\
+[(practice exam 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm2/midterm2_solutions.pdf)\
+[(practice exam 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm2/midterm2_solutions.pdf) Omit everything after 3e\
+[(practice exam 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm2/midterm2_solutions.pdf) Omit 3, 4, 6a, c, d, e, f, g\
+[(practice exam 6)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/final/final.pdf) [(practice exam solutions 6)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/final/final_solutions.pdf) Omit 1a, 2, anything after 3d
 
 
 ## Office Hours
