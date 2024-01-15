@@ -1,0 +1,212 @@
+\documentclass[12pt]{article}
+
+\usepackage[margin=1.0in]{geometry}
+\input{../../syllabi/preamble}
+
+\newcommand{\professorname}{Adam Kapelner}
+\newcommand{\professorcontactinfo}{Write to @kapelner on \href{\slackurl}{slack} in a public channel}
+\newcommand{\professoroffice}{KY 604}
+\newcommand{\coursedept}{Math}
+\newcommand{\coursenumber}{342W}
+\newcommand{\coursenumbercrosslisted}{/ 690.4 / 742}
+\newcommand{\semester}{Spring}
+\newcommand{\numcredits}{6}
+\newcommand{\lectimeandloc}{Mon and Wed 5-6:50PM / KY 283}
+\newcommand{\requiredlabtimeandloc}{Required Lab Time / Loc 		& Mon and Wed 7:10-8:05PM / KY061 \\}
+\newcommand{\tataofficehourtimeandloc}{
+Josh Palter / see \coursewebpagelink 
+}
+\newcommand{\coursewebpageurl}{https://github.com/kapelner/QC_\coursedept_\coursenumber_\semester_\the\year}
+\newcommand{\coursewebpagelink}{\href{\coursewebpageurl}{course homepage}}
+\newcommand{\slackurl}{https://QC\coursedept\coursenumber\semester\the\year.slack.com/}
+\newcommand{\slacklink}{\href{\slackurl}{slack}}
+\newcommand{\numtheoryhws}{4 or 5}
+\newcommand{\extrahwzero}{\item provide a link to your public repository on github (this means you need to sign up for github first)}
+\newcommand{\hwzerodue}{Wednesday, Feb 3 11:59PM}
+\newcommand{\lastdatetimetohandinhomeworks}{May 18 at noon}
+\newcommand{\sixhundredsection}{650.4}
+
+\input{../../syllabi/_header}
+
+\section*{Course Overview}
+
+MATH 342W. Data Science via Machine Learning and Statistical Modeling. 6 hr. lec./lab; 4 cr. Prereq.: MATH 231, MATH 241, CSCI 111 (or equivalent). Philosophy of modeling with data. Prediction via linear models and machine learning including support vector machines and random forests. Probability estimation and asymmetric costs. Underfitting vs. overfitting and model validation. Formal instruction of data manipulation, visualization and statistical computing in a modern language. Writing Intensive (W). Recommended corequisites include ECON 382, 387, MATH 341, MATH 343 or their equivalents. \\
+
+You should be familiar with the following before entering the class:
+
+\begin{itemize}
+\itemsep -0.0em 
+\item Basic Probability Theory: conditional probability, in/dependence, identical distributedness
+\item Modeling with discrete random variables: Bernoulli, Binomial%, Poisson, Geometric, Negative Binomial, Uniform Discrete and others
+\item Expectation and variance
+%\item Modeling with continuous random variables: Exponential, Uniform and Normal
+%\item Frequentist confidence intervals and hypothesis testing for one-sample proportions
+%\item Basic visualization of data: plots, histograms, bar charts
+\item Linear algebra: Vectors, matrices, transpose, inverse, rank, nullity
+\item Fundamental programming concepts: basic data types, vectors, arrays, control flow (for, while, if, else), functions
+\end{itemize}
+
+\noindent We will review the above \textit{throughout the semester} when needed and we will do so rapidly. \\
+
+\textbf{This is not your typical mathematics course.} This course will do lots of modeling of real-world situations using data via the \texttt{R} statistical language.
+
+
+
+\section*{Course Materials}
+
+We will be using many reference texts and three popular books which you will read portions from. However the main materials are the course notes. You should always supplement concepts from class by reading up on them online; \href{https://en.wikipedia.org}{wikipedia} I find the best for this. 
+
+\paragraph{Theory Reference:} It is not necessary to have these two books, but it is recommended. The first is \qu{Learning from Data: A Short Course} by Abu-Mostafa, Magdon-Ismael and Lin which can be purchased used on \href{https://www.amazon.com/Learning-Data-Yaser-S-Abu-Mostafa/dp/1600490069}{Amazon}. We will also be using portions from \qu{Deep Learning} by Goodfellow, Bengio and Courville that can be purchased on \href{https://www.amazon.com/Deep-Learning-Adaptive-Computation-Machine/dp/0262035618}{Amazon} and read for free at \url{http://www.deeplearningbook.org/}.
+
+\paragraph{Popular Books:} We will also be reading the non-fiction novel \qu{The Signal and the Noise} by Nate Silver which can also be purchased on \href{https://www.amazon.com/Signal-Noise-Many-Predictions-Fail-but/dp/0143125087}{Amazon}. This is \textit{required} --- you will have homework questions directly from this book. We will also be reading \qu{Preditive Analytics, Data Mining and Big Data} by Steven Finlay that can be purchased on \href{https://www.amazon.com/Predictive-Analytics-Data-Mining-Misconceptions/dp/1349478687}{Amazon} and it is also available online from the \href{https://link-springer-com.queens.ezproxy.cuny.edu/book/10.1057%2F9781137379283}{Queens College library system}. 
+
+\paragraph{Computer Software:} You need your own laptop and it is required to bring to class. We will be using either \texttt{R} and/or \texttt{Python} both which are free, open source programming languages available for all operating systems. I will be using \texttt{R} in class and Amir, the TA will be using \texttt{Python} in his office hours. You can hand in the lab assignments either in \texttt{R} or \texttt{Python} (more on lab assignments later.
+
+\begin{itemize}
+\item To download \texttt{R} go to \url{http://cran.mirrors.hoobly.com/}. I then recommend the IDE \texttt{RStudio} available for free at \url{https://www.rstudio.com/products/rstudio/download/} this way you can follow the demos in class.
+\item To download \texttt{Python} go to \url{https://www.python.org/downloads/}. I then recommend the IDE \texttt{Jupyter Notebook} available for free so you can follow Amir's Python translations of the class demos. To install Notebook, open up a command prompt and executing \texttt{pip install notebook}. After this is installed, you can run \texttt{jupyter notebook} in a command prompty which will open up a web browser with the IDE embedded. An alternative method is to install Anaconda using \href{https://medium.com/@yunanwu2020/how-to-install-jupyter-notebook-from-scratch-on-anaconda-simple-codes-8652c3095091}{these instructions}.
+
+\end{itemize}
+
+\paragraph{Source Control:} You will be expected to use \texttt{git} and have a \url{github.com} account with a repository named \texttt{QC\_MATH\_342}. You will use this repository to submit coding homework assignments (and theory assignments if you use \LaTeX).
+
+
+\paragraph{Book on \texttt{R}:} We will be making some use of \qu{R for Data Science} by Wickham and Grolemund which can be purchased on \href{https://www.amazon.com/R-Data-Science-Hadley-Wickham/dp/1491910399}{Amazon} or read online at \url{http://r4ds.had.co.nz/}.
+
+\paragraph{Books on Python:} The following books are recommended: \href{https://automatetheboringstuff.com/}{Second Edition of Atomate the Boring Stuff With Python}, \href{https://www.python.org/dev/peps/pep-0008/}{The Official Style Guide for Python Code}, \href{https://www.learnpython.org/}{Interactive Python Tutorial} and \href{https://cs50.harvard.edu/college/2019/fall/weeks/6/}{Harvard Universities Quick Python Course}.
+
+
+\input{../../syllabi/_the650section}
+
+\input{../../syllabi/_announcements_on_slack}
+
+\input{../../syllabi/_use_of_slack}
+
+\section*{Class Meetings}
+
+There are 56 scheduled meetings: 28 lecture periods of 110min followed and 28 lab periods of 55min (cunyfirst only lists it as 50min and that's a mistake). Of the 28 lecture periods, 24 will be lectures (see next two sections), 2 will be midterm exams which are in class and 2 will be review periods before the exams. Of the 28 lab periods, there will be 20 periods split into sets of 2 periods to cover 10 weekly lab assignments (see lab section further on). The other 8 lab periods will be devoted to either pure computing lectures, review labs (assignments that do not need to be handed in) or pure writing labs that help with the papers.
+
+\subsection*{Lectures}
+
+Lectures will be further split into two modes: theory and practice. The first is a standard \qu{chalkboard} lecture where we learn concepts and the second will be using the \qu{computer/projector} to see the concepts in action in the \texttt{R} language. %I have a no computer / tablet / phone policy during the theory component of the lectures (only pen / pencil and paper) but you are highly recommended to have the laptop during the second part.
+
+%\input{../../syllabi/_zoom_policies}
+
+\input{_lecture_schedule}
+
+%\input{../../syllabi/_lecture_upload}
+
+
+\subsection*{Labs}
+
+During labs will be in the computer-enabled classroom, the majority of this time will be your time. You will take turns \qu{driving} the coding in front of the class, working on exercises that you will finish for homework. Thus we will spend most a lot of time talking through problem-solving skills in data science.
+
+\section*{Homework}
+
+Homework will be split into \textit{theory} and \textit{practice} (called \qu{labs}). This course will be the \qu{writing in the major course} next year. Thus, a portion of each theory and practice homework will involve writing \textit{English} and being graded on \textit{English}.
+
+\subsection*{Theory Assignments}
+
+\input{../../syllabi/_theory_hws_text}
+\input{../../syllabi/_theory_hws_submission_text}
+
+
+
+\subsection*{Lab Assignments}
+
+These will almost exclusively consist of short and medium coding exercises in \texttt{R}. Most of the assignment will be done for you and your peers during the Friday lab session.
+
+
+\input{../../syllabi/_philosophy_hws}
+
+\input{../../syllabi/_time_spent_hws}
+
+\input{../../syllabi/_late_hw_policy}
+
+\input{../../syllabi/_latex_hw_bonus_policy}
+
+\input{../../syllabi/_hw_ec_policy}
+
+\subsection*{TA Office Hours}
+
+This class has two TA's. 
+
+\begin{itemize}
+\item Kennly will be running a 1hr/wk office hour session to help with the theory part of the course. Lab questions can be asked as well, but theory questions will be prioritized. 
+\item Amir will be running a 1hr/wk office hour session to help with the lab part of the course and to answer any questions about \texttt{Python}. He translated all in-lecture \texttt{R} demos to \texttt{Python} and all labs assignments from \texttt{R} to \texttt{Python} as well. He is your guide to mastering Python.
+
+\end{itemize}
+%\input{../../syllabi/_hw_0}
+
+\section*{Writing Assignments}
+
+There will be two writing assingments. (1) A \qu{philosophy of modeling} essay. Here you will coalesce the non-mathematical material that is crucial to this class. The purpose is to make you truly understand the modeling process and its limitations from start to finish. (2) A final project. Here you will use build a predictive model using a dataset. This is the capstone project for the entire data science and statistics major and it is where you will tie everything together.
+
+This class will soon be the writing in the major course. Thus, writing is a major part of the curriculum herein.
+
+\section*{Examinations}
+
+\input{../../syllabi/_examination_text}
+
+Since the is the capstone course, there is no final exam, but a large final project. There will be two midterm exams and the schedule is below.
+
+\subsection*{Exam and Major Assignments}\label{subsec:exam_schedule}
+
+\begin{itemize}
+\itemsep -0.0em 
+\item Midterm examination I will be on [see \coursewebpagelink] in class with the first review session on the class meeting prior
+\item The philosophy of modeling paper's first draft is due [see \coursewebpagelink]
+\item The philosophy of modeling paper's final draft is due [see \coursewebpagelink]
+\item Midterm examination II will be on [see \coursewebpagelink] in class with a review on the class meeting prior
+\item The final project is due [see \coursewebpagelink]
+\end{itemize}
+
+\subsection*{Exam Policies and Materials}
+
+\input{../../syllabi/_examination_policies}
+
+
+I also allow \qu{cheat sheets} on examinations. For both midterms, you are allowed to bring \ingreen{two} 8.5'' $\times$ 11'' sheet of paper (front and back). \inred{Four sheets single sided are not allowed.} On this paper you can write anything you would like which you believe will help you on the exam. %For the final, you are allowed to bring three 8.5'' $\times$ 11'' sheet of paper (front and back). \inred{Six sheets single sided are not allowed.} I will be handing back the cheat sheets so you can reuse your midterm cheat sheets for the final if you wish. 
+
+
+
+
+\input{../../syllabi/_cheating_on_exams_and_missing_exams}
+\input{../../syllabi/_special_services}
+
+\input{../../syllabi/_class_participation}
+
+%\input{../../syllabi/_zoom_attendance}
+
+
+\section*{Grading and Grading Policy}\label{sec:grading}
+
+Your course grade will be calculated based on the percentages as follows: 
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l|l}
+Theory Homework & 5\% \\
+Labs & 10\% \\
+Midterm Examination I & 26\%\\
+Midterm Examination II* & 26\%\\
+Philosophy of Modeling Paper & 13\% \\
+Final Project with Writeup & 15\% \\
+Class participation & 5\%
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+\noindent *The second midterm is not cumulative. It only covers material \textit{after} midterm I.
+
+
+\input{../../syllabi/_advanced_course_grade_distribution}
+
+\input{../../syllabi/_grade_checking_on_gradesly}
+
+\input{../../syllabi/_auditing_policy}
+
+
+
+
+\end{document}

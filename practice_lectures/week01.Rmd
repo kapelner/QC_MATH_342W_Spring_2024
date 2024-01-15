@@ -1,0 +1,749 @@
+---
+title: "Practice Lectures Week 1 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+date: "Jan 28, 2022"
+---
+
+You can get started with this cheatsheet:
+https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf
+
+Acknowledgement: I would like to thank Professor Andreas Buja at Wharton as I cribbed lots of his notes. Here's the sources:
+http://stat.wharton.upenn.edu/~buja/STAT-470-503-770/CHAPTERS/
+http://stat.wharton.upenn.edu/~buja/STAT-961/
+
+as well as Yonatan Rosenblatt of Ben Gurion University:
+http://www.john-ros.com/Rcourse
+
+## Basic R
+
+What is R? 
+
+* An open-source, free standard for statistical and numerical programming
+* interpreted, scripted and high level (like Python and not like e.g. C++)
+* Has a tremendous developer community and industry community
+* I joke that I'm an R developer for a living since I publish research in statistical methodology which comes with R packages
+* History: came from Bell Labs. C --> S --> R
+
+Upsides? 
+* Very good for "one-shot" scripting - very common in data science
+* New stats algorithms and methodologies appear here first! Waaay before Python.
+
+Downsides?
+* Slow (but this can be fixed by inlining other languages). This is mostly due to the fact that it is an interpreted and dynamically-typed language. This means that the code is first "interpreted" and then converted to machine code and then executed (see https://subscription.packtpub.com/book/application_development/9781783989263/1/ch01lvl1sec09/r-is-interpreted-on-the-fly). This has advantages though.
+* Bad threading / parallelization support (ditto)
+* Bad support for hashmaps and other inconveniences
+
+What is RStudio? 
+
+* An integrated developer environment (IDE). It is not the only IDE for R, but it is the most popular at the time of this writing. It consists of the file window (what you're reading) and the console window (below) and a few other convenient windows which will be explained later.
+
+File types:
+
+* The standard R script has a .R extension
+* This file if you note has an .Rmd extension meeaning "R Markdown". Markdown is a way of typestting simple documents with basic code directives. You can read up on this by yourself. "R Markdown" is a document type that combines R code within markdown documents where the R code is in "chunks".
+
+Let's see some R! Since R is interpreted, you can run commands directly into its command line by using ctrl-enter line-by-line or ctrl-shift-enter for the entire "chunk":
+
+```{r}
+5
+```
+
+and
+
+```{r}
+7
+8
+9
+```
+
+These are not the most exciting commands. The above is called a "chunk" and it tells the R Markdown compiler that there is R code inside those tick marks.
+
+Here's some R code commented:
+
+```{r}
+5 #This will produce the number 5
+```
+
+Everything beyond the "#" is a comment as is ignored during interpretation.
+
+Let's start by using R as a calculator
+
+```{r}
+5 + 5
+5 - 5
+5 / 5
+5 * 5
+5^5 #or 5 ** 5 (not as common)
+5 / 3
+100 * (1 + 0.03)^5
+5 %% 3
+5 * 5 %% 3
+(5 * 5) %% 3 #note order of operations - use parentheses
+```
+
+You can have multiple statements per line. The semicolon ends a statement like C++ but it is omitted usually because if the line ends it is implied. 
+
+```{r}
+5 + 5; 5 - 5
+```
+
+Multiple statements per line is not generally done unless you are making a point.
+
+You can also extend expressions for many lines if you have a dangling operator at the end of the line e.g. this plus sign:
+
+```{r}
+5+
+  5+
+  5
+```
+Avoid this unless the line gets so long it's difficult to read. Note the "+" at the end of the line so the interpreter knows to keep looking to the next line.
+
+Let's take a look at how to represent numbers using scientific notation
+
+```{R}
+3,125 #commas are illegal and note that RStudio finds basic errors for us
+3.125e3 #scientific notation
+3.125E3
+```
+
+
+Every language has a means of invoking functions. Here are some included famous math functions. R uses parentheses to invoke functions. The quantities within the parentheses are known as "parameters" or "arguments" to the function.
+
+```{r}
+sqrt(2)
+log(2)
+log(2, 2)
+log(2, base = 2) #This is preferred: specify the argument by name after the first argument.
+abs(-1)
+floor(1.2)
+ceiling(1.2)
+round(1.2345)
+round(1.2345, 2)
+log10(1000)
+sin(pi) #pi is a hard-wired numerical constant, the only one in the language (I think)
+#note the numerical error
+acos(1)
+exp(1)
+```
+
+We can control the number of digits via
+
+```{r}
+options(digits = 3)
+3.123456789E-6
+options(digits = 7) #the default
+3.123456789E-6
+```
+
+
+There are lots of options. Look at the help file for a function by using the question mark:
+
+```{r}
+?options
+```
+
+Let's talk about basic data types:
+
+```{r}
+TRUE #logical
+FALSE
+T #please don't use this constant in your programs; use TRUE.
+F #please don't use this constant in your programs; use FALSE
+class(TRUE)
+1 #numeric, think of double type in C++ or Java
+class(1)
+1L
+class(1L) #what's the L doing? It's forcing a certain type
+```
+
+There are more formal ways to "force" AKA "cast":
+
+```{r}
+class(as.integer(1))
+class(as.numeric(1L)) #what's the L doing? It's forcing a certain type
+1.L #what's this? Not an error but a warning
+1e3 #scientific notation convenience
+1E3
+class(1E3)
+"A"
+class("A")
+as.integer(TRUE)
+as.numeric(TRUE)
+as.integer(FALSE)
+as.numeric(FALSE)
+as.logical(0)
+as.logical(1)
+as.logical(0.1) #anything else besides zero...
+as.character(1)
+as.character(0.1)
+as.logical("a") #more on this "character" later
+as.logical("FALSE") #more on this "character" later
+as.logical("T") #more on this "character" later
+```
+
+All of the above are actually 1-dim vectors. We will explore this later.
+
+To create vectors, we use the "c" function which is short for "combine". This function takes any number of arguments
+
+```{r}
+c(1, 1, 2, 3, 5, 8)
+```
+
+We can also use shorthand "ladder" notation:
+
+```{r}
+1 : 3
+1 : 100
+-3 : 3
+3 : -3
+-(1 : 5)
+```
+
+The "seq" function (short for "sequence") is key for this too:
+
+```{r}
+seq(1, 9) #short for 1 : 9
+seq(1, 9, by = 2)
+seq(1, 9, length.out = 3)
+seq(1, 9, length.out = 4)
+```
+
+and so is the "rep" function (short for "replicate"):
+
+```{r}
+rep(1, 10)
+rep(c(1, 2, 3), 10)
+rep(seq(1, 2, by = 0.1), 10)
+```
+
+Every language has a means to assign a piece of data to variables:
+
+```{r}
+x = 1 #I use this... only because I like using one less character and I like my code to read like other popular languages
+x
+x <- 1 #but this is actually preferred according to the the R spec
+2 -> x #even those this is legal, please don't do this!!
+x
+T = "my string"
+x_the_number = 1 #underscored variables preferred
+xTheNumber = 1 #camel case is a different style
+x.the.number = 1 #some people like this but I don't because it is confusing with other languages e.g. Java
+```
+
+And a means to see what variables have been assigned and remove these variables:
+
+```{r}
+ls() #who's out there
+rm(x)
+x
+rm(x_the_number, xTheNumber, x.the.number)
+rm(list = ls()) #clear the workspace completely!
+```
+
+Printing them out is important:
+
+```{r}
+print(x) #gives you the output numbered by the number of outputs
+cat(x) #just prints and it is preferred
+cat(x); cat(x) #it prints without a line break
+cat(x, "\n") #you can have many arguments to cat and it will concatenate them
+cat("x is", x, "\n"); cat("x is", x, "\n")
+```
+There is a means to use logical comparisons:
+
+```{r}
+x = 1
+x == 1
+x == 0
+x != 1
+x != 0
+x > 1
+x < 1
+x >= 1
+x <= 1
+x = TRUE; y = FALSE
+x & y #AND
+x | y #OR
+```
+
+Previously, we used vector types without even knowing. Let's talk about some simple operations on vectors:
+
+```{r}
+x = seq(1, 100)
+length(x) #how long is this vector
+head(x) #the first elements
+tail(x) #the last elements
+head(x, 11) #the first 11 elements
+tail(x, 13) #the last 13 elements
+x[1] #square brackets are the "getter" - it gets the value at that index. R has one-based indexing while C, C++, Python, Java, have zero-based indexing. Get used to it. SORRY!!!
+x[1] = 1984 #square brackets also serve as the "setter" - it sets the value at that index
+x[1]
+x[6]
+x[length(x)] #unfortunately no "-1" last index convenience...
+x[c(2, 77)]
+x[2 : 77]
+x[seq(1, 100, by = 2)] #odd numbers
+x[-1] #everything but 1
+x[-(1 : 10)] #everything but 1 - 10
+x[-seq(2, 100, by = 2)] #another way to see odd numbers
+x = c(rep(1, 10), rep(2, 10), rep(3, 10))
+unique(x) #only unique elements (in order in which they appear)
+x[1 : 10] = 10 : 1 # you can set in vectors as well
+x[1 : 10]
+
+x = c(1:10, 3:40)
+```
+
+and comparisons on vectors
+
+```{r}
+x = 1 : 5
+y = 1 : 5
+x == y
+all.equal(x, y)
+```
+
+Most operations in R are vector-operations and these are preferred because they are optimized:
+
+```{r}
+x = 1 : 5
+x + 2
+x * 2
+x^2
+```
+A note about logical vectors:
+
+```{r}
+x = c(TRUE, TRUE)
+y = c(TRUE, FALSE)
+z = c(FALSE, FALSE)
+!x
+x & y
+x | y
+x && y #vector AND - confusing - recommend not to use this
+x || y #vector OR - confusing - recommend not to use this
+as.numeric(x)
+sum(x) #does the numeric conversion for you
+prod(x) #does the numeric conversion for you
+any(x) #convenient function
+any(z)
+all(x)
+all(y)
+#sometimes a useful function
+xor(TRUE, FALSE)
+xor(TRUE, TRUE)
+xor(FALSE, FALSE)
+```
+
+Sampling is very important:
+
+```{r}
+x = 1 : 100
+sample(x, 3)
+sample(x, 101)
+sample(x, 3, replace = TRUE)
+sort(sample(x, 101, replace = TRUE))
+sample(x) #default is length of the vector i.e. just shuffles
+```
+
+There are many "illegal" computation values in R: NaN, Inf, -Inf,
+
+```{r}
+1 / 0 #unlike C, Java -- no error... handles this natively
+1 / 0 == Inf #this works
+0 / 0 #unlike C, Java -- no error... handles this natively
+x = 0 / 0
+x == NaN #beware!!
+is.nan(x)
+-1 / 0
+1 + 1 / 0
+1 + Inf
+1 / Inf
+1 / (-Inf)
+1 / NaN
+log(0)
+log(-1)
+sqrt(-1)
+```
+
+There are a couple more "illegalish" values that are non-computational: NA, NULL, empty vectors
+
+```{r}
+NA #this is the value of missing
+x = NA
+x == NA #beware!!
+is.na(x)
+x = NULL #special reserved primitive for data that is "undefined"
+x == NULL #strange... and beware
+is.null(x)
+#let's look at that strange thing
+x = 1 : 3
+x[1]
+x[0] #a vector with zero elements -- a "null vector" of sorts
+length(x[0])
+c() #remarkably... not what we expect...
+x[NA]
+x[NaN]
+x[Inf]
+x[4]
+```
+
+Now let's look at data types again. These types are the data types we learned in class.
+
+```{r}
+x = c(1, 2, 3, 4, 5)
+class(x)
+x = seq(1, 5)
+class(x) #integer and numeric are approximately the same for purposes of this class
+x = sample(rep(c(0, 1), 50))
+x #binary variable?
+x = c("a", "b", "c", "d")
+x
+class(x)
+x = rep(x, 5)
+x
+class(x)
+x = factor(x)
+x
+?factor
+levels = c("low", "medium", "high")
+x_char = sample(rep(levels, 10))
+x = factor(x_char)
+x #nominal categorical variable
+x = factor(x_char, levels = levels)
+x
+x = factor(x_char, levels = levels, ordered = TRUE)
+x #ordinal categorical variable
+as.numeric(x) #coerce this variable to a number... result makes sense
+```
+
+
+Data which is of class factor can be used in mathematical models that we build just like numeric. It will, by default be reduced to binary variables.
+
+## Realizations from r.v.'s
+
+Let's now do some probability a la Math 241. Let's realize a few iid random variable models. Let's say $X_1, ..., X_{10} \iid$ ...
+
+* binomial
+* geometric
+* poisson
+* standard uniform --- all numbers between 0 and 1 equally likely
+* exponential
+* normal with mean 5 and standard deviation 2
+
+```{r}
+n = 10 #good programming practice to declare shared data
+
+x = rbinom(n, size = 5, prob = 0.1)
+x
+dbinom(1, size = 5, p = 0.1)
+pbinom(3, size = 5, p = 0.1)
+qbinom(.75, size = 3, p = 0.1)
+x #returns as a vector
+?rbinom
+x = rgeom(n, prob = 0.1)
+x
+?rgeom
+x = rpois(n, lambda = 2)
+x
+?rpois
+x = runif(n)
+x
+?runif
+x = rexp(n, rate = 1)
+x
+?rexp
+x = rnorm(n, mean = 5, sd = 2)
+x
+?rnorm
+```
+
+Randomness is an illustion in a computer. This is a whole topic in and of itself. But for our purposes, imagine random numbers being generated from a long but fixed list of numbers and the starting point is random. But you can make the randomness deterministic by setting the starting point. Then it's just the same numbers in the same order! This starting point is called a "seed" and it's an integer. 
+
+```{r}
+set.seed(1984)
+rnorm(10)
+set.seed(1984) #reset to that point in the list
+rnorm(10) #same exact numbers!!!
+set.seed(1984.1)
+rnorm(10) #same - needs to be a different integer
+set.seed(-1984)
+rnorm(10) #different
+set.seed(1983)
+rnorm(10) #different
+get.seed()
+```
+
+When writing programs that depend on randomness, you should set the seed at the top so the program is deterministic. Then it is easy to find bugs. When you switch the program to production, you just comment ou the set seed line. I will be doing this fairly often during demos for the rest of the semester.
+
+Sorting is also a key skill in R:
+
+```{r}
+n = 50
+x = rbinom(n, size = 20, prob = 0.2)
+x
+sort(x)
+sort(x, decreasing = TRUE)
+```
+
+## Matrices
+
+Now that we finished vectors, let's learn about the matrix object. Let's use the dimension of the learning problem in class.
+
+```{r}
+n = 100 #number of historical objects: the people
+p = 3 #number of features about each
+
+random_junk = round(runif(n * p), 2)
+random_junk
+X = matrix(random_junk, nrow = n, ncol = p)
+X
+class(X)
+X[1, 1] #the square brackets are still the getter but since there's two dimensions there's two indices
+X[1, ] #first row
+class(X[1, ]) #note: not matrix anymore
+X[1, , drop = FALSE]
+class(X[1, , drop = FALSE]) #still matrix... this matters sometimes and we will see an example of it
+X[, 1] #first column
+class(X[, 1]) #note: not matrix anymore
+X[, 1, drop = FALSE]
+class(X[, 1, drop = FALSE])
+#other ways of subsetting matrices
+X[1 : 4, ]
+X[, 2 : 3]
+X[, c(1, 3)]
+X[seq(1, n, by = 2), ]
+X[1, 1] = 1984 #the squarae brackets are still the setter
+X[1, 1] = "1984" #warning: this will wind up casting all values in the matrix to string
+head(X)
+```
+
+Sometimes handy by not recommended is getting / setting with only one index.
+
+```{r}
+head(X)
+X[1] #first entry i.e. the 1,1 entry
+X[2] #first entry i.e. the 2,1 entry (column major indexing, see https://cran.r-project.org/web/packages/reticulate/vignettes/arrays.html)
+X[n * p] #last entry i.e. n,p entry
+X[n * p + 1] #beyond last entry returns missing / illegal
+X[-1] #returns everything but the first entry and it automatically vectorizes
+X[1 : 100] #returns the first 100 i.e. the first column
+X[X > 0.5] = NA #replace all values no matter what row / col they exist in
+X
+```
+
+
+A few handy functions for numerical matrices:
+
+```{r}
+X = matrix(random_junk, nrow = n, ncol = p) #reset
+rowSums(X)
+colSums(X)
+rowMeans(X)
+colMeans(X)
+```
+
+## Programming! Conditional statements, loops, functions
+
+We will now learn how to program in R.
+
+* Conditional Statements (and ways to print to screen too).
+
+```{r}
+x = 3
+if (x > 0){
+  cat("The value of x is", x, "\n") #concatenate and print to screen
+} else {
+  print("The value of x is"); print(x) #each gets its own line
+}
+
+if (x > 0){
+  ##
+} 
+else { ##NOTE: ELSE MUST GO ON SAME LINE AS THE IF'S CLOSE BRACE!!! This is not Java or C++!
+  ##
+}
+
+x = -5
+if (x > 0){
+  cat("The value of x is", x, "\n") #concatenate and print to screen
+} else if (x < -3) { ##NOTE: ELSE MUST GO ON SAME LINE AS THE IF'S CLOSE BRACE!!!
+  print(paste("The value of x is", x, collapse = " ")) #paste with collapse is like a string join
+} else {
+  print("The value of x is"); print(x) #each gets its own line
+}
+```
+
+There is a one line convenience function called ifelse:
+
+```{r}
+x = -10 : 10
+b = -10 : 10
+a = ifelse(x > 0, b, -1)
+a
+x = -5 : 5
+a = ifelse(x > 0, 1, -1)
+a
+```
+
+
+
+There is also a switch in R. It is _not_ an official keyword (despite RStudio's endorsement), but it is useful for non-vector character expressions:
+
+```{r}
+ch = "two"
+# ch = c("one", "two")
+switch(ch,
+   "one" = 1,
+   "two" = 2,
+   "three" = 3,
+   -99
+)
+```
+
+
+* Looping
+
+A for loop contains three ingredients: (a) a looping variable joined with keyword "in" to a (b) vector or list (which we will discuss later) and executes over an (c) expression recommended to be enclosed in curly braces:
+
+```{r}
+for (i in 1 : 10){
+  j = i
+  print(j)
+}
+```
+
+Note that both the looping variable i still exists and the variable within the looped expression j still exists:
+
+```{r}
+i
+j
+```
+
+Be careful of scoping in R. You may want to "clean up your namespace" whenever you can.
+
+```{r}
+for (i in 1 : 10){
+  j = i
+  print(j)
+}
+rm(i, j)
+```
+
+There is no need to save the values of the temp variables i, j going forward. They would vanish in C++ / Java when the for loop ended as it goes out of scope.
+
+You can iterate over a vector as well Python-style or Java-generic-style:
+
+```{r}
+vec = seq(1, 10)
+for (i in vec){
+  print(i)
+}
+```
+
+And the vector does not have to be numeric:
+
+```{r}
+vec = c("a", "b", "c")
+for (ch in vec){
+  print(ch)
+}
+```
+
+There is also the while loop but not a "do-while" loop
+
+```{r}
+x = 1
+while (x <= 10){
+  print(x)
+  x = x + 1 #note: there is no "++" incrementing in R
+}
+```
+
+This can also be done using a break:
+
+```{r}
+x = 1
+while (TRUE){
+  print(x)
+  x = x + 1 #note: there is no "++" incrementing in R
+  if (x > 10){
+    break
+  }
+}
+```
+
+The "repeat" keyword is the same as the while-true. It is slightly more esoteric but still good to know:
+
+```{r}
+x = 1
+repeat {
+  print(x)
+  x = x + 1 #note: there is no "++" incrementing in R
+  if (x > 10){
+    break
+  }
+}
+```
+
+The final control keyword tells the loop to break the current iteration but continue to the next:
+
+```{r}
+xs = rep(NA, 10)
+xs[3] = 3
+xs[7] = 7
+xs
+
+tot = 0
+for (x in xs){
+  if (is.na(x)){
+    next #move to next element in the list in the for loop
+  }
+  tot = tot + x
+}
+tot
+```
+
+Note: "real" R programmers avoid loops since they are slow. Instead they use the "apply" function (but not "sapply" or "lapply" which are not faster). We will cover these in the future. The latest trend is to use in-line C++ code (we will get to this).
+
+## More data types
+
+Before we get back to modeling, it is worth knowing a couple more data structures in R. These are not "data [science] types", these are "[computer science] data types" that are used frequently in data science applications. 
+
+The first are "lists" which are "ordered hashmaps" or "ordered dictionaries" or "hash tables". if You don't know what this is, you should read about this online as it should have been covered in a intro to CS class.
+
+```{r}
+dict = list()
+dict$a = "first"
+dict$b = "second"
+dict$c = "third"
+dict
+length(dict)
+names(dict) #keys
+dict_unlisted = unlist(dict) #values
+dict_unlisted
+class(dict_unlisted) #i.e. a vector
+#three ways to access values by key / ordered location
+dict$a
+dict[["a"]]
+dict[[1]] #value of first entered key
+class(dict[[1]])
+dict[[1 : 2]] #bombs
+#now let's try to access a value for a non-existent key / ordered location
+dict$q
+dict[["q"]]
+dict[[4]] #bombs
+#convenient means to subset the list
+dict[1]
+class(dict[1])
+dict[1 : 2]
+dict[1 : 4] #this is the reason this type of access is not recommended
+dict = list("first", "second", "third") #no key => value... what happens?
+dict #default keys are the numbers 1, 2, ...
+dict[[1]]
+dict = list("a" = "first", "b" = "second", "c" = "third") #key => value
+dict
+dict = list(a = "first", b = "second", c = "third") #key => value
+dict
+```
+

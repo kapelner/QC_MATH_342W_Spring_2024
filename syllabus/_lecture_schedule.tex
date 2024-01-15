@@ -1,0 +1,111 @@
+
+\subsection*{Lecture Schedule}
+
+Below is a tentative schedule of the theory and practice topics covered by lecture number. 
+
+\begin{enumerate}[(1)]
+\item \textbf{Theory:} Review of syllabus, introducing science and modeling, definition of phenomena / the response $y$, reality vs. approximation, measurement vs. prediction and simulation, definition of learning from data, model validation, heuristics, ambiguous models, mathematical models, causal inputs, response spaces $\mathcal{Y}$, definition of features $\x$ and its feature space $\mathcal{X}$.
+
+\textbf{Practice:} Short history of \texttt{R}, introduction to RStudio, arithmetic, assignment of variables, mathematical functions, logical operations, numeric / integer / boolean data types, vectors, sequences, subsetting, sorting, taxonomy of illegal values.
+
+\item \textbf{Theory:} Feature spaces, binary, categorical and continuous data types, definition of metrics, ordinal codings, sample size $n$ vs. number of features $p$, error due to ignorance of information $\delta$, optimal response surface $f$, definition of training data $\mathbb{D}$, definition of candidate function set $\mathcal{H}$, definition of prediction function $g$, algorithms that produce prediction functions $\mathcal{A}$, definition of misspecification error, definition of optimal candidate function $h^*$, irreducible error $\mathcal{E}$, estimation error and residuals $e$.
+
+\textbf{Practice:} Realizations of popular random variables, PDF / PMF / CDF / empirical CDF computations, quantile computations, factor-type variables, matrix data type and its critical functions, if / if-else / else / switch programmatic control, for / while / repeat loops, console printing, errors and warnings, try-catch control.
+
+\item \textbf{Theory:} Visualization of training data $\mathbb{D}$, threshold models for classification, null model for classification $g_0$, concept of a parameter $\theta$ and parameter space $\Theta$, degrees of freedom, definition of objective function / error function, accuracy, sum of squared error (SSE), optimization within $\mathcal{A}$, linear threshold models, perception learning algorithm (PLA), introduction to neural networks.
+
+\textbf{Practice:} Review of hashing and the list data type, the array data type for general tensors, naming for vectors / matrices / tensors, introduction to specifying functions, arguments, argument defaults, creating data matrices, tabling multiple features, the dataframe data type.
+
+\item \textbf{Theory:} Review of lines in multiple dimensions with Hesse Normal Form, derivation of the support vector machine (SVM) using maximum margin objective, hinge error, SVM using the Vapnik objective, defintion of hyperparameters $\lambda$, $K$-nearest neighbors algorithm (KNN).
+
+\textbf{Practice:} Installing and loading libraries from CRAN and githuv, public vs private functions and scoping, loading datasets from libraries / files / URLs, creating threshold models, writing the PLA, matrix operations: arithmetic / transpose / inverse / rank / trace, optimization algorithms e.g. Nelder-Mead, writing the KNN algorithm, using the SVM library and setting the hyperparameter.
+
+\item \textbf{Theory:} Null model for regression $g_0$, linear models for continuous responses $\bbeta$, minimization of SSE for $p=1$ using basic calculus to arrive at the ordinary least squares (OLS) solution $\b$, review of covariance of two random variables $\sigma_{X,Y}$ and its estimate $s_{X,Y}$, review of correlation $\rho_{X,Y}$ and its estimate $r_{X,Y}$.
+
+\textbf{Practice:} Computing sample covariance and correlation in the context of the OLS algorithm for $p=1$, computing OLS error metrics, the formula object, using the \texttt{lm} function, visualizing the OLS line atop a scatterplot, computing predictions in OLS, OLS in the boston housing data
+
+\item \textbf{Theory:} Error metrics for regression: SSE, mean squared error (MSE) and root mean squared error (RMSE), approximate prediction confidence intervals using RMSE, sum of squares total (SST), concept of proportion of variance explained $R^2$, class of models with $R^2 < 0$, perfect fit models with $R^2 = 1$.
+
+\textbf{Practice:} OLS on the Galton height data and the etymology of the word \qu{regression} in statistics, computing OLS in the case of categorical variables (ANOVA), dummifying variables, computing model matrices.
+
+\item \textbf{Theory:} OLS estimates being the group averages with one binary feature, independence, dependence, association, correlation, OLS estimates with $p>1$, design matrix $X$, vector derivative properties: constant scalars, multiples, multiplication, quadratic forms, general OLS solution, review of matrix inverses, transposes, rank and symmetric matrices.
+
+\textbf{Practice:} Visualizing $R^2$ for a model using error density estimation, computing general OLS estimates in multiple dimensions from scratch, making predictions using the \texttt{predict} interface for modeling.
+
+\item \textbf{Theory:} OLS predictions as linear transformations, review of the linear algebra concepts of dimension, length, norm, subspace, linear in/dependence, column space, derivation of the orthogonal projection matrix for one dimension via law of cosines, outer products, idempotency.
+
+\textbf{Practice:} Eigendecomposition, computing error metrics for general OLS, computing the null model.
+
+\item \textbf{Theory:} Derivation of the orthogonal projection in multiple dimensions, equivalence of the OLS algorithm with orthongal projection, definition of the hat matrix $H$, review of the linear algebra concepts of eigenvectors and eigenvalues, computing the eigenvectors and eigenvectors of $H$.
+
+\textbf{Practice:} Computing the hat matrix $H$ for the null model and in general, confirming its eigendecomposition and idempotency and rank, using $H$ to find the OLS predictions and residuals and verifying their orthogonality.
+
+\item \textbf{Theory:} Verification of the symmetry and idempotency of $H$, proving that one multidimensional orthogonal projection is in general not the same as the sum of orthogonal projections in the component dimensions except if the component dimensions themselves are orthogonal, review of orthonormal matrices $Q$, proving the equivalence of $H = QQ^\top$, definition of $X = QR$ decomposition, the Gram-Schmidt algorithm, computing $R$, deriving the least squares estimate using $Q$ and $R$.
+
+\textbf{Practice:} Computing $QR$ decomposition and confirming the orthonormality of $Q$, verifying the OLS predictions are the same with $Q$, writing the Gram-Schmidt algorithm, an overview of the piping / chaining concept in modern programming and in \texttt{R} with demos. 
+
+\item \textbf{Theory:} Definition of sum of squares for the regression $SSR$, proving the sum of squares identity $SST = SSR + SSE$, showing that if $p$ increases by one dimension, then SSR is obligated to increase forcing $R^2$ higher, definition of overfitting in modeling, definition of chance capitalization, demonstrating that full overfitting in OLS leads to $H = I$, a superficial introduction to regularization (lasso regression and ridge regression).
+
+\textbf{Practice:} Demo showing the iterative addition of a feature and $R^2$ monotonically increasing and RMSE monotonically decreasing (overfitting), demonstrating that random vectors are never truly orthogonal and thus their projections are non-zero, a lasso fit and a ridge fit of a dataset with $p \geq n$.
+
+\item \textbf{Theory:} Definition of in-sample error metrics vs. out-of-sample (oos) error metrics, splitting $\mathbb{D}$ into $\mathbb{D}_{\text{train}}$ and $\mathbb{D}_{\text{test}}$ via split constant $K$, definition of \qu{honest} validation via oos error metrics, definition of the final model $g_{\text{final}}$ definition of underfitting, tracing the underfitting-overfitting complexity curve, definition of optimal-complexity models.
+
+\textbf{Practice:} A more full demo of overfitting with visualizations, demo of consistency of OLS estimates, code to create train-test splits, demonstration that oos error is larger than in-sample error in the scenario of the model being overfit.
+
+\item \textbf{Theory:} Definition of raw features versus derives features, increasing complexity in $\mathcal{H}$ using polynomial functions of raw features, interpretation of OLS coefficients $\b$, Weierstrauss Approximation Theorem, OLS with polynomial features, definition of the full rank Vandermonde matrix, definitions of interpolation vs. extrapolation.
+
+\textbf{Practice:} Square, cube and higher order polynomial fitting both raw and orthogonal with visualization, overfitting with high-degree polynomials, demonstration of extrapolation in models of many different polynomial degrees, prediction with polynomial models, extrapolation in the Galton height data.
+
+\item \textbf{Theory:} OLS using the log transformation on both features and response and interpretation of $\b$, derivation the log change is approximately percentage change, definition of first-order interactions in OLS, interpretations of coefficients in interaction models.
+
+\textbf{Practice:} Log-linear model fitting and log-log linear model fitting, logging response to reduce the effect of influential observations, the grammar of graphics and the \texttt{ggplot} package to create histograms, scatterplots, box-whisker, violin plots, smoothing plots, overloading plots with many features, faceting, coloring, aesthetics and themes, using color illustrations and faceting to visualize potential first-order interactions in a linear model, fitting interaction models.
+
+\item \textbf{Theory:} oos error metrics as estimates of model generalization error, sources of variance in these estimates, mitigation by adjusting $K$, further mitigation by using cross-validation (CV), $K$-fold CV and its aggregated error estimates, approximation confidence intervals for generalization error, discussion of reasonable values of $K$ in practice.
+
+\textbf{Practice:} Simulating many different train-test splits to underscore that $K$ trades bias vs. variance in the generalization estimate, writing code for $K$-fold CV, using the package \texttt{mlr3} to automate $K$-fold CV.
+
+\item \textbf{Theory:} Introduction of the fundamental problem of \qu{model selection} of candidates $g_1, \ldots, g_M$, model selection with honest validation via splitting $\mathbb{D}$ into $\mathbb{D}_{\text{train}}$, $\mathbb{D}_{\text{select}}$ and $\mathbb{D}_{\text{test}}$ via split constants $K_{\text{select}}$ and $K_{\text{test}}$, procedure to select best model among $M$ candidates and validation of the best model.
+
+\textbf{Practice:} Writing code for the model selection procedure, review of basic \texttt{C++}, optimizing \texttt{R} code via the \texttt{Rcpp} package, benchmarking routines that require heavy looping between \texttt{Rcpp} and base \texttt{R}, benchmarking routines that require heavy recursion between \texttt{Rcpp} and base \texttt{R}.
+
+\item \textbf{Theory:} Double-CV in the model selection procedure using inner folds and outer folds, discussion of reasonable values of $K_{\text{select}}$ and $K_{\text{test}}$ in practice, applying the model selection procedure to grid searching to locate the best value of hyperparameters $\lambda$ in algorithms that require $\lambda$, definition of stepwise modeling using the model selection procedure via the underfitting-overfitting complexity curve concept, stepwise OLS with a large basis of candidate terms. 
+
+\textbf{Practice:} Using the package \texttt{mlr3} to automate the double-CV using inner and outer loops, using the package \texttt{mlr3} to automate the locating of optimal hyperparameters, demo of forward stepwise linear modeling and tracing the underfitting-overfitting complexity curve.
+
+\item \textbf{Theory:} Definition of hyperrectangle basis for $\mathcal{X}$ and its OLS solution, unfeasibility of this algorithm in high $p$, introduction of the regression tree algorithm.
+
+\textbf{Practice:} Binning model demo and visualization for varying bin sizes, introduction to data wrangling using the packages \texttt{dplyr} and \texttt{data.table}: filtering, sorting, grouping, summarizing, feature derivation, dataframe joining (left, right, inner, full, between / overlap), benchmarking the two libraries.
+
+\item \textbf{Theory:} Full specification of regression tree algorithm: definition of a binary tree, definition of orthogonal-to-axes splits, nodes vs. leaves, left-right SSE weighting, leaf assignments, overfitting and tree-pruning.
+
+\textbf{Practice:} Using the \texttt{YARF} package to produce regression trees, querying tree stats, visualizing trees and tree model predictions, tree differences by the pruning hyperparameter.
+
+\item \textbf{Theory:} MSE of $g$ decomposition into bias and irreducible error for one $\mathbb{D}$, MSE of $g$ decomposition into bias, irreducible error and variance for multiple $\mathbb{D}$'s, MSE decomposition of $M$ different $g$'s averaged, strategies to eliminate bias and variance, non-parametric bootstrap sampling, Breiman's concept of bootstrap aggregation (bagging), correlation $\rho$ among the bootstrapped models, out-of-bag (oob) observations, validation in bagging via oob samples.
+
+\textbf{Practice:} Visualizing $M$ bagged trees, demonstrating near zero bias, demonstrating variance reduction as $M \rightarrow \infty$, a comparison to OLS and high degree polynomial models, demonstration of generalization error improvement, demonstration of validation in bagging.
+
+\item \textbf{Theory:} Demonstrating the bias for regression trees is near zero, reducing correlation among the bootstrapped models using feature sampling, introduction of random forests (RF) algorithm.
+
+\textbf{Practice:} Demonstration that RF decreases $\rho$ and demonstration that it outperforms bagging in both regression and classification.
+
+\item \textbf{Theory:} A basic discussion of \qu{causality} from a philosophical perspective, directed causal graphs, correlation vs. causation, incidental effects, lurking variables, spurious correlation, causation is defined by manipulation, a quick definition of randomized experimentation, real-world causal diagrams, wrong interpretations of $\b$ in OLS, the highly limited but true / complete paragraph-long interpretation of $\b$ in OLS, a discussion of how OLS regression accomplishes estimation of single features with other features \emph{ceteris paribus}.
+
+\textbf{Practice:} Demos of whimsical spurious correlations, demonstration that spurious correlations are easy to find in simulation, a nice illustration of correlation without causation using an OLS model that reveals the true interpretation of $\b$.
+
+\item \textbf{Theory:} Introduction of classification tree algorithm, the gini metric, leaf assignments, the two errors: false negatives and false positives, the 2$\times$2 confusion matrix and its metrics: precision, recall, accuracy, $F_1$ metric, false discovery rate, false omission rate.
+
+\textbf{Practice:} Using the \texttt{YARF} package to produce classification trees, querying tree stats, visualizing trees and tree model predictions, tree differences by the pruning hyperparameter, measuring the two errors, computing confusion matrices and the other metrics.
+
+\item \textbf{Theory:} Missing data mechanisms (MDMs): missing completely at random, missing at random, not missing at random with examples, strategies to handle missingness: listwise deletion, imputation, multiple imputation, miss forests algorithm and its convergence, the concept of \qu{retaining} missingness even after imputation, introduction of probability estimation using the independent bernoulli random variable model, optimal probability function, likelihood of $\mathbb{D}$, $\mathcal{H}$ for probability functions, generalized linear modeling, link functions: logistic / probit / complementary log-log, numerical approximations to the likelihood optimization.
+
+\textbf{Practice:} An example of a dataset with missingness, assessing the different MDMs, listwise deletion, imputation and the \texttt{missForest} package for the recommended imputation, creating the missingness dummies as derives features in $X$.
+
+\item \textbf{Theory:} Definition of logistic regression (LR), log-odds interpretation of LR $\b$, prediction in LR, error metrics for probability estimation: Brier and Log scoring rules, classification modeling from probability regression, optimal asymmetric cost modeling, response-operator curves (ROC), detection-error tradeoff curves (DET).
+
+\textbf{Practice:} Fitting LR models using the \texttt{glm} package, predicting with LR models, validating creating asymmetric cost classifiers in LR models, constructing ROC and DET plots using LR models, locating optimal models with minimal cost. 
+
+\item \textbf{Theory:} Causal diagrams, confounding, correlation does not imply causation, correct interpretation of OLS estimates, asymmetric cost classification in tree models, introduction to boosting as a meta-algorithm, adaboost
+
+\textbf{Practice:} demonstrating confounding and linear models by hiding the confounder and then revealing it, demonstration of asymmetric classification using trees, demonstration of boosting using package \texttt{xgboost}.
+\end{enumerate}
+

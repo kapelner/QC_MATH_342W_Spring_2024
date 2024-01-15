@@ -1,0 +1,159 @@
+\documentclass[12pt]{article}
+
+\usepackage[most]{tcolorbox}
+\include{preamble}
+
+
+
+
+\title{Math 342W Final Project \the\year}
+
+\author{Professor Adam Kapelner}
+\date{Writeup due Tuesday, May 24, 11:59PM by email}
+
+\begin{document}
+\maketitle
+
+You will be writing a report about a prediction model for apartment selling prices in Queens, NY using the dataset found on github, \texttt{housing\_data\_2016\_2017.csv} where the outcome to be predicted is the column named \texttt{sale\_price}. This dataset is the \emph{raw data representation} found at \href{http://www.mlsli.com/}{MLSI}. The limitation on the data population for what \emph{you will be asked to predict} will be \qu{Queens, NY} as location and home types \qu{Condo / homeowner assoc.} and \qu{Co-op} up to a maximum sale price of \$1M sold between February, 2016 and February, 2017 and limited to the zip codes found in Table~\ref{tab:zips}. The dataset was harvested with \href{mturk.com}{Amazon's MTurk} and it is a raw download from their system.
+
+
+\begin{table}[htp]
+\centering\footnotesize
+\begin{tabular}{l|ccccccccc}
+\hline
+Northeast Queens		&11361& 11362,& 11363& 11364 \\
+North Queens		&11354& 11355& 11356& 11357& 11358& 11359& 11360 \\
+Central Queens		&11365& 11366& 11367 \\
+Jamaica				&11412& 11423& 11432& 11433& 11434& 11435& 11436 \\
+Northwest Queens	&11101& 11102& 11103& 11104& 11105& 11106 \\
+West Central Queens	&11374& 11375& 11379& 11385 \\
+Southeast Queens		&11004& 11005& 11411& 11413& 11422& 11426& 11427& 11428& 11429 \\
+Southwest Queens	&11414& 11415& 11416& 11417& 11418& 11419& 11420& 11421 \\
+West Queens			&11368& 11369& 11370& 11372& 11373& 11377& 11378 \\\hline
+\end{tabular}
+\label{tab:zips}
+\caption{The zip codes for the houses in the dataset. They call come from mainland Queens. We are leaving out the Rockaways, a peninsula near JFK airport that is geographically distinct from the rest of the neighborhoods.}
+\end{table}
+
+I picked this project because I know you can all do better than \url{zillow.com} who make their own secret-sauce predictions that they whimsically call \qu{zestimates}. However, in Queens, zestimates for apartments are quite lame but indeed have improved over the years. Their reported results for the NYC area as of 4/24/20 are below:
+
+\begin{table}[htp]
+\centering\small
+\begin{tabular}{cccc}
+& \multicolumn{3}{c}{Predictions within x\% of sale price} \\
+Median Error 	 & 5\%  	&  10\%	&  20\%  \\
+\hline
+2.3\% &	80.2\%	& 94.1\%	& 98.4\%
+\end{tabular}
+\end{table}
+
+\noindent Unfortunately they do not report for Queens (nor for apartments only) so this will have to be our benchmark.  I imagine the collective brainpower of all of you plus the elementary concepts and tools from this class can produce more accurate predictions of apartment prices.\footnote{At the very least, I imagine you can score a job interview at Zillow if your predictive performance is any good.} 
+
+\pagebreak
+
+%You will be responsible for:
+%
+%\begin{itemize}
+%\item deciding which features / predictors will be of use to you and deriving new ones (featurizing)
+%\item cleaning up data errors
+%\item handling missing data
+%\item creating multiple models using only the algorithms discussed in class
+%\item validating
+%\end{itemize}
+
+Consider your reading audience as those who took this class and got an A in it; they are educated and high-level. You do not need to describe what a \qu{model} is nor how you do \qu{out of sample validation}, etc. You can just write freely. Thus, in many ways the \emph{writing task} of this assignment is easier than the modeling paper. This will give you time to concentrate on the actual data science: the cleaning, featurization, modeling and interpreting. 
+
+\section*{Deliverables}
+
+You will commit all files used for your project to your github repository under the subfolder \qu{final\_project}. You will also write a formal report to be emailed to me by the due date as a PDF. The formal report should look like below, single-spaced. Each section should address concepts given below. The style should be a professional technical paper or a scientific report. That means no whimsical musings. Please do not use \texttt{knitR} from an Rmd file in RStudio to generate your PDF (it never looks nice). You can work together but please list your collaborators \inred{and you must do your own, individual writeup. No copying from others. No paraphrasing from others.}\\
+
+
+\begin{tcolorbox}[breakable, enhanced]
+
+\begin{center}
+\LARGE{[TITLE]}\\~\\
+\footnotesize Final project for Math 342W Data Science at Queens College\\
+~[date due]~
+\end{center}
+
+\begin{flushright}
+By [Your full name]\\
+In collaboration with:\\
+~[person 1's full name]~\\
+~[person 2's full name]~\\
+$\vdots$~~~\\
+\end{flushright}
+
+\subsubsection*{Abstract}
+
+A one paragraph summary of the entire writeup that is written to \qu{lure} the reader in.\\
+
+\line(1,0){180} ~~~pagebreak~~~ \line(1,0){180}
+\pagebreak
+
+\subsection*{1. Introduction}
+
+Write about the problem here and some context and background. No need to cite papers. Talk about what a predictive model is and what that means here. What is the unit of observation? What is the response? Write about the basics of how you modeled it. You can mention your performance results, but do not go into detail about them (leave it for the discussion section). Use as much vocabulary as you can from the class notes and your previous writing assignment in describing the problem. Cite sources in APA style, i.e Johnson et al. (1999) within text and (Johnson et al., 1999) within a parenthetical.
+
+
+\subsection*{2. The Data}
+
+Give a one paragraph introduction to what type of data was used in this project, basically where it came from and the size of the historical data frame. How representative do you think it is of the population of interest (you define the populatio of interest)? If you supplemented the dataset from other sources, write about it here too. Are there outliers? Are there any dangers of extrapolation?
+
+
+\subsubsection*{2.2. Featurization}
+
+How many and what measurements did you take on the observations? Which were provided to you in the raw data and which did you featurize yourself? Make sure to list them and give a brief explanation as to what they are; describe what these measurements capture about the observation. Give a basic summary of each feature --- average, standard deviation, range for those that are continuous data type and percentages of the categories for those that are nominal data type.
+
+
+\subsubsection*{2.3. Errors and Missingness}
+
+Did you find obvious errors (not missingness) in the dataset? How did you handle these errors? Summarize the missingness across the features in Section 2.2. How did you handle missingness in your data? Talk about how you imputed. Did you include any missingness dummy variables in your expanded feature set? Note: you do not need to explain how you handled missingness in your prediction set.
+
+
+\subsection*{3. Modeling}
+
+You are creating a model to ship to the world to be used for predicting real, new observations. But you also would like to explore a little bit.
+
+\subsection*{3.1 Regression Tree Modeling}
+
+Fit one regression tree. Visualize the top layers. Comment on the top 10 features that are seemingly most important for predicting sale price. Include the visualization as a figure.  If you cannot get \texttt{YARF} to work, use the canonical CRAN package \texttt{rpart}.
+
+\subsection*{3.2 Linear Modeling}
+
+Fit a vanilla OLS linear model. Comment on its in-sample error statistics and interpret them. For the most important features found in the regression tree, interpret the coefficients in this model. Will a linear model be good for prediction? Include the OLS output as a table.
+
+\subsection*{3.3 Random Forest Modeling}
+
+Why should this be your choice of prediction model? Explain the theory as best as you could. Is it parametric / non-parametric? What did you gain by choosing this model? Lose? Was modeling an iterative process in some way? Do you think you underfit? Do you think you overfit? How were you able to know? Which variables do you believe have an effect on sale price that is truly causal, why and would you be able to prove it? (Optional: use the package \texttt{mlr} (or \texttt{mlr3}) to find the best tuning parameters for the RF model and use these parameters to build the production model). If you cannot get \texttt{YARF} to work, use the canonical CRAN package \texttt{randomForest}.
+
+\subsection*{4. Performance Results}
+
+Report your in-sample and oos (or oob) goodness-of-fit metrics: $R^2$, $RMSE$ (no need for $MAE$ unless you want to report it) for all models in one clear table. Interpret them and compare the in-sample and oos within models and between models. Did your random forest model beat the linear model? Why / why not? How can you be confident that the oos estimates are a valid estimate of how the model will by-and-large perform on future predictions?  
+
+\subsection*{5. Discussion}
+
+Discuss the project once again. Comment on things that you did informally (assume the reader has been through Sections 2-4). Talk about where you feel you fell short and how you can plug those holes. Talk about future extensions. Do you believe your model is production ready? Can you beat Zillow?
+
+
+\subsubsection*{Acknowledgments}
+
+If relevant, list people or organizations (not me, not your collaborators nor the TA) who have helped with this project in some way and state how they helped. Give credit where credit is due.
+
+\subsubsection*{References}
+
+If you cited any articles, books, blogs, etc. Use APA format for biliographic entries.\\
+
+\line(1,0){180} ~~~pagebreak~~~ \line(1,0){180}
+\pagebreak
+
+\subsubsection*{Code Appendix}
+
+Print all your code that was used to do this project here. If you are using \LaTeX, please use the \texttt{listings} package to present the code line-wrapped and syntax-colored nicely!
+
+\end{tcolorbox}
+
+
+\noindent You may do more than what is above too. Don't hesitate to include additional figures, tables, illustrations if you believe it helps relate what you have done.
+
+\end{document}
