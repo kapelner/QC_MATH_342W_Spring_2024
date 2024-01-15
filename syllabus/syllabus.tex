@@ -8,7 +8,8 @@
 \newcommand{\professoroffice}{KY 604}
 \newcommand{\coursedept}{Math}
 \newcommand{\coursenumber}{342W}
-\newcommand{\coursenumbercrosslisted}{/ 690.4 / 742}
+\newcommand{\sixhundredsection}{650 / RM 742}
+\newcommand{\coursenumbercrosslisted}{/ \sixhundredsection}
 \newcommand{\semester}{Spring}
 \newcommand{\numcredits}{6}
 \newcommand{\lectimeandloc}{Mon and Wed 5-6:50PM / KY 283}
@@ -24,7 +25,6 @@ Josh Palter / see \coursewebpagelink
 \newcommand{\extrahwzero}{\item provide a link to your public repository on github (this means you need to sign up for github first)}
 \newcommand{\hwzerodue}{Wednesday, Feb 3 11:59PM}
 \newcommand{\lastdatetimetohandinhomeworks}{May 18 at noon}
-\newcommand{\sixhundredsection}{650.4}
 
 \input{../../syllabi/_header}
 
@@ -36,9 +36,7 @@ You should be familiar with the following before entering the class:
 
 \begin{itemize}
 \itemsep -0.0em 
-\item Basic Probability Theory: conditional probability, in/dependence, identical distributedness
-\item Modeling with discrete random variables: Bernoulli, Binomial%, Poisson, Geometric, Negative Binomial, Uniform Discrete and others
-\item Expectation and variance
+\item Basic Probability Theory: conditional probability, in/dependence, identical distributedness, discrete random variables: Bernoulli, Binomial, expectation and variance
 %\item Modeling with continuous random variables: Exponential, Uniform and Normal
 %\item Frequentist confidence intervals and hypothesis testing for one-sample proportions
 %\item Basic visualization of data: plots, histograms, bar charts
@@ -48,7 +46,11 @@ You should be familiar with the following before entering the class:
 
 \noindent We will review the above \textit{throughout the semester} when needed and we will do so rapidly. \\
 
-\textbf{This is not your typical mathematics course.} This course will do lots of modeling of real-world situations using data via the \texttt{R} statistical language.
+
+\input{../../syllabi/_DSS_core}
+
+
+\noindent \textbf{This is not your typical mathematics course.} This course will do lots of modeling of real-world situations using data via the \texttt{R} statistical language.
 
 
 
@@ -64,7 +66,7 @@ We will be using many reference texts and three popular books which you will rea
 
 \begin{itemize}
 \item To download \texttt{R} go to \url{http://cran.mirrors.hoobly.com/}. I then recommend the IDE \texttt{RStudio} available for free at \url{https://www.rstudio.com/products/rstudio/download/} this way you can follow the demos in class.
-\item To download \texttt{Python} go to \url{https://www.python.org/downloads/}. I then recommend the IDE \texttt{Jupyter Notebook} available for free so you can follow Amir's Python translations of the class demos. To install Notebook, open up a command prompt and executing \texttt{pip install notebook}. After this is installed, you can run \texttt{jupyter notebook} in a command prompty which will open up a web browser with the IDE embedded. An alternative method is to install Anaconda using \href{https://medium.com/@yunanwu2020/how-to-install-jupyter-notebook-from-scratch-on-anaconda-simple-codes-8652c3095091}{these instructions}.
+%\item To download \texttt{Python} go to \url{https://www.python.org/downloads/}. I then recommend the IDE \texttt{Jupyter Notebook} available for free so you can follow Amir's Python translations of the class demos. To install Notebook, open up a command prompt and executing \texttt{pip install notebook}. After this is installed, you can run \texttt{jupyter notebook} in a command prompty which will open up a web browser with the IDE embedded. An alternative method is to install Anaconda using \href{https://medium.com/@yunanwu2020/how-to-install-jupyter-notebook-from-scratch-on-anaconda-simple-codes-8652c3095091}{these instructions}.
 
 \end{itemize}
 
@@ -86,7 +88,7 @@ We will be using many reference texts and three popular books which you will rea
 
 There are 56 scheduled meetings: 28 lecture periods of 110min followed and 28 lab periods of 55min (cunyfirst only lists it as 50min and that's a mistake). Of the 28 lecture periods, 24 will be lectures (see next two sections), 2 will be midterm exams which are in class and 2 will be review periods before the exams. Of the 28 lab periods, there will be 20 periods split into sets of 2 periods to cover 10 weekly lab assignments (see lab section further on). The other 8 lab periods will be devoted to either pure computing lectures, review labs (assignments that do not need to be handed in) or pure writing labs that help with the papers.
 
-\subsection*{Lectures}
+\subsection*{Tentative Day-by-Day Schedule}
 
 Lectures will be further split into two modes: theory and practice. The first is a standard \qu{chalkboard} lecture where we learn concepts and the second will be using the \qu{computer/projector} to see the concepts in action in the \texttt{R} language. %I have a no computer / tablet / phone policy during the theory component of the lectures (only pen / pencil and paper) but you are highly recommended to have the laptop during the second part.
 

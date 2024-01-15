@@ -87,7 +87,7 @@ My lectures are scanned in as PDF files contributed by students and myself.
 [(practice exam 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm1/midterm1_solutions.pdf)\
 [(practice exam 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm1/midterm1_solutions.pdf)\
 [(practice exam 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm1/midterm1_solutions.pdf)\
-[(practice exam 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1_solutions.pdf)\
+[(practice exam 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1_solutions.pdf)
 
 
 * Midterm II
