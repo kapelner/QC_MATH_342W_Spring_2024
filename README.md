@@ -1,10 +1,10 @@
 # MATH 342W Introdution to Data Science Spring 2024
 
-This is the course homepage for Math 342W (and Masters level 650.4 and RM 742) at Queens College, City University of New York taught by Professor Adam Kapelner. The course syllabus can be found [here](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/syllabus/syllabus.pdf). We are now using [slack](https://slack.com/) for class discussions and videos (see syllabus for link).
+This is the course homepage for Math 342W (and Masters level 642 and RM 742) at Queens College, City University of New York taught by Professor Adam Kapelner. The course syllabus can be found [here](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/syllabus/syllabus.pdf). We are now using [slack](https://slack.com/) for class announcements and discussions (see syllabus for link).
 
 ## Lectures
 
-My lectures are scanned in as PDF files contributed by students and myself.
+My lectures are scanned in as PDF files.
 
 <!--
 * Lecture 24 [(Notes 1)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec25kap.pdf) [(Notes 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec26kap.pdf)
@@ -75,9 +75,9 @@ My lectures are scanned in as PDF files contributed by students and myself.
 
 ## Exams
 
-* Midterm I is tba (in class) 
-* Midterm II is tba (in class) 
-
+* Midterm I is Thursday, March 14 (KY258 3PM) 
+* Midterm II is Tuesday, May 14 (KY258 3PM) 
+* There is a final paper instead of the final exam due May 24.
 
 ## Practice Exams
 
@@ -90,21 +90,21 @@ My lectures are scanned in as PDF files contributed by students and myself.
 [(practice exam 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1.pdf) [(practice exam solutions 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm1/midterm1_solutions.pdf)
 
 
-* Midterm II
+* Midterm II - Omit topics we did not cover
 
 [(practice exam 1)](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 1)](https://github.com/kapelner/QC_Math_342W_Spring_2022/blob/master/exams/midterm2/midterm2_solutions.pdf)\
 [(practice exam 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/exams/midterm2/midterm2_solutions.pdf)\
 [(practice exam 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 3)](https://github.com/kapelner/QC_Math_390.4_Spring_2020/blob/master/exams/midterm2/midterm2_solutions.pdf)\
-[(practice exam 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm2/midterm2_solutions.pdf) Omit everything after 3e\
-[(practice exam 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm2/midterm2_solutions.pdf) Omit 3, 4, 6a, c, d, e, f, g\
-[(practice exam 6)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/final/final.pdf) [(practice exam solutions 6)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/final/final_solutions.pdf) Omit 1a, 2, anything after 3d
+[(practice exam 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 4)](https://github.com/kapelner/QC_Math_390.4_Spring_2019/blob/master/exams/midterm2/midterm2_solutions.pdf)\
+[(practice exam 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm2/midterm2.pdf) [(practice exam solutions 5)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/midterm2/midterm2_solutions.pdf)\
+[(practice exam 6)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/final/final.pdf) [(practice exam solutions 6)](https://github.com/kapelner/QC_Math_390.4_Spring_2018/blob/master/exams/final/final_solutions.pdf)
 
 
 ## Office Hours
 
 I *want* you to come to office hours! My office hours are:
 
-Time / Location: tba / KY 283
+Time / Location: 7:45-8:30PM / KY 061
 
 In addition, the TAs will hold office hours as well:
 
