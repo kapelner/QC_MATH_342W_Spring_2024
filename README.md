@@ -1,6 +1,6 @@
 # MATH 342W Introdution to Data Science Spring 2024
 
-This is the course homepage for Math 342W (and Masters level 642 and RM 742) at Queens College, City University of New York taught by Professor Adam Kapelner. The course syllabus can be found [here](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/syllabus/syllabus.pdf). We are now using [slack](https://slack.com/) for class announcements and discussions (see syllabus for link).
+This is the course homepage for Math 342W (and Masters level 642 and RM 742) at Queens College, City University of New York taught by Professor Adam Kapelner. The course syllabus can be found [here](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/syllabus/syllabus.pdf). We use [slack](https://slack.com/) for class announcements and discussions (see syllabus for link).
 
 ## Lectures
 
@@ -39,10 +39,9 @@ My lectures are scanned in as PDF files.
 * Week 2 [Practice Notes in R](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/week02.Rmd)
 * Lecture 5/6 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec05kap.pdf)
 * Lecture 3/4 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec04kap.pdf)
-* Week 1 [Practice Notes in R](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/week01.Rmd)
 * Lecture 2/3 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec02kap.pdf)
 * Lecture 1/2 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec01kap.pdf) -->
-
+* Week 1 [Practice Notes in R](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/week01.Rmd)
 
 ## Labs
 

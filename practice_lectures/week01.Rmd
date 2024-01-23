@@ -1,7 +1,7 @@
 ---
 title: "Practice Lectures Week 1 MATH 342W Queens College"
 author: "Professor Adam Kapelner"
-date: "Jan 28, 2022"
+date: "Jan 25, 2024"
 ---
 
 You can get started with this cheatsheet:
@@ -11,7 +11,7 @@ Acknowledgement: I would like to thank Professor Andreas Buja at Wharton as I cr
 http://stat.wharton.upenn.edu/~buja/STAT-470-503-770/CHAPTERS/
 http://stat.wharton.upenn.edu/~buja/STAT-961/
 
-as well as Yonatan Rosenblatt of Ben Gurion University:
+as well as Yonatan Rosenblatt previously of Ben Gurion University:
 http://www.john-ros.com/Rcourse
 
 ## Basic R
@@ -56,7 +56,7 @@ and
 9
 ```
 
-These are not the most exciting commands. The above is called a "chunk" and it tells the R Markdown compiler that there is R code inside those tick marks.
+These are not the most exciting R commands. The above is called a "chunk" and it tells the R Markdown compiler that there is R code inside those tick marks.
 
 Here's some R code commented:
 
@@ -75,28 +75,29 @@ Let's start by using R as a calculator
 5 * 5
 5^5 #or 5 ** 5 (not as common)
 5 / 3
-100 * (1 + 0.03)^5
+100 * 1 + 0.08^5
+100 * (1 + 0.08)^5 #note order of operations - use parentheses
 5 %% 3
 5 * 5 %% 3
 (5 * 5) %% 3 #note order of operations - use parentheses
 ```
 
-You can have multiple statements per line. The semicolon ends a statement like C++ but it is omitted usually because if the line ends it is implied. 
+You can have multiple statements per line. The semicolon ends a statement like C++ but it is omitted usually because if the line ends, it is implied. 
 
 ```{r}
 5 + 5; 5 - 5
 ```
 
-Multiple statements per line is not generally done unless you are making a point.
+Multiline statements are rarely used. Only do it to make a point to yourself and your teammates - code is written for you not for the computer.
 
 You can also extend expressions for many lines if you have a dangling operator at the end of the line e.g. this plus sign:
 
 ```{r}
-5+
-  5+
+5 +
+  5 +
   5
 ```
-Avoid this unless the line gets so long it's difficult to read. Note the "+" at the end of the line so the interpreter knows to keep looking to the next line.
+Avoid this unless the line gets so long it's difficult to read. Note the "+" at the end of the line so the interpreter knows to keep looking to the next line. It is conventional to use some form of indentation on lines past the first line so show it's one command split over lines.
 
 Let's take a look at how to represent numbers using scientific notation
 
@@ -120,7 +121,7 @@ ceiling(1.2)
 round(1.2345)
 round(1.2345, 2)
 log10(1000)
-sin(pi) #pi is a hard-wired numerical constant, the only one in the language (I think)
+sin(pi) #pi is a hard-wired numerical constant, the only numerical constant in the language
 #note the numerical error
 acos(1)
 exp(1)
@@ -266,7 +267,7 @@ x & y #AND
 x | y #OR
 ```
 
-Previously, we used vector types without even knowing. Let's talk about some simple operations on vectors:
+Let's talk about some simple operations on vectors:
 
 ```{r}
 x = seq(1, 100)
@@ -518,7 +519,7 @@ X[1, 1] = "1984" #warning: this will wind up casting all values in the matrix to
 head(X)
 ```
 
-Sometimes handy by not recommended is getting / setting with only one index.
+Sometimes handy but not recommended is getting / setting with only one index.
 
 ```{r}
 head(X)
@@ -543,7 +544,7 @@ rowMeans(X)
 colMeans(X)
 ```
 
-## Programming! Conditional statements, loops, functions
+## Conditional statements and looping
 
 We will now learn how to program in R.
 
@@ -608,29 +609,29 @@ A for loop contains three ingredients: (a) a looping variable joined with keywor
 
 ```{r}
 for (i in 1 : 10){
-  j = i
-  print(j)
+  my_loop_variable = i
+  print(my_loop_variable)
 }
 ```
 
-Note that both the looping variable i still exists and the variable within the looped expression j still exists:
+A slight difference from most other functional languages: after the loop is executed both the looping variable (i) still exists and the variable(s) within the scope of the looped expression (my_loop_variable) still exist:
 
 ```{r}
 i
-j
+my_loop_variable
 ```
 
-Be careful of scoping in R. You may want to "clean up your namespace" whenever you can.
+It is recommended to "clean up your namespace" whenever you can.
 
 ```{r}
 for (i in 1 : 10){
-  j = i
-  print(j)
+  my_loop_variable = i
+  print(my_loop_variable)
 }
-rm(i, j)
+rm(i, my_loop_variable)
 ```
 
-There is no need to save the values of the temp variables i, j going forward. They would vanish in C++ / Java when the for loop ended as it goes out of scope.
+Remember, these two variables would vanish in C++ / Java when the for loop ended as it goes out of scope.
 
 You can iterate over a vector as well Python-style or Java-generic-style:
 
@@ -660,7 +661,7 @@ while (x <= 10){
 }
 ```
 
-This can also be done using a break:
+This can also be done using the while-true and a break:
 
 ```{r}
 x = 1
@@ -745,5 +746,351 @@ dict = list("a" = "first", "b" = "second", "c" = "third") #key => value
 dict
 dict = list(a = "first", b = "second", c = "third") #key => value
 dict
+```
+
+There is no "hash set" native to the language. You can create a dictionary and fill it with missings:
+
+
+```{r}
+dict = list()
+dict$a = NA
+dict$b = NA
+dict$c = NA
+dict
+length(dict)
+names(dict) #keys
+```
+
+Lists conveniently allow all sorts of data types (as values only).
+
+```{r}
+varied_dict = list()
+varied_dict$a = "first"
+varied_dict$b = 2
+varied_dict$c = 1 : 7
+varied_dict$d = matrix(NA, nrow = 2, ncol = 2)
+varied_dict[["some function"]] = function(x){x^2} #this key is not recommended
+varied_dict
+varied_dict$`some function` #note the tick marks (sometimes seen) needed due to spaces in key name
+length(varied_dict)
+names(varied_dict)
+```
+
+They have lots of uses in data science applications. We will likely see them in class and if not, you'll definitely see them in the real world. Note that data.frame objects are implemented as lists as well as many other common R objects.
+
+Unfortunately, list can only truly accept characters as keys. If you really need more flexibility here, we will need a library (coming soon).
+
+
+We will now discuss arrays i.e. multidimensional vectors
+
+```{r}
+x = array(1 : 5, 5)
+x
+X = array(1 : 25, dim = c(5, 5))
+X
+X = array(1 : 125, dim = c(5, 5, 5))
+X
+X[1, , ]
+X[, 1, ]
+X[, , 1]
+X[1, 1, 1]
+```
+
+These can be associative arrays too and operate like a hash of vectors across arbitrary dimensions:
+
+```{r}
+X = array(1 : 125, 
+          dim = c(5, 5, 5),
+          dimnames = list(
+            c("A", "B", "C", "D", "E"),
+            c("I", "II", "III", "IV", "V"),
+            c("blue", "red", "green", "yellow", "orange")
+          ))
+X
+X["A", , ]
+X[, "III", ]
+X[, , "orange"]
+X["C", , "orange"]
+X["C", "IV", "orange"]
+```
+
+
+* Functions
+
+```{r}
+my_function = function(x){
+  x
+}
+##You may be used to:
+# int my_function(int x){
+#  //something
+#  return x;
+# }
+```
+
+* Functions are objects in R. This is why you are actually assigning the function to an object.
+* We don't need to declare type since R is not "statically typed" (higher level languages usually are not statically typed). Objects can be coerced into different types on the fly (R is "dynamically typed").
+* No need for a "return" statement as the last line is the data that is returned. It is considered bad style to use "return" in R.
+
+Let's make sure this works:
+
+```{r}
+my_function(3)
+my_function("asd")
+my_function(x = 3) #you can specify that 3 is the value for argument "x"
+my_function(y = 3) #illegal argument
+(function(x){x + 1})(3) #anonymous function or "lambda" (see https://en.wikipedia.org/wiki/Anonymous_function)
+```
+
+R is somewhat user friendly as it allows for default argument values, making those arguments optional to specify when calling the function:
+
+```{r}
+my_function = function(x = 1, y = 2, z = 3, p = 4, q = 5, r = 6){
+  (x + y + z) / (p + q + r)
+}
+my_function() #default execution
+my_function(p = 0) #one optional argument specified, others defaulted
+my_function(y = -2, q = 0) #two optional arguments specified, others defaulted
+
+my_function = function(x = 1, y, z = 3, p = 4, q = 5, r = 6){
+  (x + y + z) / (p + q + r)
+}
+my_function() #no dice
+my_function(1, 0) #required argument specified
+my_function(y = 0, q = 7) #required argument specified and one optional argument
+rm(my_function) #can be deleted since it's an object
+```
+
+There are also common functional programming functions. 
+
+* Reduce uses a binary function to successively combine the elements of a given vector and a possibly given initial value. 
+* Filter extracts the elements of a vector for which a predicate (logical) function gives true. 
+* Find and Position give the first or last such element and its position in the vector, respectively. 
+* Map applies a function to the corresponding elements of given vectors. 
+
+If you like this, there are many packages that extend this and organize it nicely e.g. `purrr` (we will get to packages next class).
+
+```{r}
+x = c(1, 2, 3, 4, 5)
+Reduce(sum, x)
+Filter(function(x){x <= 3}, x)
+Find(function(x){x > 4}, x)
+unlist(Map(function(x){x + 100}, x)) #what happened here?? Map will return a list (for flexibility)
+```
+
+## Libraries in R
+
+So far we've only made use of "base R". This is the funcionality included from a vanilla installation of R. 
+
+R has a huge worldwide community of contributors. Some contribute to newer version of base R, but most create open-source "R packages" or "libraries". Many libraries come preinstalled. For instance, the MASS library which stands for "Modern Applied Statistics with S" (a famous textbook of R). We can call a function from the MASS library via the following:
+
+```{r}
+MASS::as.fractions(0.99)
+MASS::as.fractions(pi)
+```
+
+Note we cannot just execute
+
+```{r}
+as.fractions(pi)
+```
+
+We made use of the scope operator "::" to access a namespace beyond the usual "global namespace" which we've been used to. Parenthetically, you can use the ":::" to access the private / internal functions and variables. Anyone who understands object-oriented programming with public interfaces / APIs would cringe at this!!!
+
+If we are using the MASS library a lot, using the scope operator may get annoying. So similar to the "with" command, we can call
+
+```{r}
+library(MASS)
+```
+
+which loads all public methods (aka "exported" functions) into the public namespace. 
+
+Now, after the library invocation we can do the following and treat it as a normal function:
+
+```{r}
+as.fractions(pi)
+```
+
+Is this always a good idea? No... everytime you call `library` it "dirties" the namespace by putting all the functions there and rewriting over functions there previously. This is bad because you are more likely to get namespace conflicts. For instance. Let's say package `kapelner` had a weird `sample` function. This would be clear:
+
+```{r}
+v = rnorm(100)
+kapelner::sample(v)
+sample(v)
+```
+
+The first line is doing the special sample function and the second is using base R's sample. But if I do this:
+
+```{r}
+library(kapelner)
+#...
+#...
+###10,000 lines of code in which you forget about the fact that the kapelner library is loaded
+#...
+#...
+sample(v)
+```
+
+You may think you're getting base R sample function, but you're not and now you're in  bug-city! You would have to do the following to be explicit:
+
+```{r}
+library(kapelner)
+sample(v)
+base::sample(v)
+```
+
+This is not a recommended thing to do. It's also not recommended for package developers to name functions the same as common base R functions. But this doesn't stop them!
+
+Back to real packages... the content for the MASS package was sitting on the hard drive since it comes with R. But what if you want to use a package that does not come with R? We'll have to install the package just like pip for Python, Rubygems for Ruby, R has a package management system built in. For example, here's a useful package for time series / finance stuff:
+
+```{r}
+install.packages("tseries")
+```
+
+Note that it knew where to go online - it went to a CRAN mirror. CRAN is the official repository for R packages. Now that it's installed, step 2 is to load it into namespace so we can more seamlessly access its functionality.
+
+```{r}
+library(tseries)
+```
+
+That was a welcome message.
+
+This library is really cool e.g.
+
+```{r}
+ibm_stock_history = get.hist.quote(instrument = "IBM", start = "2018-01-01", end = "2018-02-01")
+ibm_stock_history
+```
+
+Is this a data frame?
+
+```{r}
+class(ibm_stock_history)
+```
+
+Nope - they made their own data type. If we had a unit on "writing your own R packages", I would explain how this is done but alas there is no time...
+
+Let's say you're sharing your code with someone and one of your lines is loading a library e.g.
+
+```{r}
+library(a_library_my_computer_does_not_have_installed_yet)
+```
+
+And my computer doesn't have this library. Then we need to stop what we're doing and install. This could be annoying. Here is a convenience: use the pacman package that installs if necessary:
+
+```{r}
+if (!require("pacman")){install.packages("pacman")} #installs pacman if necessary but does not load it!
+pacman::p_load(devtools) #ensures that devtools gets installed and loaded into the workspace but pacman does not (very tidy)!
+```
+
+It is typical to then have a few lines declaring all packages on top of your R/Rmd script file. Here is an example header from one of my projects. 
+
+```{r}
+#if (!require("pacman")){install.packages("pacman")}
+#pacman::p_load(knitr, randomForest, dplyr, tidyverse, doParallel, xtable, pracma, yaml)
+```
+
+We will be seeing this in pretty much all our demos in the future. It is very rare to be coding in R without making use of packages beyond base R. I'm going to require the use of pacman for HW / projects, etc. It just makes code easier to share, run, etc.
+
+The devtools package is important for modern R usage. It allows downloading R packages directly from source that are not even on CRAN. This allows you to get "bleeding edge" features. For example:
+
+```{r}
+install_github("yihui/knitr")
+```
+
+However this doesn't always work!
+
+```{r}
+install_github("hadley/ggplot2")
+```
+
+Why can this fail? Because the computer you're running this on is not setup for compiling C++. Admittedly, MAC's usually succeed here and Windows usually fails here. To make it succeed you need to install a separate program beyond R called Rtools. This is one of the big advantages of using Linux and MAC over Windows - Windows just is more buggy when it comes to "real coding" and it gets in the way when you're out there trying to get stuff done. Linux absolutely is the best here and because Linux is usually the production environment anyway, it may make sense to use it for all your assignments and coding anyway.
+
+Note, you can use the pacman library for this type of installation too. So your header becomes:
+
+```{r}
+if (!require("pacman")){install.packages("pacman")}
+pacman::p_load(devtools)
+pacman::p_load_gh("hadley/ggplot2")
+```
+
+
+# Convenient Mapping Function for Lists with the purrr package
+
+We first load the library.
+
+```{r}
+pacman::p_load(purrr)
+```
+
+We will see later that the library `purrr` is part of a collection of libraries called the `tidyverse`.
+
+Now imagine you have a collection of objects in a list. For example, let's let the object be matrices with different sizes:
+
+```{r}
+my_matrix_list = list()
+my_matrix_list[["first"]] = matrix(rnorm(9), nrow = 3)
+my_matrix_list[["second"]] = matrix(rnorm(12), nrow = 2)
+my_matrix_list[["third"]] = matrix(rnorm(8), nrow = 4)
+my_matrix_list
+```
+
+And you want to operate on each of those objects and return a list. Let's say I want to get back the dimensions, or the first rows, or the average values and return the same keys:
+
+```{r}
+my_dims_list = modify(my_matrix_list, ~ dim(.x))
+my_dims_list
+my_first_rows_list = modify(my_matrix_list, ~ .x[1, ])
+my_first_rows_list
+my_avgs_list = modify(my_matrix_list, ~ mean(.x))
+my_avgs_list
+```
+
+This is a very convenient function known as "mapping" in functional programming. It saves a few lines of code e.g. the first `modify` would be:
+
+```{r}
+my_dims_list = list() #make new list to store keys --> dimensions of original matrices
+for (key in names(my_matrix_list)){ #iterate over all list by key
+  .x = my_matrix_list[[key]] #get value at the key for this iteration
+  my_dims_list[[key]] = dim(.x) #run function on value and save it to new list
+}
+my_dims_list
+```
+
+The above which takes 5 lines and is repeated again and again and again in code all takes one line using the `modify` function. 
+
+The `modify` function uses funky syntax which is not standard R. And it doesn't have to be; packages are allowed to extend the language and use symbols to create their own little mini-language. The `.x` above is a dummy variable for the value in the iteration in the imagined for loop (like in my rewritten boilerplate code above). The "~" tilde symbol we will be seeing in base R later on in class but in a completely different context. Here it just means "run the following function".
+
+Modify is just one of the functions in the `purrr` package. See the following cheatsheet for more convenient functions: https://github.com/rstudio/cheatsheets/blob/master/purrr.pdf.
+
+
+## Loading datasets from R packages
+
+Since R is a language built for data and statistics, it has a ton of interesting data sets by default and even more that are contained in packages. There is really just one command to know:
+
+```{r}
+rm(list = ls())
+data(iris) #load the iris dataset (as a data frame). This dataset is included in the package "datasets" which is autoloaded by default
+class(iris)
+?iris
+#3 things I always do immediately upon getting a dataset
+head(iris)
+str(iris)
+summary(iris)
+```
+
+Here is another very famous dataset
+
+```{r}
+MASS::Boston #this just references the object but does not load it into the environment
+data(Boston) #error since package MASS is not loaded by default
+data(Boston, package = "MASS") #package argument not needed if package loaded 
+head(Boston)
+```
+
+Most data sets are names some descriptive name like "loandata" or "cars". R has so many datasets. Here they all are by package installed:
+
+```{r}
+data(package = .packages(all.available = TRUE))
 ```
 
