@@ -1,0 +1,174 @@
+---
+title: "Practice Lectures Week 6 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+date: "Mar 7, 2022"
+---
+
+## Multivariate linear regression with the Hat Matrix
+
+First let's do the null model to examine what the null hat matrix looks like. In this exercise, we will see that $g_0 = \bar{y}$ is really the OLS solution in the case of no features, only an intercept i.e. $b_0 = \bar{y}$.
+
+```{r}
+y = MASS::Boston$medv
+mean(y)
+```
+
+We can use `lm`.
+
+```{r}
+mod = lm(y ~ 1)
+coef(mod)
+mod$fitted.values
+```
+
+
+Let's do a simple example of projection. Let's project $y$ onto the intercept column, the column of all 1's. What do you think will happen?
+
+```{r}
+ones = rep(1, length(y))
+H = ones %*% t(ones) / sum(ones^2)
+H[1 : 5, 1 : 5]
+#in fact
+unique(c(H))
+1 / 506
+```
+
+The whole matrix is just one single value for each element! What is this value? It's 1 / 506 where 506 is $n$. So what's going to happen?
+
+```{r}
+y_proj_ones = H %*% y
+head(y_proj_ones)
+```
+
+Projection onto the space of all ones makes the null model ($g = \bar{y}$). It's the same as the model of response = intercept + error, i.e. $y = \mu_y + \epsilon$. The OLS intercept estimate is clearly $\bar{y}$.
+
+```{r}
+y = MASS::Boston[, 14]
+X = as.matrix(cbind(1, MASS::Boston[, 1 : 13]))
+Xt = t(X)
+XtXinv = solve(Xt %*% X)
+b = XtXinv %*% t(X) %*% y
+b
+```
+
+We can compute all predictions:
+
+```{r}
+H = X %*% XtXinv %*% t(X)
+dim(h)
+yhat = H %*% y
+head(yhat)
+```
+
+Can you tell this is projected onto a 13 dimensionsal space from a 506 dimensional space? Not really... but it is...
+
+Now let's project over and over...
+
+```{r}
+head(H %*% H %*% H %*% H %*% H %*% H %*% H %*% H %*% H %*% y)
+```
+
+Same thing! Once you project, you're there. That's the idempotency of $H$.
+
+Let's make sure that it really does represent the column space of $X$. Let's try to project different columns of $X$:
+
+```{r}
+head(X[, 1, drop = FALSE])
+head(H %*% X[, 1, drop = FALSE])
+
+head(X[, 2, drop = FALSE])
+head(H %*% X[, 2, drop = FALSE])
+
+head(X[, 3, drop = FALSE])
+head(H %*% X[, 3, drop = FALSE]) #why?? Numerical error...
+
+head(X[, 1, drop = FALSE] * 3 + X[, 2, drop = FALSE] * 17)
+head(H %*% (X[, 1, drop = FALSE] * 3 + X[, 2, drop = FALSE] * 17))
+
+#etc....
+```
+
+We can calculate the residuals:
+
+```{r}
+e = y - yhat
+head(e)
+I = diag(nrow(X))
+e = (I - H) %*% y
+head(e)
+```
+
+Let's do that projection over and over onto the complement of the column space of $X$:
+
+```{r}
+head((I - H) %*% (I - H) %*% (I - H) %*% (I - H) %*% (I - H) %*% (I - H) %*% y)
+```
+
+# QR Decomposition
+
+Let's go back to the Boston data and regenerate all our quantities:
+
+```{r}
+y = MASS::Boston$medv
+ybar = mean(y)
+SST = sum((y - ybar)^2)
+SST
+
+
+X = as.matrix(cbind(1, MASS::Boston[, 1 : 13]))
+n = nrow(X)
+p_plus_one = ncol(X)
+Xt = t(X)
+XtXinv = solve(Xt %*% X)
+b = XtXinv %*% Xt %*% y
+b
+yhat = X %*% b
+head(yhat)
+# e = y - yhat
+# SSE = sum(e^2)
+SSR = sum((yhat - ybar)^2)
+SSR
+Rsq = SSR / SST
+Rsq
+```
+
+Now let's do the QR decomposition and see if the projections work.
+
+```{r}
+nrow(X)
+p_plus_one
+qrX = qr(X)
+class(qrX)
+Q = qr.Q(qrX)
+R = qr.R(qrX)
+dim(Q)
+dim(R)
+Matrix::rankMatrix(Q)
+Matrix::rankMatrix(R)
+
+head(Q[, 1], 50)
+head(Q[, 2], 50)
+1 / sqrt(nrow(X))
+sum(Q[, 1]^2) #normalized?
+sum(Q[, 2]^2) #normalized?
+Q[, 1] %*% Q[, 2] #orthogonal?
+Q[, 7] %*% Q[, 13] #orthogonal?
+
+Qt = t(Q)
+yhat_via_Q = Q %*% Qt %*% y
+head(yhat)
+head(yhat_via_Q)
+testthat::expect_equal(c(yhat), c(yhat_via_Q)) #needed to vectorize to make dimensions equal
+```
+
+Can we get the $b$ vector from the $Q$ matrix?
+
+```{r}
+solve(R) %*% Qt %*% y
+b_Q = Qt %*% y
+b_Q
+head(Q %*% b_Q)
+head(X %*% b)
+```
+
+Nope - this is not the same! Why not?

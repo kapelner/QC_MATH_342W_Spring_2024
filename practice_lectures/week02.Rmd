@@ -1,0 +1,419 @@
+---
+title: "Practice Lectures Week 2 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+date: "Feb 7, 2022"
+---
+
+
+
+## First modeling exercise
+
+Before we model, let's fabricate the training data! Let's try to build a data matrix similar to the one in the class example. Let's imagine $n = 100$ and $x_1$ is salary, $x_2$ is a dummy variable for missing loan payment in their credit history, $x_3$ is a ordinal variable for crime type coded 0, 1, 2 or 3.
+
+We can "make up" a dataset using the sampling we just learned.
+
+```{r}
+n = 100 #number of historical objects: the people
+p = 3 #number of features about each
+
+X = matrix(NA, nrow = n, ncol = p)
+X
+```
+
+Some more useful matrix functions:
+
+```{r}
+nrow(X)
+ncol(X)
+dim(X)
+length(X) #countless bugs!
+c(X)
+```
+
+Why should we fill up this matrix with NA's? No technical reason; it is done for a practical reason. Every value is currently "missing" until it's filled in i.e. it will let you know if you didn't fill any of the values.
+
+We can also name rows and columns. Each row is a historical person and each column is a feature about that person.
+
+```{r}
+colnames(X) = c(
+  "salary", 
+  "has_past_unpaid_loan", 
+  "past_crime_severity"
+)
+colnames(X) #setter and a getter
+fake_first_names = c(
+  "Sophia", "Emma", "Olivia", "Ava", "Mia", "Isabella", "Riley", 
+  "Aria", "Zoe", "Charlotte", "Lily", "Layla", "Amelia", "Emily", 
+  "Madelyn", "Aubrey", "Adalyn", "Madison", "Chloe", "Harper", 
+  "Abigail", "Aaliyah", "Avery", "Evelyn", "Kaylee", "Ella", "Ellie", 
+  "Scarlett", "Arianna", "Hailey", "Nora", "Addison", "Brooklyn", 
+  "Hannah", "Mila", "Leah", "Elizabeth", "Sarah", "Eliana", "Mackenzie", 
+  "Peyton", "Maria", "Grace", "Adeline", "Elena", "Anna", "Victoria", 
+  "Camilla", "Lillian", "Natalie", "Jackson", "Aiden", "Lucas", 
+  "Liam", "Noah", "Ethan", "Mason", "Caden", "Oliver", "Elijah", 
+  "Grayson", "Jacob", "Michael", "Benjamin", "Carter", "James", 
+  "Jayden", "Logan", "Alexander", "Caleb", "Ryan", "Luke", "Daniel", 
+  "Jack", "William", "Owen", "Gabriel", "Matthew", "Connor", "Jayce", 
+  "Isaac", "Sebastian", "Henry", "Muhammad", "Cameron", "Wyatt", 
+  "Dylan", "Nathan", "Nicholas", "Julian", "Eli", "Levi", "Isaiah", 
+  "Landon", "David", "Christian", "Andrew", "Brayden", "John", 
+  "Lincoln"
+)
+rownames(X) = fake_first_names
+rownames(X) #setter and getter
+X
+```
+
+Let's pretend "salary" is normally distributed with mean \$50,000 and standard error \$20,000. Let's make up some data
+
+```{r}
+X[, 1] = round(rnorm(n, 50000, 20000))
+X
+#another way to set this feature:
+X[, "salary"] = round(rnorm(n, 50000, 20000))
+X
+```
+
+A quick sidebar about vectors within matrices with row or column names:
+
+```{r}
+salaries = X[, 1] 
+salaries #it's a vector with names
+names(salaries) #access to its names
+names(salaries)[3] = "Adam"
+salaries
+salaries[3]
+salaries["Adam"]
+sort(salaries)
+#how do we sort salaries by name?
+salaries[order(names(salaries))]
+?order #it's like sort, but it returns indices
+rm(salaries)
+```
+
+Are the salary values independent? Yes, or at least we assume so... Hopefully we will get to models in this semester where they are not independent.
+
+We will eventually do visualization, but first let's take a look at a summary of this data:
+
+```{r}
+summary(X[, "salary"])
+```
+
+There are other base functions to know:
+
+```{r}
+mean(X[, "salary"]) #mean should be "average"!!
+sum(X[, "salary"]) / length(X[, "salary"])
+var(X[, "salary"])
+sd(X[, "salary"])
+median(X[, "salary"])
+min(X[, "salary"])
+max(X[, "salary"])
+IQR(X[, "salary"])
+```
+
+There is also the convenient quantile and inverse quantile function
+
+```{r}
+quantile(X[, "salary"], probs = 0.5)
+quantile(X[, "salary"], probs = c(.1, .9))
+inverse_quantile_obj = ecdf(X[, "salary"]) #the "empirical" CDF
+inverse_quantile_obj(50000)
+inverse_quantile_obj(70000)
+inverse_quantile_obj(0)
+inverse_quantile_obj(-10000)
+inverse_quantile_obj(200000)
+```
+
+
+Let's pretend "has_past_unpaid_loan" is benoulli distributed with probability 0.2
+
+```{r}
+X[, "has_past_unpaid_loan"] = rbinom(n, size = 1, prob = 0.2)
+X
+```
+
+Is this a reasonable fabrication of this dataset? No... since salary and not paying back a loan are dependent r.v.'s. But... we will ignore this now.
+
+It would be nice to see a summary of values. Would median and mean be appropriate here? No. For categorical variables, you should "table" them:
+
+```{r}
+table(X[, "has_past_unpaid_loan"])
+```
+
+
+Also, 50\% of people have no crime, 40\% have an infraction, 8\% a misdimeanor and 2\% a felony. Let's try to add this to the matrix. We first need to simulate this. Here's how:
+
+```{r}
+X[, "past_crime_severity"] = sample(
+  c("no crime", "infraction", "misdimeanor", "felony"),
+  size = n,
+  replace = TRUE,
+  prob = c(.50, .40, .08, .02)
+)
+X
+```
+
+Oh no - what happened?? Our matrix went all characters... The matrix type cannot handle numeric and categorical variables simultaneously! It would be nice to keep factor or character information in a matrix but this is not the spec.
+
+Enter the key data type, the "data.frame" - this is the object that is used for modeling in the R ecosystem. It is essentially an upgraded matrix.
+
+```{r}
+X = data.frame(
+  salary = round(rnorm(n, 50000, 20000)),
+  has_past_unpaid_loan = rbinom(n, size = 1, prob = 0.2),
+  past_crime_severity = sample(
+    c("no crime", "infraction", "misdimeanor", "felony"),
+    size = n,
+    replace = TRUE,
+    prob = c(.50, .40, .08, .02)
+  )
+)
+rownames(X) = fake_first_names
+X
+```
+
+RStudio gives us a nicer rendering of the information. You can open it up in a separate tab via:
+
+```{r}
+View(X)
+```
+
+and you can view summaries of each feature and data type of each feature via
+
+```{r}
+summary(X)
+str(X)
+```
+
+Again, summary doesn't work for "has_past_unpaid_loan". We should convert it to factor and try again. Note the "$" operator which is now valid for data.frame objects.
+
+```{r}
+X$has_past_unpaid_loan = factor(X$has_past_unpaid_loan, labels = c("Never", ">=1"))
+head(X) #make sure that worked
+summary(X) #much better now!
+str(X)
+```
+
+Now that we have two categorical variables, we can do a "cross tab":
+
+```{r}
+table(X$has_past_unpaid_loan)
+table(X$past_crime_severity)
+table(X$has_past_unpaid_loan, X$past_crime_severity) / 100
+#to avoid needing the "X$" over and over, use the convenience "with"
+with(X,
+  table(has_past_unpaid_loan, past_crime_severity)
+)
+```
+
+In our training set D, we are missing one final variable, the response! Let's add it and say that 90\% of people are creditworthy i.e. they paid back their loan:
+
+```{r}
+X$paid_back_loan = factor(rbinom(n, size = 1, prob = 0.9), labels = c("No", "Yes"))
+head(X) #make sure that worked
+summary(X) #much better now!
+```
+
+Conceptually - why does this make no sense at all??? y is independent of X --- what happens then? No function f can ever have any predictive / explanatory power! This is just a silly example to show you the data types. We will work with real data soon. Don't worry.
+
+
+
+
+## Continue discussion concerning data frames and the modeling from class
+
+We quickly recreate our data frame from last class:
+
+```{r}
+n = 100
+X = data.frame(
+  salary = round(rnorm(n, 50000, 20000)),
+  has_past_unpaid_loan = rbinom(n, size = 1, prob = 0.2),
+  past_crime_severity = sample(
+    c("no crime", "infraction", "misdimeanor", "felony"),
+    size = n,
+    replace = TRUE,
+    prob = c(.50, .40, .08, .02)
+  )
+)
+row.names(X) = c(
+  "Sophia", "Emma", "Olivia", "Ava", "Mia", "Isabella", "Riley", 
+  "Aria", "Zoe", "Charlotte", "Lily", "Layla", "Amelia", "Emily", 
+  "Madelyn", "Aubrey", "Adalyn", "Madison", "Chloe", "Harper", 
+  "Abigail", "Aaliyah", "Avery", "Evelyn", "Kaylee", "Ella", "Ellie", 
+  "Scarlett", "Arianna", "Hailey", "Nora", "Addison", "Brooklyn", 
+  "Hannah", "Mila", "Leah", "Elizabeth", "Sarah", "Eliana", "Mackenzie", 
+  "Peyton", "Maria", "Grace", "Adeline", "Elena", "Anna", "Victoria", 
+  "Camilla", "Lillian", "Natalie", "Jackson", "Aiden", "Lucas", 
+  "Liam", "Noah", "Ethan", "Mason", "Caden", "Oliver", "Elijah", 
+  "Grayson", "Jacob", "Michael", "Benjamin", "Carter", "James", 
+  "Jayden", "Logan", "Alexander", "Caleb", "Ryan", "Luke", "Daniel", 
+  "Jack", "William", "Owen", "Gabriel", "Matthew", "Connor", "Jayce", 
+  "Isaac", "Sebastian", "Henry", "Muhammad", "Cameron", "Wyatt", 
+  "Dylan", "Nathan", "Nicholas", "Julian", "Eli", "Levi", "Isaiah", 
+  "Landon", "David", "Christian", "Andrew", "Brayden", "John", 
+  "Lincoln"
+)
+X
+```
+
+Remember our cross tab? Now we can get fancier using our new libary skills. Any Stata fans out there?
+
+```{r}
+pacman::p_load(gmodels)
+CrossTable(X$has_past_unpaid_loan, X$past_crime_severity, chisq = TRUE)
+```
+
+
+And add a new variable, the response to the data frame:
+
+```{r}
+X$paid_back_loan = factor(rbinom(n, size = 1, prob = 0.9), labels = c("No", "Yes"))
+```
+
+Note that our matrix is now no longer just $X$; it includes $y$. I could make a renamed copy, but I want to show off dropping this column and create a new object that's both features and response column-binded together:
+
+```{r}
+y = X$paid_back_loan
+X$paid_back_loan = NULL #drop column
+Xy = cbind(X, y) #an aside: what do you think the "rbind" function does?
+head(Xy) #make sure that worked
+summary(Xy) #much better now!
+#Note: Xy = X; rm(X) would've been easier
+```
+
+I prefer calling the full training set ${X, y}$ a data frame called $Xy$. 
+
+
+The object $X$ is now extraneous, so we should clean up our workspace now.
+
+```{r}
+rm(list = setdiff(ls(), "Xy"))
+```
+
+
+## The Null Model
+
+```{r}
+#There's no standard R function for sample mode!!!
+sample_mode = function(data){
+  mode_name = names(sort(-table(data)))[1]
+  if (class(data) == "factor"){
+    factor(mode_name, levels = levels(data))
+  } else if (class(data) == "numeric"){
+    as.numeric(mode_name)
+  } else if (class(data) == "integer"){
+    as.integer(mode_name)
+  } else {
+    mode_name
+  }
+}
+
+g0 = function(){
+  sample_mode(Xy$y) #return mode regardless of x
+} 
+
+g0()
+```
+
+
+## The Threshold Model
+
+Let's compute the threshold model and see what happens. Here's an inefficent but quite pedagogical way to do this:
+
+```{r}
+n = nrow(Xy)
+num_errors_by_parameter = matrix(NA, nrow = n, ncol = 2)
+colnames(num_errors_by_parameter) = c("threshold_param", "num_errors")
+y_logical = Xy$y == "Yes"
+for (i in 1 : n){
+  threshold = Xy$salary[i]
+  num_errors = sum((Xy$salary > threshold) != y_logical)
+  num_errors_by_parameter[i, ] = c(threshold, num_errors)
+}
+num_errors_by_parameter
+
+#look at all thresholds in order
+num_errors_by_parameter[order(num_errors_by_parameter[, "num_errors"]), ]
+
+#now grab the smallest num errors
+best_row = order(num_errors_by_parameter[, "num_errors"])[1]
+x_star = c(num_errors_by_parameter[best_row, "threshold_param"], use.names = FALSE)
+x_star
+```
+
+Let's program `g`, the model that is shipped as the prediction function for future `x_*`
+
+```{r}
+g = function(x){
+  ifelse(x > x_star, 1, 0)
+} 
+
+g(15000)
+```
+
+
+## The Perceptron
+
+Time for some new data first... we are bored of the fabricated creditworthiness data.
+
+```{r}
+rm(list = ls())
+Xy = na.omit(MASS::biopsy) #The "breast cancer" data
+?MASS::biopsy
+head(Xy)
+X = Xy[, 2 : 10] #V1, V2, ..., V9
+head(X)
+y_binary = as.numeric(Xy$class == "malignant")
+table(y_binary)
+```
+
+First question. Let $\mathcal{H}$ be the set $\{0, 1\}$ meaning $g = 0$ or $g = 1$. What are the error rates then on $\mathbb{D}$? 
+
+```{r}
+#If always 0, all the 1's are errors
+239 / (444 + 239)
+#If always 1, all the 0's are errors
+444 / (444 + 239)
+
+g0 = function(){
+  sample_mode(y_binary) #return mode regardless of x's
+} 
+
+g0()
+```
+
+If your $g$ can't beat that, either your features $x_1, \ldots, x_p$ are terrible, and/or $\mathcal{H}$ was a terrible choice and/or $\mathcal{A}$ can't pull its weight.
+
+Okay... back to the "perceptron learning algorithm".
+
+Let's do so for one dimension - just "V1" in the breast cancer data. You will do an example with more features for the lab.
+
+```{r}
+# y_binary = ifelse(y_binary == 1, 0, 1)
+MAX_ITER = 1000
+w_vec = rep(0, 2) #intialize a 2-dim vector
+
+X1 = as.matrix(cbind(1, X[, 1, drop = FALSE]))
+
+for (iter in 1 : MAX_ITER){  
+  for (i in 1 : nrow(X1)){
+    x_i = X1[i, ]
+    yhat_i = ifelse(sum(x_i * w_vec) > 0, 1, 0)
+    y_i = y_binary[i]
+    w_vec[1] = w_vec[1] + (y_i - yhat_i) * x_i[1]
+    w_vec[2] = w_vec[2] + (y_i - yhat_i) * x_i[2]
+  }
+}
+w_vec
+```
+
+What is our error rate?
+
+```{r}
+yhat = ifelse(X1 %*% w_vec > 0, 1, 0)
+sum(y_binary != yhat) / length(y_binary)
+```
+
+Looks like the perceptron fit to just the first feature beat the null model (at least on the data in $\mathbb{D}$). Is this expected? Yes if the first feature is at all predictive of `y`.
+

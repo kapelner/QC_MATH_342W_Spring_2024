@@ -1,0 +1,417 @@
+---
+title: "Practice Lectures Week 3 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+date: "Feb 14, 2022"
+---
+
+
+
+
+## Errors and Warnings
+
+You can write better functions if you make use of errors and warnings. Java forces you to catch likely errors via the "throws" designation for a method but there is no such requirement in R.
+
+* Errors are unrecoverable, they halt execution i.e. red lights
+* Warnings (under usual execution) do not halt execution, but they display a message, i.e. yellow lights
+
+Here's how they work:
+
+```{r}
+my_vector_sum = function(xs){
+  
+  if (!(class(xs) %in% c("numeric", "integer"))){ #short for class(xs) == "numeric" | class(xs) == "integer"
+    stop("You need to pass in a vector of numbers not a vector of type \"", class(xs), "\".\n") #throw error!
+    # warning("Your vector of type \"", class(xs), "\" will be coerced to numbers.\n") #throw warning!
+    # xs = as.numeric(as.factor(xs))
+  }
+  
+  tot = 0
+  for (x in xs){
+    tot = tot + x
+  }
+  tot
+}
+my_vector_sum(c(1, 2, 3))
+my_vector_sum(c("a", "b", "c"))
+```
+
+There is a try-catch as well:
+
+```{r}
+xs = c("a", "b", "c")
+tot = my_vector_sum(xs)
+
+tot = tryCatch(
+  {
+    my_vector_sum(xs)
+  },
+  error = function(e){
+    print("xs was non-numeric... coercing xs to numeric...")
+    my_vector_sum(as.numeric(as.factor(xs)))
+  }
+)
+tot
+```
+
+The recommended thing to do of course is to query if it is non-numeric within the function `my_vector_sum` and cast it then. Possibly create an argument toggling this behavior on/off with a default of off.
+
+## Matrix operations in R
+
+R can do all the standard matrix operations. Let's go through them quickly. First initialize two example matrices:
+
+```{r}
+A = matrix(rep(1, 4), nrow = 2)
+A
+B = array(seq(1, 4), dim = c(2, 2))
+B
+I = diag(2) #create an identity matrix of size 2x2
+I
+```
+
+Now we show off some operations:
+
+```{r}
+A * B #element-wise multiplication
+A %*% B #matrix multiplication
+B %*% I
+t(B) #transpose
+solve(B)
+solve(A) #BOOM - why?
+tryCatch(
+  {
+    solve(A)
+  },
+  error = function(e){
+    print("matrix not invertible, doing Moore-Penrose generalized pseudoinverse instead...")
+    MASS::ginv(A)
+  }
+)
+
+
+#how would you wrap this and handle it in the real world?
+solve(I)
+#rank(A) = 1 #no such function... but... there are tons of add-on libraries for matrix computations e.g.
+pacman::p_load(Matrix) #load the Matrix library
+rankMatrix(B)
+rankMatrix(A)
+rankMatrix(I)
+```
+
+Note that vectors and matrices are not the same:
+
+```{r}
+v = c(1, 2, 3) #3-d vector
+t(v) #converts to 1x3 vector... unsure why
+t(t(v))
+v %*% v #seems to default to dot product
+t(v) %*% t(t(v)) #dot product
+I = diag(3)
+I %*% v #seems to default correctly!
+I %*% t(v) #actually uncomformable
+```
+
+
+## Support Vector Machines (SVM)
+
+You will code a basic SVM for homework. Here we use the `e1071` library.
+
+```{r}
+pacman::p_load(e1071)
+```
+
+We make a simple dataset first.
+
+```{r}
+Xy_simple = data.frame(
+ response = factor(c(0, 0, 0, 1, 1, 1)), #nominal
+ first_feature = c(1, 1, 2, 3, 3, 4),    #continuous
+ second_feature = c(1, 2, 1, 3, 4, 3)    #continuous
+)
+```
+
+We haven't spoken about visualization yet, but it is important we do some of it now. First we load the visualization library we're going to use:
+
+```{r}
+pacman::p_load(ggplot2)
+```
+
+And let's plot the data:
+
+```{r}
+simple_viz_obj = ggplot(Xy_simple, aes(x = first_feature, y = second_feature, color = response)) + 
+  geom_point(size = 5)
+simple_viz_obj
+```
+
+Now we fit a linear SVM. Since it is linearly separable, we can make $\lambda = 0$. Since the package doesn't allow zero, we make it trivially small. 
+
+```{r}
+Xy_simple_feature_matrix = as.matrix(Xy_simple[, 2 : 3])
+lambda = 1e-9
+n = nrow(Xy_simple_feature_matrix)
+svm_model = svm(Xy_simple_feature_matrix, Xy_simple$response, kernel = "linear", cost = (2 * n * lambda)^-1, scale = FALSE)
+```
+
+The model object can be queried to find the "support vectors" i.e. the observations that lie on the wedge. Let's visualize them too.
+
+```{r}
+svm_model$index
+Xy_simple$is_support_vector = rep("no", n)
+Xy_simple$is_support_vector[svm_model$index] = "yes"
+simple_viz_obj = ggplot(Xy_simple, aes(x = first_feature, y = second_feature, color = response, shape = is_support_vector)) + 
+  geom_point(size = 5)
+simple_viz_obj
+```
+
+
+Now we calculate the weight vector. This is technical and not covered in the class yet (or maybe never):
+
+```{r}
+w_vec_simple_svm = c(
+  svm_model$rho, #the b term
+  -t(svm_model$coefs) %*% Xy_simple_feature_matrix[svm_model$index, ] # the other terms
+)
+w_vec_simple_svm
+w_norm = sqrt(sum(w_vec_simple_svm^2))
+w_norm
+```
+
+We can also plot it. We have to convert from Hesse Normal form back into point-intercept form. Note that $b$ is the first entry of the `w_vec_simple_svm` vector
+
+```{r}
+simple_svm_line = geom_abline(
+    intercept = -w_vec_simple_svm[1] / w_vec_simple_svm[3], 
+    slope = -w_vec_simple_svm[2] / w_vec_simple_svm[3], 
+    color = "purple")
+simple_viz_obj + simple_svm_line
+```
+
+We can also plot the wedge by plotting the top line (where b is augmented by 1) and the bottom line (where b is diminished by 1).
+
+```{r}
+simple_svm_top_line = geom_abline(
+    intercept = -(w_vec_simple_svm[1] + 1) / w_vec_simple_svm[3], 
+    slope = -w_vec_simple_svm[2] / w_vec_simple_svm[3], 
+    color = "yellow")
+simple_svm_bottom_line = geom_abline(
+    intercept = -(w_vec_simple_svm[1] - 1) / w_vec_simple_svm[3], 
+    slope = -w_vec_simple_svm[2] / w_vec_simple_svm[3], 
+    color = "yellow")
+simple_viz_obj + simple_svm_line + simple_svm_top_line + simple_svm_bottom_line
+```
+
+
+
+To understand the hyperparameter, let's introduce another data point so the training data is no longer linearly separable.
+
+```{r}
+Xy_simple = rbind(Xy_simple, c(0, 3.2, 3.2))
+```
+
+and plot it:
+
+```{r}
+simple_viz_obj = ggplot(Xy_simple, aes(x = first_feature, y = second_feature, color = response)) + 
+  geom_point(size = 5)
+simple_viz_obj
+```
+
+Let's try SVM at different $\lambda$ values.
+
+```{r}
+lambda = 0.001#0.001 #1.3
+
+Xy_simple_feature_matrix = as.matrix(Xy_simple[, 2 : 3])
+n = nrow(Xy_simple_feature_matrix)
+svm_model = svm(Xy_simple_feature_matrix, Xy_simple$response, kernel = "linear", cost = (2 * n * lambda)^-1, scale = FALSE)
+summary(svm_model)
+w_vec_simple_svm = c(
+  svm_model$rho, #the b term
+  -t(svm_model$coefs) %*% Xy_simple_feature_matrix[svm_model$index, ] # the other terms
+)
+sqrt(sum(w_vec_simple_svm^2))
+
+Xy_simple$is_support_vector = rep("no", n)
+Xy_simple$is_support_vector[svm_model$index] = "yes"
+simple_viz_obj = ggplot(Xy_simple, aes(x = first_feature, y = second_feature, color = response, shape = is_support_vector)) + 
+  geom_point(size = 5)
+
+simple_svm_line = geom_abline(
+    intercept = -w_vec_simple_svm[1] / w_vec_simple_svm[3], 
+    slope = -w_vec_simple_svm[2] / w_vec_simple_svm[3], 
+    color = "purple")
+simple_svm_top_line = geom_abline(
+    intercept = -(w_vec_simple_svm[1] + 1) / w_vec_simple_svm[3], 
+    slope = -w_vec_simple_svm[2] / w_vec_simple_svm[3], 
+    color = "yellow")
+simple_svm_bottom_line = geom_abline(
+    intercept = -(w_vec_simple_svm[1] - 1) / w_vec_simple_svm[3], 
+    slope = -w_vec_simple_svm[2] / w_vec_simple_svm[3], 
+    color = "yellow")
+simple_viz_obj + simple_svm_line + simple_svm_top_line + simple_svm_bottom_line
+```
+
+What lesson did we learn here? This hyperparameter really matters! (In the method's documentation note, it says "Parameters of SVM-models usually must be tuned to yield sensible results!") And it is not clear to me what the "wedge" is anymore when there isn't separability, nor what the support vectors are, and nor how `cost` parameter has much to do with the lambda from the notes. What is clear is that we need to figure out a way to deal with selecting the "right" hyperparameter value automatically. So far neither the perceptron nor the SVM is an algorithm for binary classification that comes without flaws.
+
+
+## Nearest Neighbor algorithm
+
+Load up the breast cancer data set again.
+
+```{r}
+Xy = na.omit(MASS::biopsy) #The "breast cancer" data with all observations with missing values dropped
+X = Xy[, 2 : 10] #V1, V2, ..., V9
+y_binary = as.numeric(Xy$class == "malignant")
+```
+
+Let's say we want to build a nearest neighbor model with the first covariate only. We are then looking for the label (response) of the closest x_1. Here is a simple function that does it:
+
+```{r}
+nn_function = function(x_star){
+  y_binary[which.min((X[, 1] - x_star)^2)]
+}
+nn_function(7.8)
+nn_function(5.2)
+```
+
+Why is this silly for this dataset?
+
+```{r}
+str(X)
+```
+
+The features are not truly continuous. Would it make sense in higher dimensions? Your homework...
+
+Has this been coded before? Definitely...
+
+```{r}
+pacman::p_load(class)
+?knn
+```
+
+We can fit a knn model *and* predict in one shot via:
+
+```{r}
+y_hat = knn(X, c(4, 2, 1, 1, 2, 1, 2, 1, 1), y_binary, k = 1)
+y_hat
+```
+
+Why is build model and predict in one shot natural in knn?
+
+Now for an interesting exercise that will setup future classes:
+
+```{r}
+y_hat = knn(X, X, y_binary, k = 1)
+y_hat
+all.equal(y_hat, factor(y_binary))
+```
+
+No errors! Can this be a good model? No... "something" must be wrong! It is too good to be true.
+
+Something is wrong. This is the first example of "overfitting". We will explore this later in depth (it is one of the core concepts of this course).
+
+Let's see $K > 1$
+
+
+```{r}
+y_hat = knn(X, X, y_binary, k = 10)
+y_hat
+all.equal(y_hat, factor(y_binary))
+```
+
+Why would there be difference now between predictions and the actual data?
+
+```{r}
+rm(list = ls())
+```
+
+
+
+## Simple Linear Regression (p = 1)
+
+To understand what the algorithm is doing - best linear fit by minimizing the squared errors, we can draw a picture. First let's make up some very simple training data $\mathbb{D}$.
+
+```{r}
+set.seed(1984)
+n = 20
+x = runif(n)
+beta_0 = 3
+beta_1 = -2
+h_star = beta_0 + beta_1 * x
+epsilons = rnorm(n, mean = 0, sd = 0.33)
+y = h_star + epsilons 
+```
+
+And let's plot the data:
+
+
+```{r}
+pacman::p_load(ggplot2)
+simple_df = data.frame(x = x, y = y)
+simple_viz_obj = ggplot(simple_df, aes(x, y)) + 
+  geom_point(size = 2)
+simple_viz_obj
+```
+
+And its true $h^*$ line:
+
+```{r}
+true_hstar_line = geom_abline(intercept = beta_0, slope = beta_1, color = "green")
+simple_viz_obj + true_hstar_line
+```
+
+Now let's calculate the simple least squares coefficients:
+
+```{r}
+r = cor(x, y)
+s_x = sd(x)
+s_y = sd(y)
+ybar = mean(y)
+xbar = mean(x)
+
+b_1 = r * s_y / s_x
+b_0 = ybar - b_1 * xbar
+b_0
+b_1
+```
+
+Note how $b_0$ and $b_1$ are not exactly the same as $\beta_0$ and $\beta_1$. Why?
+
+And we can plot it:
+
+
+```{r}
+simple_ls_regression_line = geom_abline(intercept = b_0, slope = b_1, color = "red")
+simple_viz_obj + simple_ls_regression_line + true_hstar_line
+```
+
+Review of the modeling framework:
+
+The difference between the green line and red line is the "estimation error". The difference between the green line and the points is a combination of error due to ignorance and error due to misspecification of $f$ as a straight line. In most real-world applications, estimation error is usually small relative to the other two. In the era of "big data", $n$ is usually big so estimation error is pretty small.
+
+Recall that the noise (epsilons) are the difference between the data and the green line:
+
+```{r}
+simple_df$hstar = beta_0 + beta_1 * simple_df$x
+simple_viz_obj = ggplot(simple_df, aes(x, y)) + 
+  geom_point(size = 2)
+epsilon_line_segments = geom_segment(aes(xend = x, yend = hstar), position = position_nudge(x = 0.002))
+simple_viz_obj + epsilon_line_segments + true_hstar_line
+```
+
+And that the residuals (e's) are the difference between the measurements of the response in the actual data and the green line:
+
+```{r}
+simple_df$gs = b_0 + b_1 * simple_df$x
+simple_viz_obj = ggplot(simple_df, aes(x, y)) + 
+  geom_point(size = 2)
+e_line_segments = geom_segment(aes(xend = x, yend = gs), color = "purple")
+simple_viz_obj + simple_ls_regression_line + e_line_segments
+```
+
+Examining both at the same time:
+
+```{r}
+simple_viz_obj + simple_ls_regression_line + true_hstar_line + e_line_segments + epsilon_line_segments
+```
+

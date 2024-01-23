@@ -1,0 +1,474 @@
+---
+title: "Practice Lectures Week 12 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+date: "May 9, 2022"
+---
+
+
+# Spurious Correlation
+
+Take a look at the following real data:
+
+```{r}
+rm(list = ls())
+pacman::p_load(tidyverse, magrittr, data.table)
+
+spurious = data.frame(
+  yearly_divorce_rate_maine_per_1000 = c(5,4.7,4.6,4.4,4.3,4.1,4.2,4.2,4.2,4.1),
+  yearly_US_consumption_margarine_per_capita = c(8.2,7,6.5,5.3,5.2,4,4.6,4.5,4.2,3.7)
+)
+
+with(spurious, 
+     cor(yearly_divorce_rate_maine_per_1000, yearly_US_consumption_margarine_per_capita))
+```
+
+And visually,
+
+```{r}
+ggplot(spurious, aes(x = yearly_divorce_rate_maine_per_1000, y = yearly_US_consumption_margarine_per_capita)) +
+  geom_point() + geom_smooth()
+```
+
+How did this happen? 
+
+I looked at many, many different datasets until I found something impressive!
+
+Well, we can imagine doing the same thing. Let's look at a million datasets and find the dataset most correlated with the yearly consumption of margarine per capita:
+
+
+```{r}
+y = spurious$yearly_US_consumption_margarine_per_capita
+n = length(y)
+
+n_sim = 1e6
+best_abs_corr = 0
+best_random_xs = NULL
+for (i in 1 : n_sim){
+  x = rnorm(n)
+  
+  random_abs_corr = abs(cor(x, y))
+  if (random_abs_corr > best_abs_corr){
+    best_abs_corr = random_abs_corr
+    best_random_xs = x
+  }
+}
+spurious$best_random_xs = best_random_xs
+
+best_abs_corr
+```
+
+And visually,
+
+```{r}
+ggplot(spurious, aes(x = best_random_xs, y = yearly_US_consumption_margarine_per_capita)) +
+  geom_point() + geom_smooth() + ggtitle(paste("Spurious Correlation has |r| = ", round(best_abs_corr, 3)))
+```
+
+So what's the narrative here? If you look through a gajillion random features that have no causal connection with the phenomenon $y$, you will eventually find something that "clicks". It's the same as the "chance capitalization" except taken to an extreme. Here are a whole bunch of them:
+
+https://www.tylervigen.com/spurious-correlations
+
+However, these will all vanish if you keep collecting data. Anything that is built upon falsehood will crumble!
+
+
+#An Example of Correlation without Causation
+
+When does correlation really not imply causation? We now mean real correlation, not spurious correlation. This correlation will persist as the sample size increases. 
+
+From class, we spoke about the phenomenon y = "num car accidents" with observed feature x = "num umbrellas sold" but common cause z = "rain amount". It is clear the umbrella sales has *no causal* relationship with car accidents. But they *are correlated* because they are linked by a common cause. Here's the data example that makes this clear.
+
+The data generating process as specified by the causal diagram looks as follows:
+
+```{r}
+rm(list = ls())
+set.seed(1)
+n = 300
+sigma = 0.3
+
+umbrella_example_data = data.frame(
+  z_rainfall = runif(n, 0, 6) #here's the common cause - rainfall
+)
+umbrella_example_data$x_umbrella_sales = umbrella_example_data$z_rainfall^2 + rnorm(n, sigma) #x is a variable that is driven by z with noise
+umbrella_example_data$y_car_accidents = umbrella_example_data$z_rainfall + rnorm(n, sigma) #y is a variable driven by z with noise
+```
+
+So we only see $x$ and $y$. Here's what it appears as:
+
+```{r}
+pacman::p_load(tidyverse, data.table, magrittr)
+ggplot(umbrella_example_data) +
+  aes(x = x_umbrella_sales, y = y_car_accidents) +
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+
+and the model looks like:
+
+```{r}
+mod = lm(y_car_accidents ~ x_umbrella_sales, umbrella_example_data)
+summary(mod)
+```
+
+So what's the interpretation of the coefficient for $x$? ...
+
+What you can't say is that $x$ is a causal contributor to $y$! You may want to say it, but you can't!
+
+Now let's build a model of $y$ linear in both $x$ and $z$. What happens?
+
+```{r}
+mod = lm(y_car_accidents ~ x_umbrella_sales + z_rainfall, umbrella_example_data)
+summary(mod)
+```
+
+The effect of $x$ is gone!! Why? If you keep $z$ constant, the sole true causal factor in $y$, manipulating $x$ won't matter anymore!
+
+Why is this? Well, you can look at how x affects y in local areas of z for instance.
+
+```{r}
+z_max = 0.2; z_min = 0.1
+z_small_indices = umbrella_example_data$z_rainfall < 
+  quantile(umbrella_example_data$z_rainfall, z_max) &
+  umbrella_example_data$z_rainfall >
+  quantile(umbrella_example_data$z_rainfall, z_min)
+
+local_plot = ggplot(umbrella_example_data[z_small_indices, ]) +
+  aes(x = x_umbrella_sales, y = y_car_accidents) +
+  geom_point()
+local_plot
+local_plot +
+  geom_smooth(method = "lm")
+```
+
+If you force the common cause (lurking variable) to be an approximate constant, then you won't see any affect of x on y.
+
+
+# Ridge Regression
+
+Let's take a look at the boston housing data and add many useless features.
+
+```{r}
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(data.table, tidyverse, magrittr, YARF)
+boston = MASS::Boston %>% data.table
+```
+
+Now add a whole bunch of extra features:
+
+```{r}
+p_extra = 1000
+
+set.seed(1)
+boston = cbind(boston, matrix(rnorm(nrow(boston) * p_extra), ncol = p_extra))
+dim(boston)
+```
+
+Clearly $p + 1 > n$ so OLS will not work. Let's try ridge with $\lambda = 0.01$. Let's see the ridge estimate:
+
+```{r}
+X = cbind(1, as.matrix(boston[, !"medv"]))
+y = boston[, medv]
+lambda = 10
+b_ridge = solve(t(X) %*% X + lambda * diag(ncol(X))) %*% t(X) %*% y
+head(b_ridge, 30)
+```
+
+Clearly this works as an algorithm where OLS wouldn't. 
+
+Note: I left this out of the demos and out of class... you should standardize your features before ridge otherwise features become unfairly squished or unfairly dominant relative to others. Each should have te same weight.
+
+But let's see how it performs relative to OLS. To do so, we'll use the same setup but not add quite as many junk features so we can compare to OLS:
+
+
+```{r}
+boston = MASS::Boston %>% data.table
+p_extra = 350
+
+set.seed(1)
+boston = cbind(boston, matrix(rnorm(nrow(boston) * p_extra), ncol = p_extra))
+dim(boston)
+```
+
+Now we'll split into train-test so we can see which does better.
+
+```{r}
+prop_test = 0.2
+test_indices = sample(1 : nrow(boston), round(prop_test * nrow(boston)))
+boston_test = boston[test_indices, ]
+y_test = boston_test$medv
+X_test = cbind(1, as.matrix(boston_test[, !"medv"]))
+train_indices = setdiff(1 : nrow(boston), test_indices)
+boston_train = boston[train_indices, ]
+y_train = boston_train$medv
+X_train = cbind(1, as.matrix(boston_train[, !"medv"]))
+```
+
+Let's use a big lambda since we have intuition that most of the features are junk:
+
+```{r}
+lambda = 10
+```
+
+And we'll fit both models:
+
+```{r}
+b_ols = solve(t(X_train) %*% X_train) %*% t(X_train) %*% y_train
+b_ridge = solve(t(X_train) %*% X_train + lambda * diag(ncol(X_train))) %*% t(X_train) %*% y_train
+abs(b_ols) %>% head(30)
+abs(b_ridge) %>% head(30)
+```
+
+And look at oos performance:
+
+```{r}
+y_hat_ols = X_test %*% b_ols
+y_hat_ridge = X_test %*% b_ridge
+rmse_ols = sd(y_test - y_hat_ols)
+rmse_ridge = sd(y_test - y_hat_ridge)
+rmse_ols
+rmse_ridge
+cat("ridge advantage over OLS:", round((rmse_ols - rmse_ridge) / rmse_ols * 100, 1), "%")
+```
+
+Why did it do better than OLS???? Because penalized regression is a good idea if you know many of your features are junk. But only if you know many of your features are junk. 
+
+
+Of course by using CV, we can optimize the lambda value to give ridge even better performance. The package `glmnet` does that for us automatically:
+
+```{r}
+pacman::p_load(glmnet)
+ridge_mod_optimal_lambda = cv.glmnet(X_train, y_train, alpha = 0, lambda = 10^seq(-3, 3, by = 0.1))
+y_hat_optimal_ridge = predict(ridge_mod_optimal_lambda, X_test)
+rmse_optimal_ridge = sd(y_test - y_hat_optimal_ridge)
+rmse_optimal_ridge
+cat("optimal lambda:", ridge_mod_optimal_lambda$lambda.min, "\n")
+cat("optimal ridge advantage over OLS:", round((rmse_ols - rmse_optimal_ridge) / rmse_ols * 100, 1), "%\n")
+```
+
+Of course you can use `mlr` as well but `glmnet` is probably more optimized.
+
+# Lasso (and bonus: variable selection)
+
+Let's do this same problem using the lasso. There is no closed form solution since the design matrix is not orthogonal (i.e. there's some multicollinearity), so we will use the numerical optimization found in the `glmnet` package. While we're at it, we might as well use CV to find the best lambda.
+
+```{r}
+lasso_mod_optimal_lambda = cv.glmnet(X_train, y_train, alpha = 1, lambda = 10^seq(-3, 3, by = 0.1))
+y_hat_optimal_lasso = predict(lasso_mod_optimal_lambda, X_test)
+rmse_optimal_lasso = sd(y_test - y_hat_optimal_lasso)
+rmse_optimal_lasso
+cat("optimal lambda:", lasso_mod_optimal_lambda$lambda.min, "\n")
+cat("optimal lasso advantage over OLS:", round((rmse_ols - rmse_optimal_lasso) / rmse_ols * 100, 1), "%\n")
+```
+
+Wow - did better than ridge in predictive accuracy. Lambda values are completely not comparable since L1 and L2 penalties are categorically different. 
+
+What do the estimates look like?
+
+```{r}
+head(coef(lasso_mod_optimal_lambda), 30)
+```
+
+That "." means 0 in a sparse matrix. We never studied these. But they are very memory efficient. Which ones are non-zero?
+
+```{r}
+b_lasso = coef(lasso_mod_optimal_lambda)[, 1]
+b_lasso[b_lasso != 0]
+```
+
+Wow - it deleted all 364 variables except for 4: intercept, rm, ptratio and lstat!!!
+
+If you remember in the regression tree, these were the most important (highest level splits).  That is killer variable selection!
+
+The coefficient values are also approximately the OLS estimates:
+
+```{r}
+lm(medv ~ rm + ptratio + lstat, MASS::Boston) #i.e. a regression on the original data with no junk
+```
+
+It's amazing that it really deleted ALL the junk and left the most predictive variables of the original 13 features and the estimates of those four is pretty on target.
+
+
+# Elastic Net
+
+We can use `mlr` to CV over alpha, but here we can't. So let's let $\alpha = 0.5$ meaning "half lasso and half ridge" penalty:
+
+```{r}
+elastic_net_mod_optimal_lambda = cv.glmnet(X_train, y_train, alpha = 0.2, lambda = 10^seq(-3, 3, by = 0.1))
+y_hat_optimal_elastic_net = predict(elastic_net_mod_optimal_lambda, X_test)
+rmse_optimal_elastic_net = sd(y_test - y_hat_optimal_elastic_net)
+rmse_optimal_elastic_net
+cat("optimal elastic_net advantage over OLS:", round((rmse_ols - rmse_optimal_elastic_net) / rmse_ols * 100, 1), "%\n")
+cat("optimal lambda:", elastic_net_mod_optimal_lambda$lambda.min, "\n")
+```
+
+Slightly better than lasso. I imagine if we optimized $\alpha$ we can do even better. Elastic nets can also give easy variable selection:
+
+```{r}
+head(coef(elastic_net_mod_optimal_lambda), 30)
+
+```
+
+Here we "found" one more variable. That makes sense - as alpha decreases, the ridge penalty becomes more pronounced and it's harder to shrink exactly to zero. Unsure about the $\alpha$ value that stops the hard shrinkage to zero. Good project to think about!
+
+#RF with many features
+
+How about RF?
+
+```{r}
+rf_mod = YARF(data.frame(X_train), y_train, num_trees = 500, calculate_oob_error = FALSE)
+rmse_rf = sd(y_test - predict(rf_mod, data.frame(X_test)))
+
+cat("RF advantage over OLS:", round((rmse_ols - rmse_rf) / rmse_ols * 100, 1), "%\n")
+```
+
+Takes a very long time to build - why? Amazingly, RF does very well. Why? How it able to not get confused by the junk features? It might be because the real features have a slight SSE edge. I think RF will do poorly if p > n. Maybe a lab exercise?
+
+How about just the RF on the lasso-picked variables? We can delete the intercept since RF doesn't need it.
+
+```{r}
+variables_selected = names(b_lasso[b_lasso != 0])
+variables_selected = variables_selected[-1]
+X_train_sub = data.frame(X_train)[, variables_selected]
+X_test_sub = data.frame(X_test)[, variables_selected]
+
+rf_mod = YARF(X_train_sub, y_train, num_trees = 500, mtry = 2, calculate_oob_error = FALSE)
+rmse_rf = sd(y_test - predict(rf_mod, X_test_sub))
+
+cat("RF var selected advantage over OLS:", round((rmse_ols - rmse_rf) / rmse_ols * 100, 1), "%\n")
+```
+
+Why is that better than lasso? Because lasso is linear and in RF you get a bit of juice from the non-linearities and interactions. Why is it very slightly better than RF on the full data set? Because variable selection is a good "pre-step" to do sometimes. This is why in the real world there's usually a "pipeline" that cleans data, then variable selects, then fits model then validates.
+
+
+# Asymmetric Cost Models in Trees and RF
+
+Let's load up the adult dataset where the response is 1 if the person makes more than $50K per year and 0 if they make less than $50K per year.
+
+```{r}
+rm(list = ls())
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(YARF)
+pacman::p_load_gh("coatless/ucidata")
+data(adult)
+adult %<>% 
+  na.omit #kill any observations with missingness
+```
+
+Let's use samples of 2,000 to run experiments:
+
+```{r}
+train_size = 2000
+train_indices = sample(1 : nrow(adult), train_size)
+adult_train = adult[train_indices, ]
+y_train = adult_train$income
+X_train = adult_train %>% select(-income)
+test_indices = setdiff(1 : nrow(adult), train_indices)
+adult_test = adult[test_indices, ]
+y_test = adult_test$income
+X_test = adult_test %>% select(-income)
+```
+
+What does the $y$'s look like?
+
+```{r}
+table(y_train)
+```
+
+Very imbalanced. This would off-the-bat make y=0 the default.
+
+Now make a regular RF and look at the oob confusion table and FDR and FOR:
+
+```{r}
+num_trees = 500
+yarf_mod = YARF(X_train, y_train, num_trees = num_trees, calculate_oob_error = FALSE)
+y_hat_test = predict(yarf_mod, X_test)
+oos_confusion = table(y_test, y_hat_test)
+oos_confusion
+cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
+cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
+```
+
+High FDR rate and low FOR rate. Let's try to change this and reduce the FDR by oversampling 0's.
+
+```{r}
+idx_0 = which(y_train == "<=50K")
+n_0 = length(idx_0)
+idx_1 = which(y_train == ">50K")
+n_1 = length(idx_1)
+
+bootstrap_indices = list()
+for (m in 1 : num_trees){
+  bootstrap_indices[[m]] = c( #note n_0' + n_1' doesn't equal n. You can make it so with one more line of code...
+    sample(idx_0, round(2.0 * n_0), replace = TRUE),
+    sample(idx_1, round(0.5 * n_1), replace = TRUE)
+  )
+}
+yarf_mod_asymmetric = YARF(X_train, y_train, bootstrap_indices = bootstrap_indices, calculate_oob_error = FALSE)
+y_hat_test = predict(yarf_mod_asymmetric, X_test)
+oos_confusion = table(y_test, y_hat_test)
+oos_confusion
+cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
+cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
+```
+
+You can even vary the sampling and trace out ROC / DET curves. See function `YARFROC`.
+
+# Boosting?
+
+Nice simple explanation: https://towardsdatascience.com/basic-ensemble-learning-random-forest-adaboost-gradient-boosting-step-by-step-explained-95d49d1e2725
+
+```{r}
+pacman::p_load(xgboost)
+```
+
+Look at performance on adult dataset. This demo isn't working yet.
+
+```{r}
+xgboost_mod = xgboost(data = data.matrix(X_train), 
+ label = as.numeric(y_train == ">50K"), 
+ num_class = 2, #y = 0 or 1
+ eta = 0.3, #default
+ max_depth = 6, #default 
+ nrounds = 25, 
+ subsample = 1, #default 
+ colsample_bytree = 1,
+ eval_metric = "merror",
+ objective = "multi:softmax",
+ nthread = 3
+)
+
+y_hat_test = as.numeric(predict(xgboost_mod, data.matrix(X_test)))
+oos_confusion = table(y_test, ifelse(y_hat_test == 0, "<=50K", ">50K"))
+oos_confusion
+cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
+cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
+```
+
+Invert train and test splits and let it train on 28,000 observations.
+
+```{r}
+xgboost_mod = xgboost(data = data.matrix(X_test), 
+ label = as.numeric(y_test == ">50K"), 
+ num_class = 2, #y = 0 or 1
+ eta = 0.5, #default
+ max_depth = 6, #default 
+ nrounds = 50, 
+ subsample = 1, #default 
+ colsample_bytree = 1,
+ eval_metric = "merror",
+ objective = "multi:softmax",
+ nthread = 3
+)
+
+y_hat_test = as.numeric(predict(xgboost_mod, data.matrix(X_train)))
+oos_confusion = table(y_train, ifelse(y_hat_test == 0, "<=50K", ">50K"))
+oos_confusion
+cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
+cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
+```
+
+Lightning fast on $n = 30000$!!! But only a bit more accurate. This leads me to think the error is mostly in delta.
+
+We can try playing with the hyperparams. A lot to CV over! You think this is a lot... wait until you see deep learning networks!
+
+
+

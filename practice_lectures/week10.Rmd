@@ -1,0 +1,1436 @@
+---
+title: "Practice Lectures Week 10 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+date: "Apr 11, 2022"
+---
+
+
+# Regression Trees
+
+Let's fit a regression tree. We will use the development package `YARF` which I've been hacking on now for a few years. The package internals are written in Java which we just installed above. Since `YARF` is not on CRAN, we install the package from my github including its dependency (if necessary) and then load it 
+
+```{r}
+if (!pacman::p_isinstalled(YARF)){
+  pacman::p_install_gh("kapelner/YARF/YARFJARs", ref = "dev")
+  pacman::p_install_gh("kapelner/YARF/YARF", ref = "dev", force = TRUE)
+}
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(YARF)
+```
+
+The data will be fitting with the regression tree is a sine curve plus noise:
+
+```{r}
+pacman::p_load(tidyverse, magrittr)
+n = 500
+x_max = 4 * pi
+x = runif(n, 0, x_max)
+sigma = 0.05
+y = ifelse(x < 2 * pi, 0.5 * sin(x), 0) + rnorm(n, 0, sigma)
+ggplot(data.frame(x = x, y = y), aes(x, y)) + geom_point(lwd = 0.6) 
+```
+
+Now we fit a regression tree to this model. Nevermind the `calculate_oob_error` argument for now. This will be clear why FALSE is NOT the default in a few classes.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, calculate_oob_error = FALSE)
+```
+
+How "big" is this tree model?
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+What are the "main" splits?
+
+```{r}
+illustrate_trees(tree_mod, max_depth = 4, open_file = TRUE)
+```
+
+What does $g(x)$ look like?
+
+```{r}
+Nres = 1000
+x_predict = data.frame(x = seq(0, x_max, length.out = Nres))
+g = predict(tree_mod, x_predict)
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x_predict, y = g), col = "blue")
+```
+
+Obviously overfit - but not that bad... let's try lowering the complexity by stopping the tree construction at a higher node size.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, nodesize = 50, calculate_oob_error = FALSE)
+yhat = predict(tree_mod, x_predict)
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x_predict, y = yhat), col = "blue")
+```
+
+Less overfitting now but now it's clearly underfit! We can play with the nodesize. Or we can use the model selection algorithm to pick the model (the nodesize). Let's ensure nodesize = 1 gives us perfect overfitting.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, nodesize = 1, calculate_oob_error = FALSE)
+yhat = predict(tree_mod, data.frame(x = x))
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x, y = yhat), col = "blue")
+mean((y - yhat)^2)
+```
+Are we sure we have a leaf node for each observation?
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+Let's ensure nodesize > n gives us perfect underfitting.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, nodesize = n + 1, calculate_oob_error = FALSE)
+yhat = predict(tree_mod, data.frame(x = x))
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x, y = yhat), col = "blue")
+unique(yhat)
+mean(y)
+```
+
+Are we sure we have one root node?
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+Yes.
+
+
+Let's try this using oos validation and trace out a performance curve to find the optimal hyperparameter.
+
+```{r}
+K = 4
+set.seed(1984)
+select_idx = sample(1 : n, round(1 / K * n))
+x_select = x[select_idx]
+y_select = y[select_idx]
+train_idx = setdiff(1 : n, select_idx)
+x_train = x[train_idx]
+y_train = y[train_idx]
+n_train = length(train_idx)
+
+max_nodesize_to_try = 70
+in_sample_errors = array(NA, max_nodesize_to_try)
+oos_errors = array(NA, max_nodesize_to_try)
+for (i in 1 : max_nodesize_to_try){
+  tree_mod = YARFCART(data.frame(x = x_train), y_train, nodesize = i, calculate_oob_error = FALSE)
+  yhat = predict(tree_mod, data.frame(x = x_train))
+  in_sample_errors[i] = sd(y_train - yhat)
+  yhat_select = predict(tree_mod, data.frame(x = x_select))
+  oos_errors[i] = sd(y_select - yhat_select)
+}
+
+ggplot(data.frame(nodesize = 1: max_nodesize_to_try, in_sample_errors = in_sample_errors, oos_errors = oos_errors)) + 
+  geom_point(aes(nodesize, in_sample_errors), col = "red") +
+  geom_point(aes(nodesize, oos_errors), col = "blue")
+```
+
+For some reason, we do not see serious overfitting.
+
+# Regression Trees with Real Data
+
+Now let's look at a regression tree model predicting medv in the Boston Housing data. We first load the data and do a training-test split:
+
+```{r}
+set.seed(1984)
+pacman::p_load(MASS)
+data(Boston)
+test_prop = 0.1
+train_indices = sample(1 : nrow(Boston), round((1 - test_prop) * nrow(Boston)))
+Boston_train = Boston[train_indices, ]
+y_train = Boston_train$medv
+X_train = Boston_train
+X_train$medv = NULL
+n_train = nrow(X_train)
+```
+
+And fit a tree model. The default hyperparameter, the node size is $N_0 = 5$.
+
+```{r}
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(YARF)
+tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE)
+```
+
+What does the in-sample fit look like?
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+e = y_train - y_hat_train
+sd(e)
+1 - sd(e) / sd(y_train)
+```
+
+Recall the linear model:
+
+```{r}
+linear_mod = lm(medv ~ ., Boston_train)
+sd(y_train - linear_mod$fitted.values)
+summary(linear_mod)$r.squared
+```
+
+The tree seems to win in-sample. Why? 
+
+Is this a "fair" comparison?
+
+Before we address this, let's illustrate the tree. 
+
+```{r}
+illustrate_trees(tree_mod, max_depth = 4, open_file = TRUE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+Let's make the comparison fair by seeing what happens oos.
+
+```{r}
+test_indices = setdiff(1 : nrow(Boston), train_indices)
+Boston_test = Boston[test_indices, ]
+y_test = Boston_test$medv
+X_test = Boston_test
+X_test$medv = NULL
+```
+
+For the tree:
+
+```{r}
+y_hat_test_tree = predict(tree_mod, X_test)
+e = y_test - y_hat_test_tree
+sd(e)
+1 - sd(e) / sd(y_test)
+```
+
+For the linear model:
+
+```{r}
+y_hat_test_linear = predict(linear_mod, Boston_test)
+e = y_test - y_hat_test_linear
+sd(e)
+1 - sd(e) / sd(y_test)
+```
+
+The take-home message here is that the tree beats the linear model in future predictive performance but the only way to be truly convinced of this is to do the split over and over to get a sense of the average over the massive variability (like the previous demo) or to do CV to reduce the error of the estimate. 
+
+Why does the regression tree beat the linear model? Let's see what's going on in the tree.
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+About how many observations are in each leaf?
+
+```{r}
+nrow(Boston_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+That's a very flexible model.
+
+Let's see overfitting in action. Let's set nodesize to be one.
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, nodesize = 1, calculate_oob_error = FALSE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+nrow(Boston_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+Why is it not exactly 1 on average? I think it's because...
+
+```{r}
+data.table::uniqueN(y_train)
+length(y_train)
+```
+
+Regardless of this point, this model is essentially giving each observation it's own y-hat, it's own personal guess which will be its own personal y. Just like linear modeling when $n = p + 1$ and nearest neighbors when $K = 1$. Let's see how bad the overfitting is:
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+e = y_train - y_hat_train
+sd(e)
+1 - sd(e) / sd(y_train)
+```
+
+This is the expected behavior in perfect fitting.
+
+```{r}
+y_hat_test_tree = predict(tree_mod, X_test)
+e = y_test - y_hat_test_tree
+sd(e)
+1 - sd(e) / sd(y_test)
+```
+
+It overfits but amazing it doesn't get clobbered completely! And its results are on-par with the non-overfit linear model probably because it made up for the overfitting by reducing misspecification error. 
+
+Trees are truly amazing!
+
+
+# Classification Trees
+
+Let's get the cancer biopsy data:
+
+```{r}
+rm(list = ls())
+pacman::p_load(YARF, tidyverse, magrittr)
+data(biopsy, package = "MASS")
+biopsy %<>% na.omit %>% dplyr::select(-ID) #for some reason the "select" function is scoping elsewhere without this explicit directive
+colnames(biopsy) = c(
+  "clump_thickness",
+  "cell_size_uniformity",
+  "cell_shape_uniformity",
+  "marginal_adhesion",
+  "epithelial_cell_size",
+  "bare_nuclei",
+  "bland_chromatin",
+  "normal_nucleoli",
+  "mitoses",
+  "class"
+)
+```
+
+Let's do a training-test split to keep things honest:
+
+```{r}
+test_prop = 0.1
+train_indices = sample(1 : nrow(biopsy), round((1 - test_prop) * nrow(biopsy)))
+biopsy_train = biopsy[train_indices, ]
+y_train = biopsy_train$class
+X_train = biopsy_train
+X_train$class = NULL
+n_train = nrow(X_train)
+test_indices = setdiff(1 : nrow(biopsy), train_indices)
+biopsy_test = biopsy[test_indices, ]
+y_test = biopsy_test$class
+X_test = biopsy_test
+X_test$class = NULL
+```
+
+Let's fit a tree:
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+nrow(biopsy_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+Why would the average observations per node be larger than the nodesize which is 1?
+
+```{r}
+illustrate_trees(tree_mod, max_depth = 5, length_in_px_per_half_split = 30, open_file = TRUE)
+```
+
+How are we doing in-sample?
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+mean(y_train != y_hat_train)
+```
+
+Why is this?
+
+```{r}
+?YARFCART
+```
+
+That's the default for classification tree algorithm. Don't be lazy: you probably should use a Dselect and optimize nodesize!!!
+
+Out of sample?
+
+```{r}
+y_hat_test = predict(tree_mod, X_test)
+mean(y_test != y_hat_test)
+```
+
+It appears we overfit. But this is still pretty good!
+
+Now let's take a look at the linear SVM model. Let's use default cost (we should really CV over the cost parameter if we weren't lazy).
+
+```{r}
+pacman::p_load(e1071)
+svm_model = svm(X_train, y_train, kernel = "linear")
+svm_model
+```
+
+A couple of points:
+
+* Reached max iterations to minimize the hinge loss. Seems like there are computational issues here.
+* Note that we are relying on the $\lambda$ hyperparameter value for the hinge loss. On the homework, you will answer the question we never answered: how should the value of the hyperparameter be chosen?
+
+Regardless, how did it do in-sample?
+
+```{r}
+y_hat_train = predict(svm_model, X_train)
+mean(y_train != y_hat_train)
+```
+
+Out of sample?
+
+```{r}
+y_hat_test = predict(svm_model, X_test)
+mean(y_test != y_hat_test)
+```
+
+Maybe the model truly was linearly separable? Meaning, you don't get any added benefit from the tree if there are no interactions or non-linearities. Let's try a harder dataset. First, get a bunch of datasets from the UCI repository:
+
+```{r}
+rm(list = ls())
+pacman::p_load_gh("coatless/ucidata")
+data(adult)
+adult = na.omit(adult) #kill any observations with missingness
+?adult
+```
+
+Let's use samples of 2,000 to run experiments:
+
+```{r}
+set.seed(1984)
+test_size = 2000
+train_indices = sample(1 : nrow(adult), test_size)
+adult_train = adult[train_indices, ]
+y_train = adult_train$income
+X_train = adult_train
+X_train$income = NULL
+n_train = nrow(X_train)
+test_indices = sample(setdiff(1 : nrow(adult), train_indices), test_size)
+adult_test = adult[test_indices, ]
+y_test = adult_test$income
+X_test = adult_test
+X_test$income = NULL
+```
+
+Make a tree:
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+nrow(adult_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+illustrate_trees(tree_mod, max_depth = 5, length_in_px_per_half_split = 30, open_file = TRUE)
+```
+
+In-sample?
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+mean(y_train != y_hat_train)
+```
+
+Out of sample?
+
+```{r}
+y_hat_test = predict(tree_mod, X_test)
+mean(y_test != y_hat_test)
+```
+
+The warning was legit this time. What's it saying?
+
+Looks like we overfit quite a bit! That's what nodesize of 1 does! Why is it the default? People found that even though it overfits, you still get good performance (as we've seen even with regression). I doubt people still use CART in production models that require best possible accuracy these days since this issue of overfitting was fixed with bagging (we will get to this soon) and Random Forests (we'll get to that too).
+
+Let's see how the linear SVM does. Warning: this takes a while to compute:
+
+```{r}
+svm_model = svm(model.matrix(~ ., X_train), y_train, kernel = "linear")
+```
+
+In-sample?
+
+```{r}
+y_hat_train = predict(svm_model, model.matrix(~ ., X_train))
+mean(y_train != y_hat_train)
+```
+
+Out of sample?
+
+```{r}
+y_hat_test = predict(svm_model, model.matrix(~ ., X_test))
+mean(y_test != y_hat_test)
+```
+
+It seems (at least when I ran it at home), the linear SVM does much worse. Likely there are a lot of interactions in this dataset that the linear SVM must ignore because it's $\mathcal{H}$ candidate set is so limited!
+
+Note: SVM train error is approximtely = SVM test error? Why? 
+
+That's a usual scenario during underfitting in high n situations. There is no estimation error - only misspecification error and error due to ignorance. And those are the same among the training and test set.
+
+
+
+# Bias-Variance Decomposition of Generalization Error
+
+Let's try to fit a quadratic $f$ with a linear model and examine bias-variance tradeoff.
+
+```{r}
+rm(list = ls())
+xmin = 0
+xmax = 5
+n_train = 20
+n_test = 1000
+sigma = 1 ###### this squared is the irreducible error component through all of the bias-variance decomp formulas
+f = function(x){x^2}
+
+#the number of datasets generated (separate universes) and thus the number of models fitted in different universes
+Nsim = 1000
+
+training_gs = matrix(NA, nrow = Nsim, ncol = 2)
+x_trains = matrix(NA, nrow = Nsim, ncol = n_train)
+y_trains = matrix(NA, nrow = Nsim, ncol = n_train)
+all_oos_residuals = matrix(NA, nrow = Nsim, ncol = n_test)
+for (nsim in 1 : Nsim){
+  #simulate dataset $\mathbb{D}$
+  x_train = runif(n_train, xmin, xmax)
+  delta_train = rnorm(n_train, 0, sigma) #Assumption I: mean zero and Assumption II: homoskedastic
+  y_train = f(x_train) + delta_train
+  x_trains[nsim, ] = x_train
+  y_trains[nsim, ] = y_train
+  
+  #fit a model g | x's, delta's and save it
+  g_model = lm(y_train ~ ., data.frame(x = x_train))
+  training_gs[nsim, ] = coef(g_model)
+  
+  #generate oos dataset according to the same data generating process (DGP) 
+  x_test = runif(n_test, xmin, xmax)
+  delta_test = rnorm(n_test, 0, sigma)
+  y_test = f(x_test) + delta_test
+  #predict oos using the model and save the oos residuals
+  y_hat_test = predict(g_model, data.frame(x = x_test))
+  all_oos_residuals[nsim, ] = y_test - y_hat_test
+}
+```
+
+Take a look at the irreducible error for one dataset:
+
+```{r}
+pacman::p_load(ggplot2)
+resolution = 10000 #how many xstars to test
+x = seq(xmin, xmax, length.out = resolution)
+
+f_x_df = data.frame(x = x, f = f(x))
+ggplot(f_x_df, aes(x, f)) + 
+  geom_line(col = "green") + 
+  geom_point(aes(x, y), data = data.frame(x = x_trains[1, ], y = y_trains[1, ]))
+```
+
+There is no way to fit those deviations from the green line using known information. That is the "irreducible error" (from ignorance).
+
+There is dataset to dataset variation (different universes) in these deltas. Graph a few:
+
+```{r}
+ggplot(f_x_df, aes(x, f)) + 
+  geom_line(col = "green") +
+  geom_point(aes(x, y), data = data.frame(x = x_trains[1, ], y = y_trains[1, ]), col = "blue") +
+  geom_point(aes(x, y), data = data.frame(x = x_trains[2, ], y = y_trains[2, ]), col = "darkgreen") +
+  geom_point(aes(x, y), data = data.frame(x = x_trains[3, ], y = y_trains[3, ]), col = "red")
+```
+
+The blue dataset is one possible $\mathbb{D}$, the green dataset is another possible $\mathbb{D}$ and the red dataset is another possible $\mathbb{D}$. This illustrated "dataset-dataset variability".
+
+Take a look at the mse that's averaging over (1) all datasets D and (2) all xstars in the set [0,5]. This should be equal to the three terms: (a) irreducible error plus (b) bias-squared plus (c) variance.
+
+```{r}
+mse = mean(c(all_oos_residuals)^2)
+mse
+```
+
+Let's visualize the bias
+
+```{r}
+g_average = colMeans(training_gs)
+ggplot(f_x_df, aes(x, f)) + 
+  geom_line(col = "green") + 
+  geom_abline(intercept = g_average[1], slope = g_average[2], col = "red") +
+  ylim(-3, 25)
+```
+
+What is the average bias of $g$?
+
+```{r}
+x = seq(xmin, xmax, length.out = resolution)
+g_avg_x = g_average[1] + g_average[2] * x
+biases = f(x) - g_avg_x
+expe_bias_g_sq = mean(biases^2)
+expe_bias_g_sq
+```
+
+What is the variance? Let's look at all lines:
+
+```{r}
+plot_obj = ggplot() + 
+  xlim(xmin, xmax) + ylim(xmin^2, xmax^2)
+
+for (nsim in 1 : min(Nsim, 100)){ #otherwise takes too long
+  plot_obj = plot_obj + geom_abline(intercept = training_gs[nsim, 1], slope = training_gs[nsim, 2], col = "blue")
+}
+
+plot_obj +
+  geom_abline(intercept = g_average[1], slope = g_average[2], col = "red", lwd = 2) 
+  # geom_line(data = f_x_df, aes(x, f), col = "green", size = 1)
+```
+
+Now calculate this average variance:
+
+```{r}
+x = seq(xmin, xmax, length.out = resolution)
+
+expe_g_x = g_average[1] + g_average[2] * x
+
+var_x_s = array(NA, Nsim)
+for (nsim in 1 : Nsim){
+  g_x = training_gs[nsim, 1] + training_gs[nsim, 2] * x
+  var_x_s[nsim] = mean((g_x - expe_g_x)^2)
+}
+
+expe_var_g = mean(var_x_s)
+expe_var_g
+```
+
+Now check the equivalence
+
+```{r}
+mse
+sigma^2
+expe_bias_g_sq
+expe_var_g
+sigma^2 + expe_bias_g_sq + expe_var_g
+```
+
+This is not exactly equal due to numerical error. If we increase resolution and Nsim, it will be equal.
+
+Let's try the whole thing again using a quadratic regression!
+
+```{r}
+training_gs = matrix(NA, nrow = Nsim, ncol = 3)
+all_residuals = matrix(NA, nrow = Nsim, ncol = n_test)
+
+for (nsim in 1 : Nsim){
+  #simulate dataset $\mathbb{D}$
+  x_train = runif(n_train, xmin, xmax)
+  delta_train = rnorm(n_train, 0, sigma)
+  y_train = f(x_train) + delta_train
+  
+  #fit a model g | x's, delta's and save it
+  g_model = lm(y_train ~ poly(x, 2, raw = TRUE), data.frame(x = x_train))
+  training_gs[nsim, ] = coef(g_model)
+  
+  #generate oos dataset and save residuals on oos data
+  x_test = runif(n_test, xmin, xmax)
+  delta_test = rnorm(n_test, 0, sigma)
+  y_test = f(x_test) + delta_test
+  y_hat_test = predict(g_model, data.frame(x = x_test))
+  all_residuals[nsim, ] = y_test - y_hat_test
+}
+```
+
+Take a look at the mse:
+
+```{r}
+mse = mean(c(all_residuals)^2)
+mse
+```
+
+Much lower! Why? Bias went down. 
+
+Let's visualize the bias
+
+```{r}
+g_average = colMeans(training_gs)
+x = seq(xmin, xmax, length.out = resolution)
+ggplot(f_x_df, aes(x, f)) + 
+  geom_line(col = "green") + 
+  stat_function(fun = function(x){g_average[1] + g_average[2] * x + g_average[3] * x^2}, col = "red")
+```
+
+Not much! What is the average bias of $g$?
+
+```{r}
+x = seq(xmin, xmax, length.out = resolution)
+g_avg_x = g_average[1] + g_average[2] * x + g_average[3] * x^2
+f_x = x^2
+biases = f_x - g_avg_x
+expe_bias_g_sq = mean(biases^2)
+expe_bias_g_sq
+```
+
+What is the variance? Let's look at all lines:
+
+```{r}
+plot_obj = ggplot(data.frame(x = x)) + 
+  xlim(xmin, xmax) + ylim(xmin^2, xmax^2)
+
+for (nsim in 1 : min(Nsim, 50)){ #otherwise takes too long
+  plot_obj = plot_obj + geom_line(data = data.frame(x = x, y = training_gs[nsim, 1] + training_gs[nsim, 2] * x + training_gs[nsim, 3] * x^2), mapping = aes(x, y), col = "blue")
+}
+
+plot_obj +
+  stat_function(fun = function(x){g_average[1] + g_average[2] * x + g_average[3] * x^2}, col = "red", lwd = 2) #+
+  #geom_line(data = f_x_df, aes(x, f), col = "green", size = 0.5) 
+```
+
+Now calculate this average variance:
+
+```{r}
+x = seq(xmin, xmax, length.out = resolution)
+
+expe_g_x = g_average[1] + g_average[2] * x + g_average[3] * x^2
+
+var_x_s = array(NA, Nsim)
+for (nsim in 1 : Nsim){
+  g_x = training_gs[nsim, 1] + training_gs[nsim, 2] * x + training_gs[nsim, 3] * x^2
+  var_x_s[nsim] = mean((g_x - expe_g_x)^2)
+}
+
+expe_var_g = mean(var_x_s)
+expe_var_g
+```
+
+Now check the equivalence
+
+```{r}
+mse
+sigma^2 
+expe_bias_g_sq
+expe_var_g
+sigma^2 + expe_bias_g_sq + expe_var_g
+```
+
+
+Try it again with quintic polynomials!
+
+```{r}
+training_gs = matrix(NA, nrow = Nsim, ncol = 6)
+all_residuals = matrix(NA, nrow = Nsim, ncol = n_test)
+
+for (nsim in 1 : Nsim){
+  #simulate dataset $\mathbb{D}$
+  x_train = runif(n_train, xmin, xmax)
+  delta_train = rnorm(n_train, 0, sigma)
+  y_train = f(x_train) + delta_train
+  
+  #fit a model g | x's, delta's and save it
+  g_model = lm(y_train ~ poly(x, 5, raw = TRUE), data.frame(x = x_train))
+  training_gs[nsim, ] = coef(g_model)
+  
+  #generate oos dataset and save residuals on oos data
+  x_test = runif(n_test, xmin, xmax)
+  delta_test = rnorm(n_test, 0, sigma)
+  y_test = f(x_test) + delta_test
+  y_hat_test = predict(g_model, data.frame(x = x_test))
+  all_residuals[nsim, ] = y_test - y_hat_test
+}
+```
+
+Take a look at the mse:
+
+```{r}
+mse = mean(c(all_residuals)^2)
+mse
+```
+
+Much higher! Why? 
+
+Variance went up!
+
+Let's visualize the bias
+
+```{r}
+g_average = colMeans(training_gs)
+f = function(x){x^2}
+x = seq(xmin, xmax, length.out = resolution)
+ggplot(f_x_df, aes(x, f)) + 
+  geom_line(col = "darkgreen") + 
+  stat_function(fun = function(x){g_average[1] + g_average[2] * x + g_average[3] * x^2 + g_average[4] * x^3 + g_average[5] * x^4 + g_average[6] * x^5}, col = "red")
+```
+
+Not much! Now compute the average bias squared of $g$:
+
+```{r}
+x = seq(xmin, xmax, length.out = resolution)
+g_avg_x = g_average[1] + g_average[2] * x + g_average[3] * x^2 + g_average[4] * x^3 + g_average[5] * x^4 + g_average[6] * x^5
+biases = f(x) - g_avg_x
+expe_bias_g_sq = mean(biases^2)
+expe_bias_g_sq
+```
+
+This appears to have increased over last time by a nominal amount ... but it's only because we're not running the regression infinite times. Remember this "expectation" is only an average.
+
+What is the variance? Let's look at all lines:
+
+```{r}
+plot_obj = ggplot(data.frame(x = x)) + 
+  xlim(xmin, xmax)
+
+for (nsim in 1 : min(Nsim, 30)){ #otherwise takes too long
+  plot_obj = plot_obj + geom_line(data = data.frame(x = x, y = training_gs[nsim, 1] + training_gs[nsim, 2] * x + training_gs[nsim, 3] * x^2 + training_gs[nsim, 4] * x^3 + training_gs[nsim, 5] * x^4 + training_gs[nsim, 6] * x^5), mapping = aes(x, y), col = "blue")
+}
+
+plot_obj +
+  stat_function(fun = function(x){g_average[1] + g_average[2] * x + g_average[3] * x^2 + g_average[4] * x^3 + g_average[5] * x^4 + g_average[6] * x^5}, col = "red", lwd = 2) + 
+  ylim(0, 25) +
+  geom_line(data = f_x_df, aes(x, f), col = "green", size = 0.5)
+```
+
+It looks awful!!!
+
+Now actually compute the average variance numerically:
+
+```{r}
+x = seq(xmin, xmax, length.out = resolution)
+
+expe_g_x = g_average[1] + g_average[2] * x + g_average[3] * x^2 + g_average[4] * x^3 + g_average[5] * x^4 + g_average[6] * x^5
+
+var_x_s = array(NA, Nsim)
+for (nsim in 1 : Nsim){
+  g_x = training_gs[nsim, 1] + training_gs[nsim, 2] * x + training_gs[nsim, 3] * x^2 + training_gs[nsim, 4] * x^3 + training_gs[nsim, 5] * x^4 + training_gs[nsim, 6] * x^5
+  var_x_s[nsim] = mean((g_x - expe_g_x)^2)
+}
+
+expe_var_g = mean(var_x_s)
+expe_var_g
+```
+
+Any more complexity than you need allows for overfitting! Overfitted models induce variance-error from the perspective of multiple universes.
+
+Now check the equivalence:
+
+```{r}
+mse
+sigma^2
+expe_bias_g_sq
+expe_var_g
+sigma^2 + expe_bias_g_sq + expe_var_g
+```
+
+# Bias - Variance Decomposition of MSE in Regression Trees
+
+Let's return to the simulated sine curve data which we used to introduce regression trees.
+
+```{r}
+rm(list = ls())
+n_train = 100
+n_test = 500
+xmin = 0
+xmax = 10
+sigma = 0.2
+Nsim = 250
+```
+
+And load the tree package:
+
+```{r}
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(YARF, tidyverse, magrittr)
+```
+
+Now let's generate lots of different datasets and fit many tree models. Note there's a new argument `calculate_oob_error = FALSE`. This is here for speed only. Ignore this for now as we will go over what this means later in detail.
+
+```{r}
+training_gs = list() #storing entire objects - need a hash
+Nsim = 200 #trees take longer to build than OLS models
+sigma = 1
+all_residuals = matrix(NA, nrow = Nsim, ncol = n_test)
+
+#go back to the sine curve example from class when we introduced the tree model
+f = function(x){5 * sin(x)}
+
+for (nsim in 1 : Nsim){
+  cat ("nsim", nsim, "of", Nsim, "\n")
+  #simulate dataset $\mathbb{D}$
+  x_train = runif(n_train, xmin, xmax)
+  delta_train = rnorm(n_train, 0, sigma)
+  y_train = f(x_train) + delta_train
+  # ggplot(data.frame(x = x, y = y), aes(x, y)) + geom_point(lwd=0.6) 
+  
+  #fit a model g | x's, delta's and save it
+  g_model = YARFCART(data.frame(x = x_train), y_train, calculate_oob_error = FALSE, verbose = FALSE)
+  training_gs[[nsim]] = g_model
+  
+  #generate oos dataset and save residuals on oos data
+  x_test = runif(n_test, xmin, xmax)
+  delta_test = rnorm(n_test, 0, sigma) #mean zero, variance sigsq always (not dependent on value of x)
+  y_test = f(x_test) + delta_test
+  y_hat_test = predict(g_model, data.frame(x = x_test))
+  all_residuals[nsim, ] = y_test - y_hat_test
+}
+```
+
+Let's look at the last of the data sets to remind ourselves of the problem setting:
+
+```{r}
+ggplot(data.frame(x = x_train, y = y_train)) + 
+  geom_point(aes(x, y))
+```
+
+
+What does the storage of all the models look like?
+
+```{r}
+head(training_gs, 2)
+```
+
+Take a look at the mse:
+
+```{r}
+mse = mean(c(all_residuals)^2)
+mse
+```
+
+Let's visualize the bias
+
+```{r}
+resolution = 1000
+#generate x and the truth
+x = seq(xmin, xmax, length.out = resolution)
+
+#now estimate the expectation of g by averaging all the different models
+g_avg_x = array(0, resolution)
+for (nsim in 1 : Nsim){
+  g_nsim = training_gs[[nsim]]
+  g_avg_x = g_avg_x + predict(g_nsim, data.frame(x = x))
+}
+g_avg_x = g_avg_x / Nsim #average of all models
+
+#now plot
+ggplot(data.frame(x = x, f = f(x), expe_g = g_avg_x)) + 
+  geom_line(aes(x, expe_g), col = "red", lwd = 2) +
+  geom_line(aes(x, f), col = "green", lwd = 1)
+```
+
+Not much! Now actually compute the average bias squared of $g$:
+
+```{r}
+biases = f(x) - g_avg_x
+expe_bias_g_sq = mean(biases^2)
+expe_bias_g_sq
+```
+
+This is small - why??
+
+It's because trees are so expressive and have such model complexity that they can nail almost any true $f$ function!
+
+That means the MSE save the irreducible noise is coming from the variance. Let's look at the variance vs f(x):
+
+```{r}
+plot_obj = ggplot(data.frame(x = x)) + 
+  xlim(xmin, xmax) #+ ylim(xmin^2, xmax^2)
+
+num_trees_to_visualize = 30
+for (nsim in 1 : min(Nsim, num_trees_to_visualize)){
+  g_nsim = training_gs[[nsim]]
+  g_x = predict(g_nsim, data.frame(x = x))
+  plot_obj = plot_obj + geom_line(data = data.frame(x = x, y = g_x), aes(x = x, y = y), col = "blue")
+}
+
+plot_obj + 
+  geom_line(data = data.frame(x = x, expe_g = g_avg_x), mapping = aes(x, expe_g), col = "red", lwd = 2) +
+  geom_line(aes(x, f(x)), col = "green", lwd = 1)
+```
+
+It looks awful!!! Why?
+
+Now actually compute the average variance numerically:
+
+```{r}
+x = seq(xmin, xmax, length.out = resolution)
+
+var_x_s = array(NA, min(Nsim, 50))
+for (nsim in 1 : min(Nsim, 50)){ #otherwise takes too long
+  g_nsim = training_gs[[nsim]]
+  g_x = predict(g_nsim, data.frame(x = x))
+  var_x_s[nsim] = mean((g_x - g_avg_x)^2)
+}
+
+expe_var_g = mean(var_x_s)
+expe_var_g
+```
+
+Any more complexity than you need allows for overfitting!
+
+Now check the equivalence
+
+```{r}
+mse
+sigma^2
+expe_bias_g_sq
+expe_var_g
+sigma^2 + expe_bias_g_sq + expe_var_g
+```
+
+
+# Model Averaging via Bootstrap Aggregation ("Bagging")
+
+Now let's generate one dataset (only ONE)!
+
+```{r}
+x_train = runif(n_train, xmin, xmax)
+delta_train = rnorm(n_train, 0, sigma)
+y_train = f(x_train) + delta_train
+ggplot(data.frame(x = x_train, y = y_train)) + geom_point(aes(x, y))
+```
+
+Spend a moment to appreciate that this is all we're going to have. There is a lot of irreducible noise that is going to prevent us from finding the sine curve.
+
+Now we create many bootstrap samples to create similiar but different datasets and fit many tree models:
+
+```{r}
+bootstrapped_gs = list() #storing entire objects - need a hash / list object
+
+num_trees = 250 #M = num_trees
+for (t in 1 : num_trees){ 
+  #fit a model g | x's, delta's and save it
+  bootstrap_indices_t = sample(1 : n_train, replace = TRUE)
+  g_model = YARFCART(data.frame(x = x_train[bootstrap_indices_t]), y_train[bootstrap_indices_t], 
+                     calculate_oob_error = FALSE) #this is confusing! But will become clear later...
+  bootstrapped_gs[[t]] = g_model
+}
+```
+
+Now let's aggregate all models constructed with bootstrap samples together by averaging and see what it looks like relative to real $f$:
+
+```{r}
+#generate x and the truth
+x = seq(xmin, xmax, length.out = resolution)
+
+#create the bagged model predictions
+g_bagged = array(0, resolution)
+for (t in 1 : num_trees){
+  g_t = bootstrapped_gs[[t]]
+  g_bagged = g_bagged + predict(g_t, data.frame(x = x))
+}
+g_bagged = g_bagged / num_trees #average of all models
+
+#now plot
+ggplot(data.frame(x = x, f = f(x), g_bagged = g_bagged)) + 
+  geom_line(aes(x, f), col = "green") + 
+  geom_line(aes(x, g_bagged), col = "blue")
+```
+  
+That's pretty good considering the plot of the raw data from above.
+
+We just compared one tree to a bagged-tree (i.e. average of many trees where each tree was fit on a bootstrap sample of the original data). Let's see if the bagged tree is truly better than one tree. The way to do this is generate lots of datasets and try to estimate mse (with bias and variance).
+
+We fit the bag of trees before manually with a for loop. But of course there is a convenience to do this, the function `YARFBAG`. And then we run the same simulation as we did above with one tree.
+
+```{r}
+Nsim = 250
+training_gs = list() #storing entire objects - need a hash
+all_residuals = matrix(NA, nrow = Nsim, ncol = n_test)
+
+for (nsim in 1 : Nsim){
+  #simulate dataset $\mathbb{D}$
+  x_train = runif(n_train, xmin, xmax)
+  delta_train = rnorm(n_train, 0, sigma)
+  y_train = f(x_train) + delta_train
+  # ggplot(data.frame(x = x, y = y), aes(x, y)) + geom_point(lwd=0.6) 
+  
+  #fit a model bagged tree g | x's, delta's and save it
+  g_model = YARFBAG(data.frame(x = x_train), y_train, num_trees = num_trees, calculate_oob_error = FALSE) #automatically does the bootstrap internally
+  training_gs[[nsim]] = g_model
+  
+  #generate oos dataset and save residuals on oos data
+  x_test = runif(n_test, xmin, xmax)
+  delta_test = rnorm(n_test, 0, sigma) #mean zero, variance sigsq always (not dependent on value of x)
+  y_test = f(x_test) + delta_test
+  y_hat_test = predict(g_model, data.frame(x = x_test))
+  all_residuals[nsim, ] = y_test - y_hat_test
+}
+```
+
+What do all the the bagged models look like?
+
+```{r}
+head(training_gs, 2)
+```
+
+Take a look at the mse:
+
+```{r}
+mse = mean(c(all_residuals)^2)
+mse
+```
+
+Let's visualize the bias
+
+```{r}
+resolution = 1000
+#generate x and the truth
+x = seq(xmin, xmax, length.out = resolution)
+f_x = sin(x)
+
+#now estimate the expectation of g by averaging all the different models
+g_avg_x = array(0, resolution)
+for (nsim in 1 : Nsim){
+  g_nsim = training_gs[[nsim]]
+  g_avg_x = g_avg_x + predict(g_nsim, data.frame(x = x))
+}
+g_avg_x = g_avg_x / Nsim #average of all models
+
+#now plot
+ggplot(data.frame(x = x, f = f(x), expe_g = g_avg_x)) + 
+  geom_line(aes(x, expe_g), col = "red", lwd = 2) +
+  geom_line(aes(x, f), col = "darkgreen", lwd = 1) 
+```
+
+This is not a shock since if a single tree was unbiased then an average of trees will be unbiased all the more so.
+
+Now actually compute the average bias squared of $g$:
+
+```{r}
+biases = f(x) - g_avg_x
+expe_bias_g_sq = mean(biases^2)
+expe_bias_g_sq
+```
+
+Almost nothing.
+
+Now... variance?
+
+```{r}
+plot_obj = ggplot(data.frame(x = x)) + 
+  xlim(xmin, xmax) #+ ylim(xmin^2, xmax^2)
+
+for (nsim in 1 : min(Nsim, 30)){ #otherwise takes too long
+  g_nsim = training_gs[[nsim]]
+  g_x = predict(g_nsim, data.frame(x = x))
+  plot_obj = plot_obj + geom_line(data = data.frame(x = x, y = g_x), aes(x = x, y = y), col = "blue")
+}
+
+plot_obj +
+  geom_line(data = data.frame(x = x, expe_g = g_avg_x), mapping = aes(x, expe_g), col = "red", lwd = 1.5)
+```
+
+There is variance, but less than previously when only one tree was used.
+
+Now actually compute the average variance numerically:
+
+```{r}
+x = seq(xmin, xmax, length.out = resolution)
+
+var_x_s = array(NA, min(Nsim, 50))
+for (nsim in 1 : min(Nsim, 50)){ #otherwise takes too long
+  g_nsim = training_gs[[nsim]]
+  g_x = predict(g_nsim, data.frame(x = x))
+  var_x_s[nsim] = mean((g_x - g_avg_x)^2)
+}
+
+expe_var_g_bagged = mean(var_x_s)
+expe_var_g_bagged
+```
+
+Any more complexity than you need allows for overfitting!
+
+Now check the equivalence
+
+```{r}
+mse
+sigma^2
+expe_bias_g_sq
+expe_var_g_bagged
+sigma^2 + expe_bias_g_sq + expe_var_g_bagged
+```
+
+We have a better algorithm! Why? Because there is reduction of correlation between the bootstrapped models:
+
+```{r}
+rho = expe_var_g_bagged / expe_var_g
+rho
+```
+
+That's a gain of ~50% in the MSE component that we have control over! And... it's for FREE. Well, not exactly, you are giving up on the tree's explanation ability - the ultimate tradeoff in machine learning. This tradeoff is no joke! It is a huge area of research and a huge debate of civil importance. Let's watch some of Stephen Wolfram's testimony in the US Senate in Feb, 2021.
+
+https://www.youtube.com/watch?v=SuaP8izUPzQ&t=424s
+https://www.youtube.com/watch?v=SuaP8izUPzQ&t=588s
+
+# Bagged Trees vs. a Linear Model: Behold the power of machine learning!!
+
+Let's look at the boston housing data first.
+
+```{r}
+rm(list = ls())
+boston = MASS::Boston
+
+prop_test = 0.1
+test_indices = sample(1 : nrow(boston), round(prop_test * nrow(boston)))
+boston_test = boston[test_indices, ]
+y_test = boston_test$medv
+X_test = boston_test
+X_test$medv = NULL
+train_indices = setdiff(1 : nrow(boston), test_indices)
+boston_train = boston[train_indices, ]
+y_train = boston_train$medv
+X_train = boston_train
+X_train$medv = NULL
+
+mod_lin = lm(y_train ~ ., X_train)
+y_hat_test_lin = predict(mod_lin, X_test)
+oos_rmse_lin = sd(y_test - y_hat_test_lin)
+oos_rmse_lin
+
+num_trees = 500
+mod_bag = YARFBAG(X_train, y_train, num_trees = num_trees, calculate_oob_error = FALSE)
+y_hat_test_bag = predict(mod_bag, X_test)
+oos_rmse_bag = sd(y_test - y_hat_test_bag)
+oos_rmse_bag
+
+cat("oos standard error reduction:", (1 - oos_rmse_bag / oos_rmse_lin) * 100, "%\n")
+```
+
+
+Whole lot of room to improve! That extra 26% or so of unexplained variance is split between bias and irreducible error due to unknown information. The bagged trees can get rid of the bias and minimize variance while doing so. And it did a great job!
+
+Now the diamonds data:
+
+```{r}
+n_train = 1000
+
+training_indices = sample(1 : nrow(diamonds), n_train)
+diamonds_train = diamonds[training_indices, ]
+y_train = diamonds_train$price
+X_train = diamonds_train
+X_train$price = NULL
+
+
+test_indices = setdiff(1 : nrow(diamonds), training_indices)
+diamonds_test = diamonds[test_indices, ]
+y_test = diamonds_test$price
+X_test = diamonds_test
+X_test$price = NULL
+
+
+mod_lin = lm(y_train ~ ., X_train)
+y_hat_test_lin = predict(mod_lin, X_test)
+oos_rmse_lin = sd(y_test - y_hat_test_lin)
+oos_rmse_lin
+
+mod_bag = YARFBAG(X_train, y_train, num_trees = num_trees, calculate_oob_error = FALSE)
+y_hat_test_bag = predict(mod_bag, X_test)
+oos_rmse_bag = sd(y_test - y_hat_test_bag)
+oos_rmse_bag
+
+cat("oos standard error reduction:", (1 - oos_rmse_bag / oos_rmse_lin) * 100, "%\n")
+```
+
+Shocking improvement... and it's even more shocking that...
+
+```{r}
+summary(mod_lin)$r.squared
+```
+
+There was seemingly not a whole lot of room to improve! But there is when you measure error in RMSE. That extra 8% of unexplained variance means (1) a whole lot of RMSE and (2) that whole lot of RMSE is split between bias and irreducible error due to unknown information. But it did the best it can. It is likely what's remaining is due to information we don't measure.
+
+# Validation in Bagging?
+
+We are using the "bootstrap" to get the trees. Can we do model validation in the same step? 
+
+The answer is yes. For every tree, there was a bootstrap sample of the training set used to build the tree. But there are observations in $\mathbb{D}$ that are not in the bootstrap sample! About 1/3 on average are left out i.e. "out of bag (oob)". Over many trees, there are different oob subsets than become the full data set. So you actually have validation in a way on the whole dataset kind of like K-fold cross validation. Supposedly this validation is similar to K=2 in terms of performance. It is what everyone seems to use. 
+
+Let's load the data and packages from last class and plot the data:
+
+```{r}
+rm(list = ls())
+n_train = 100
+n_test = 500
+xmin = 0
+xmax = 10
+sigma = 0.09
+num_trees = 500
+x_train = runif(n_train, xmin, xmax)
+delta_train = rnorm(n_train, 0, sigma)
+y_train = sin(x_train) + delta_train
+ggplot(data.frame(x = x_train, y = y_train)) + geom_point(aes(x, y))
+```
+
+Let's look at one bagged tree model and compute OOB errors after construction. Here we just drop the `calculate_oob_error` argument as the default is `TRUE`. We save the model and print it out:
+
+```{r}
+bagged_tree_mod = YARFBAG(data.frame(x = x_train), y_train, num_trees = num_trees)
+bagged_tree_mod
+```
+
+How did this work? Let's look at the oob sets of indices:
+
+```{r}
+cat("bootstrap indices:")
+sort(bagged_tree_mod$bootstrap_indices[[1]])
+cat("oob:")
+sort(setdiff(1 : n_train, bagged_tree_mod$bootstrap_indices[[1]]))
+cat("bootstrap indices:")
+sort(bagged_tree_mod$bootstrap_indices[[2]])
+cat("oob:")
+sort(setdiff(1 : n_train, bagged_tree_mod$bootstrap_indices[[2]]))
+bagged_tree_mod$y_oob
+
+n_oob = sapply(1 : n_train, function(i){sum(unlist(lapply(bagged_tree_mod$bootstrap_indices, function(set){!(i %in% set)})))})
+round(n_oob / num_trees, 2)
+mean(n_oob / num_trees, 2)
+1 / exp(1)
+```
+
+It took predictions on each tree on the oob set, averaged by observation across trees and then averaged across observation averages.
+
+Let's compare this to training-test manual splits. Let's look at the boston housing data first.
+
+```{r}
+pacman::p_load(data.table)
+boston = MASS::Boston %>% data.table
+
+seed = 4
+set.seed(seed)
+prop_test = 0.5
+test_indices = sample(1 : nrow(boston), round(prop_test * nrow(boston)))
+boston_test = boston[test_indices, ]
+y_test = boston_test$medv
+X_test = boston_test
+X_test$medv = NULL
+train_indices = setdiff(1 : nrow(boston), test_indices)
+boston_train = boston[train_indices, ]
+y_train = boston_train$medv
+X_train = boston_train
+X_train$medv = NULL
+
+num_trees = 500
+
+#build on training and validate on test
+mod_bag_train = YARFBAG(X_train, y_train, num_trees = num_trees, calculate_oob_error = FALSE, seed = seed)
+y_hat_test_bag = predict(mod_bag_train, X_test)
+s_e_bag = sd(y_test - y_hat_test_bag)
+s_e_bag
+
+#build and validate on all the data at once!
+mod_bag_all = YARFBAG(boston[, !"medv"], boston$medv, num_trees = num_trees, seed = seed)
+mod_bag_all$rmse_oob
+```
+
+There is a lot of variation, but theoretically, they should be about the same. 
+
+What do we have now? We now have model selection done within training. And training and validation are done in a single step! No more costly K-fold CV with 3 splits!
+
+
+# Random Forests
+
+But can it get any better? YES. As you saw, the variance terms can be shrunk further the more decorrelated the trees become. We do this now by introducing randomness into the splits by choosing only a subset of the features to split on randomly. The trees are then grown as normal. Then the we model average many trees via bagging. And that's random forests!
+
+Quick demo with the diamonds and oob validation:
+
+```{r}
+rm(list = ls())
+
+seed = 1984
+set.seed(seed)
+n_samp = 2000
+#note: trees are perfect for ordinal variables! Since it only needs an ordering to do the splits
+#and thus it is immune to different encodings so, just use the standard 1, 2, 3, ...
+#thus there is no need here to cast the ordinal variables cut, color, clarity to nominal variables
+diamonds_samp = diamonds %>% sample_n(n_samp)
+y = diamonds_samp$price
+X = diamonds_samp %>% dplyr::select(-price)
+
+num_trees = 1000
+mod_bag = YARFBAG(X, y, num_trees = num_trees, seed = seed)
+mod_bag
+
+#now for apples-apples, build the RF on the same bootstrap data for each tree
+mod_rf = YARF(X, y, num_trees = num_trees, seed = seed, bootstrap_indices = mod_bag$bootstrap_indices)
+mod_rf
+
+# pacman::p_load(randomForest)
+# mod_rf = randomForest(X, y, num_trees = num_trees)
+# mod_rf
+
+cat("gain: ", (mod_bag$rmse_oob - mod_rf$rmse_oob) / mod_bag$rmse_oob * 100, "%\n")
+```
+
+This was a fail. RF is sensitive to the number of features samples (the hyperparameter mtry). Let's try again.
+
+
+```{r}
+#there are 9 total features
+mod_rf = YARF(X, y, num_trees = num_trees, seed = seed, bootstrap_indices = mod_bag$bootstrap_indices, mtry = 8)
+mod_rf
+
+cat("gain: ", (mod_bag$rmse_oob - mod_rf$rmse_oob) / mod_bag$rmse_oob * 100, "%\n")
+```
+
+This is not so impressive. But it is for free. 
+
+If `mtry` is small, the gain may be so small in the rho-multiple on the variance term that it doesn't outweigh the increase in bias. Thus, we underfit a little bit. Thus it's better to stay with just bagging. Here it is on the boston housing data:
+
+```{r}
+rm(list = ls())
+y = MASS::Boston$medv
+X = MASS::Boston
+X$medv = NULL
+seed = 1984
+num_trees = 1000
+mod_bag = YARFBAG(X, y, num_trees = num_trees, seed = seed)
+mod_bag
+mod_rf = YARF(X, y, num_trees = num_trees, seed = seed, bootstrap_indices = mod_bag$bootstrap_indices, mtry = 10)
+mod_rf
+cat("oob rmse gain:", round((mod_bag$rmse_oob - mod_rf$rmse_oob) / mod_bag$rmse_oob * 100, 3), "%\n")
+```
+
+Slightly more impressive. But again it is for free. 
+
+What about for classification models?
+
+```{r}
+rm(list = ls())
+pacman::p_load_gh("coatless/ucidata")
+data(adult)
+adult %<>% 
+  na.omit #kill any observations with missingness
+n_samp = 1000
+seed = 1984
+set.seed(seed)
+adult_samp = adult %>% sample_n(n_samp)
+y = adult_samp$income
+X = adult_samp %>% dplyr::select(-income)
+
+num_trees = 500
+mod_bag = YARFBAG(X, y, num_trees = num_trees, seed = seed)
+#default mtry for classification models is floor(sqrt(p))
+mod_rf = YARF(X, y, num_trees = num_trees, seed = seed, bootstrap_indices = mod_bag$bootstrap_indices) 
+mod_bag$misclassification_error
+mod_rf$misclassification_error
+
+cat("gain: ", (mod_bag$misclassification_error - mod_rf$misclassification_error) / mod_bag$misclassification_error * 100, "%\n")
+```
+
+Very nice... and can likely be improved with optimizing mtry.
+
+And on letters:
+
+```{r}
+rm(list = ls())
+pacman::p_load(mlbench, skimr)
+data(LetterRecognition)
+LetterRecognition = na.omit(LetterRecognition) #kill any observations with missingness
+#skim(LetterRecognition)
+?LetterRecognition
+
+adult %<>% 
+  na.omit #kill any observations with missingness
+n_samp = 2000
+seed = 1984
+set.seed(seed)
+letters_samp = LetterRecognition %>% sample_n(n_samp)
+y = letters_samp$lettr
+X = letters_samp %>% dplyr::select(-lettr)
+
+num_trees = 500
+mod_bag = YARFBAG(X, y, num_trees = num_trees, seed = seed)
+#default mtry for classification models is floor(sqrt(p))
+mod_rf = YARF(X, y, num_trees = num_trees, seed = seed, bootstrap_indices = mod_bag$bootstrap_indices) 
+mod_bag$misclassification_error
+mod_rf$misclassification_error
+
+cat("gain: ", (mod_bag$misclassification_error - mod_rf$misclassification_error) / mod_bag$misclassification_error * 100, "%\n")
+```
+
+Very nice... and can likely be improved with optimizing mtry.
+
+There are very real gains for RF over bagging and these are most pronounced in classification models.
+

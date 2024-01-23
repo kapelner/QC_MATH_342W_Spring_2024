@@ -871,25 +871,30 @@ There are also common functional programming functions.
 If you like this, there are many packages that extend this and organize it nicely e.g. `purrr` (we will get to packages next class).
 
 ```{r}
-x = c(1, 2, 3, 4, 5)
+x = c(1, 2, 3, 4, 5) * 10
+x
 Reduce(sum, x)
-Filter(function(x){x <= 3}, x)
-Find(function(x){x > 4}, x)
-unlist(Map(function(x){x + 100}, x)) #what happened here?? Map will return a list (for flexibility)
+Filter(function(x){x <= 30}, x)
+Find(function(x){x <= 30}, x)
+Position(function(x){x <= 30}, x)
+Map(function(x){x + 100}, x) #what happened here?? Map will return a list (for flexibility)
+unlist(Map(function(x){x + 100}, x)) #collect values into a vector and the keys became the names of the indices
 ```
 
 ## Libraries in R
 
 So far we've only made use of "base R". This is the funcionality included from a vanilla installation of R. 
 
-R has a huge worldwide community of contributors. Some contribute to newer version of base R, but most create open-source "R packages" or "libraries". Many libraries come preinstalled. For instance, the MASS library which stands for "Modern Applied Statistics with S" (a famous textbook of R). We can call a function from the MASS library via the following:
+R has a huge worldwide community of contributors. Some contribute to newer versions of base R, but the vast majority of contributors contribute by creating and maintaining open-source "R packages" or "libraries". I'm one of the latter - check it out [here](https://scholar.rpkg.net/authordetails.php?author=Adam+Kapelner). 
+
+Many libraries come preinstalled. For instance, the MASS library which stands for "Modern Applied Statistics with S" (a famous textbook of R). We can call a function from the MASS library via the following:
 
 ```{r}
 MASS::as.fractions(0.99)
 MASS::as.fractions(pi)
 ```
 
-Note we cannot just execute
+But we cannot just execute the following as the function is not included in "base R".
 
 ```{r}
 as.fractions(pi)
@@ -931,7 +936,7 @@ library(kapelner)
 sample(v)
 ```
 
-You may think you're getting base R sample function, but you're not and now you're in  bug-city! You would have to do the following to be explicit:
+You may think you're getting base R sample function, but you're not and now you're in bug-city! You would have to do the following to be explicit:
 
 ```{r}
 library(kapelner)

@@ -1,0 +1,1883 @@
+---
+title: "Practice Lectures Week 9 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+date: "Apr 4, 2022"
+---
+
+
+## Eigendecomposition in R and the Projection Matrix
+
+```{r}
+B = array(seq(1, 4), dim = c(2, 2))
+B
+eigen_decomp = eigen(B)
+V = eigen_decomp$vectors
+V
+v1 = V[, 1, drop = FALSE]
+v2 = V[, 2, drop = FALSE]
+lambdas = eigen_decomp$values
+lambdas
+lambda1 = lambdas[1]
+lambda2 = lambdas[2]
+B %*% v1
+lambda1 * v1
+B %*% v2 
+lambda2 * v2
+B %*% v2 == lambda2 * v2 #why not?
+#diagonolization
+V %*% diag(lambdas) %*% solve(V)
+```
+
+Let's take a look at a projection matrix:
+
+```{r}
+X = model.matrix(medv ~ ., MASS::Boston)
+head(X)
+H = X %*% solve(t(X) %*% X) %*% t(X)
+H[1:5,1:5]
+dim(H)
+eigen_decomp = eigen(H)
+lambdas = eigen_decomp$values
+head(lambdas, 50)
+lambdas = as.numeric(eigen_decomp$values) #coerce to real numbers (good enough approximation)
+head(lambdas, 50)
+lambdas_rounded = round(lambdas, 10)
+head(lambdas_rounded, 50)
+table(lambdas_rounded)
+sum(lambdas_rounded) #i.e. the rank(H) = # cols in X
+```
+
+It turns out all eigenvalues of a projection matrix are either 0 or 1. Why is this? It makes sense since:
+
+H 1-vec = 1-vec
+H x_{dot 1} = x_{dot 1}
+H x_{dot 2} = x_{dot 2}
+.
+.
+.
+H x_{dot p} = x_{dot p}
+
+All these p+1 eigenvalues of H are 1 and there are p+1 of them. Further,
+
+```{r}
+sum(diag(H))
+```
+
+The trace (sum of the diagonal entries) is also = p+1 i.e. the rank[X]. This is true since the trace of a matrix is always equal to the sum of the eigenvalues since tr(H) = tr(V^-1 D V) = tr(V^-1 V D) = tr(D) = sum lambda_i which in this case is rank[X].
+
+What are the eigenvectors? Only the first ncol(X) = 14 reconstruct the space. Are they the same as the X columns?
+
+```{r}
+V = eigen_decomp$vectors
+V = matrix(as.numeric(V), ncol = ncol(V))
+dim(V)
+V[1 : 5, 1 : ncol(X)]
+
+V_X_angles = matrix(NA, ncol(X), ncol(X))
+for (i in 1 : ncol(X)){
+  for (j in 1 : ncol(X)){
+    if (j > i){
+      V_X_angles[i, j] = acos(V[, i] %*% X[, j] / sqrt(sum(V[, i]^2) * sum(X[, j]^2))) * 180 / pi
+    }
+  }
+}
+V_X_angles
+```
+
+No... and they don't need to be. They just need to represent the same space i.e. their columns need to span the same 14-dimensional subspace. You can check this by just comparing the orthogonal projection matrix which is unique for each subspace.
+
+```{r}
+V_X = V[, 1 : ncol(X)]
+H_V = V_X %*% solve(t(V_X) %*% V_X) %*% t(V_X)
+dim(H_V)
+testthat::expect_equal(c(H_V), c(H))
+```
+
+And they're the same as expected.
+
+## The K tradeoff
+
+K determines how large the training set is relative to the test set when you're doing honest validation for an algorithm. For now, let's not use K-fold CV, but only examine one split at a time. Consider this simulated dataset with 50 observations:
+
+```{r}
+n = 50
+xmin = 0
+xmax = 4
+sigma_e_ignorance = 0.8
+# set.seed(1)
+set.seed(1984)
+x = runif(n, xmin, xmax)
+y = 2 + 3 * x^2 + rnorm(n, 0, sigma_e_ignorance) #f(x)  + delta
+Xy = data.frame(x = x, y = y)
+pacman::p_load(ggplot2)
+data_plot = ggplot(Xy) + aes(x = x, y = y) + geom_point()
+data_plot
+```
+
+Note how $f(x)$ is quadratic and there is random noise which is "ignorance error". The random noise will be part of generalization error and can never go away.
+
+If we use OLS with no derived features, then we can at most get $h*(x)$. Let's see what $h^*(x) = \beta_0 + \beta_1 x$ truly is. To do this, we imagine we see an absolute ton of data and run OLS on it.
+
+```{r}
+n_hidden = 1e6
+x_hidden = seq(from = xmin, to = xmax, length.out = n_hidden)
+y_hidden = 2 + 3 * x_hidden^2 + rnorm(n_hidden, 0, sigma_e_ignorance)
+h_star_mod = lm(y_hidden ~ x_hidden)
+coef(h_star_mod)
+```
+
+The fact that $\beta = [-6~12]^\top$ can actually be solved with calculus: $\int_0^4 ((2 + 3x^2) - (b_0 + b_1 x))^2 dx$ and solve for $b0$ and $b1$ explicitly by minimizing.
+
+Plotting that over $\mathbb{D}$ we obtain
+
+```{r}
+data_plot +
+  geom_abline(intercept = coef(h_star_mod)[1], slope = coef(h_star_mod)[2], color = "green")
+```
+
+That is the best we're going to get. However, $g_{final}$ falls far short of it due to estimation error since n is only 50:
+
+```{r}
+g_final_mod = lm(y ~ x)
+coef(g_final_mod)
+data_plot +
+  geom_abline(intercept = coef(h_star_mod)[1], slope = coef(h_star_mod)[2], color = "green") +
+  geom_abline(intercept = coef(g_final_mod)[1], slope = coef(g_final_mod)[2], color = "red")
+```
+
+
+The actual error of g_final can be estimated by imagining tons of future observations:
+
+```{r}
+y_hat_g_final = predict(g_final_mod, data.frame(x = x_hidden))
+gen_error_true = sd(y_hidden - y_hat_g_final)
+gen_error_true
+```
+
+The model $g$ can vary quite a bit as we subsample $\mathbb{D}$ which is what happens when you do train-test splits. It varies a lot because there is large misspecification error. If the model was correctly specified, the results of everything that follows will be less impressive. But in the real world - is your model ever correctly specified? is $f \in \mathcal{H}$?? NO. So this is more realistic.
+
+Now let's let K be small. Let K = 2 meaning even 50-50 split of test and train.
+
+```{r}
+K = 2
+prop_train = (K - 1) / K
+n_train = round(prop_train * n)
+set.seed(123)
+index_train = sample(1 : n, n_train, replace = FALSE)
+index_test = setdiff(1 : n, index_train)
+pacman::p_load(testthat)
+expect_equal(sort(c(index_test, index_train)), 1:n)
+
+x_train = x[index_train]
+y_train = y[index_train]
+Xytrain = data.frame(x = x_train, y = y_train)
+x_test = x[index_test]
+y_test = y[index_test]
+
+g_mod = lm(y ~ ., Xytrain)
+y_hat_g = predict(g_mod, data.frame(x = x_test))
+g_s_e_K_2 = sd(y_test - y_hat_g)
+g_s_e_K_2
+gen_error_true
+```
+
+Although I cooked the books by setting the seed, this realization makes sense. If K=2, I build the model g with half the data than the model g_final. Less data to train on => higher generalization error. How about if K is large. Let's say $K = n / 2$ meaning n_train = 48 and n_test = 2.
+
+```{r}
+K = n / 2
+prop_train = (K - 1) / K
+n_train = round(prop_train * n)
+set.seed(123)
+index_train = sample(1 : n, n_train, replace = FALSE)
+index_test = setdiff(1 : n, index_train)
+pacman::p_load(testthat)
+expect_equal(sort(c(index_test, index_train)), 1:n)
+
+x_train = x[index_train]
+y_train = y[index_train]
+Dtrain = data.frame(x = x_train, y = y_train)
+x_test = x[index_test]
+y_test = y[index_test]
+
+g_mod = lm(y ~ ., Dtrain)
+y_hat_g = predict(g_mod, data.frame(x = x_test))
+g_s_e_K_n_over_2 = sd(y_test - y_hat_g)
+g_s_e_K_2
+g_s_e_K_n_over_2
+gen_error_true
+```
+
+Although I cooked the books again by setting the seed, this also makes sense. More data to train on = less error but still more error than all the data. In reality, there is massive variance over specific splits! Let's run the simulation with these two K values many times.
+
+While we're at it, let's do all K's! Well, what are all the valid K's? If you want to keep the sizes the same, any factorization of n except the trivial 1 since n = 1 * n. A K = 1 would mean there's no split!!! How to find divisors? Of course a package for this.
+
+```{r}
+pacman::p_load(numbers)
+setdiff(divisors(n), 1)
+```
+
+But should we also include the trivial n? Yes K = n is indeed a valid divisor. And this type of CV is called the "leave one out cross validation" (LOOCV). Now we compute the errors over K:
+
+
+```{r}
+Nsim_per_K = 5000
+Kuniqs = setdiff(divisors(n), 1)
+num_Kuniqs = length(Kuniqs)
+Ks = rep(Kuniqs, Nsim_per_K)
+results = data.frame(s_e = rep(NA, Nsim_per_K * num_Kuniqs), K = rep(NA, Nsim_per_K * num_Kuniqs))
+for (i in 1 : length(Ks)){
+  K = Ks[i]
+  prop_train = (K - 1) / K
+  n_train = round(prop_train * n)
+  index_train = sample(1 : n, n_train, replace = FALSE)
+  index_test = setdiff(1 : n, index_train)
+  expect_equal(sort(c(index_test, index_train)), 1:n)
+  
+  x_train = x[index_train]
+  y_train = y[index_train]
+  Xytrain = data.frame(x = x_train, y = y_train)
+  x_test = x[index_test]
+  y_test = y[index_test]
+  
+  g_mod = lm(y ~ ., Xytrain)
+  y_hat_g = predict(g_mod, data.frame(x = x_test))
+  g_s_e = sum(abs(y_test - y_hat_g)) / length(y_test)
+  results[i, ] = c(g_s_e, K)
+}
+save(results, file = "K_results.RData")
+```
+
+Let's take the average error over each simulated split and also its variability:
+
+```{r}
+load("K_results.RData")
+#don't worry about the following code... we will learn dplyr later...
+pacman::p_load(dplyr)
+results_summary = results %>%
+  group_by(K) %>%
+  summarize(avg_s_e = mean(s_e), s_s_e = sd(s_e), s_avg_s_e = sd(s_e) / sqrt(Nsim_per_K))
+results_summary
+```
+
+Now let's see what the distributions look like to visualize the means and variances.
+
+```{r}
+sim_plot = ggplot(results) + 
+  aes(x = s_e) +
+  geom_density(aes(fill = factor(K)), alpha = 0.3) + 
+  xlim(0, NA) + 
+  geom_vline(data = results_summary, aes(xintercept = avg_s_e, color = factor(K)), size = 2)
+sim_plot
+```
+
+The main takeaways are
+
+(1) the std err of generalization error estimate is much lower for low K than high K
+
+With high K, the test set is small meaning the estimate has high variance; with low K, the test set is large meaning you can measure it with low variance.
+
+(2) the average of generalization error estimate is lower for high K than low K
+
+With high K, the training set is large meaning $g$ is closer to g_final and thus has higher expected accuracy; with low K, the training set is small meaning $g$ is further from g_final and thus has lower expected accuracy.
+
+Thus, the tradeoff is bias vs. variance. There are many similar tradeoffs in statistics. We will see one later when we do machine learning.
+
+Is the estimates' accuracy for what we really care about? No... the generalization error of g_final which we picture below:
+
+```{r}
+sim_plot + 
+  geom_vline(xintercept = gen_error_true, col = "black", size = 2)
+```
+
+Remember, g_final's error should be lower than both averages since it uses all the data. But we see above it's higher!
+
+So what happened? Simple... we are mixing apples and oranges. We calculated the real generalization error by looking at one million future observations. We calculated the red and blue distributions by looking at our data only which is a random realization of many such datasets! Thus, our generalization errors are biased based on the specific n observations in D we received. We will see that K-fold helps a bit with this. But there is nothing we can do about it beyond that (besides collect more observations). If you get a weird sample, you get a weird sample!
+
+How would we be able to generate the picture we really want to see? We would run this simulation over many datasets and average. That would be a giant simulation. To show that this is the case, go back and change the seed in the first chunk and rerun. You'll see a different white bar.
+
+What is the main takeaway? K matters because it induces a tradeoff. It shouldn't be too large or too small (as we believe at the moment). And, generalization error estimation is very variable in low n. To see this, go back and increase n.
+
+
+Let's do the demo again. This time, we generate all samples from the data generating process.
+
+```{r}
+rm(list = ls())
+pacman::p_load(numbers, testthat, ggplot2)
+
+n = 50
+xmin = 0
+xmax = 4
+sigma_e_ignorance = 0.8
+set.seed(1984)
+Ntest = 1e6
+Kuniqs = setdiff(divisors(n), 1)
+
+Nsim = 5e6
+
+results = data.frame(s_e = numeric(), K = character())
+
+for (nsim in 1 : Nsim){
+  x = runif(n, xmin, xmax)
+  y = 2 + 3 * x^2 + rnorm(n, 0, sigma_e_ignorance) #f(x)  + delta
+  
+  #do all the oos validation
+  for (i in 1 : length(Kuniqs)){
+    K = Kuniqs[i]
+    prop_train = (K - 1) / K
+    n_train = round(prop_train * n)
+    index_train = sample(1 : n, n_train, replace = FALSE)
+    index_test = setdiff(1 : n, index_train)
+    expect_equal(sort(c(index_test, index_train)), 1:n)
+    
+    x_train = x[index_train]
+    y_train = y[index_train]
+    Xytrain = data.frame(x = x_train, y = y_train)
+    x_test = x[index_test]
+    y_test = y[index_test]
+    
+    g_mod = lm(y ~ ., Xytrain)
+    y_hat_g = predict(g_mod, data.frame(x = x_test))
+    g_s_e = sum(abs(y_test - y_hat_g)) / length(y_test)
+    results = rbind(results, data.frame(s_e = g_s_e, K = K))
+  }
+  
+  #now estimate generalization error on g_final
+  g_final_mod = lm(y ~ x)
+  x_star = seq(from = xmin, to = xmax, length.out = Ntest)
+  y_star = 2 + 3 * x_star^2 + rnorm(Ntest, 0, sigma_e_ignorance)
+  y_hat_g_final_star = predict(g_final_mod, data.frame(x = x_star))
+  gen_error_true = sum(abs(y_star - y_hat_g_final_star)) / Ntest
+  results = rbind(results, data.frame(s_e = gen_error_true, K = "true"))
+  save(results, file = "K_dgp_results.RData")
+}
+```
+
+Let's take the average error over each simulated split and also its variability:
+
+```{r}
+load("K_dgp_results.RData")
+#don't worry about the following code... we will learn dplyr later...
+pacman::p_load(dplyr)
+results_summary = results %>%
+  group_by(K) %>%
+  summarize(avg_s_e = mean(s_e), s_s_e = sd(s_e), s_avg_s_e = sd(s_e) / sqrt(Nsim)) %>%
+  arrange(as.numeric(K))
+results_summary
+```
+
+
+Now let's see what the distributions look like to visualize the means and variances.
+
+```{r}
+sim_plot = ggplot(results) + 
+  aes(x = s_e) +
+  geom_density(aes(fill = factor(K)), alpha = 0.3) + 
+  xlim(0, NA) + 
+  geom_vline(data = results_summary, aes(xintercept = avg_s_e, color = factor(K)), size = 1)
+sim_plot
+```
+
+
+#K-fold CV variance reduction
+
+Let's run this same demo again except K-fold within the runs.
+
+
+```{r}
+rm(list = ls())
+pacman::p_load(numbers, testthat, ggplot2)
+
+n = 50
+xmin = 0
+xmax = 4
+sigma_e_ignorance = 0.8
+set.seed(1984)
+Ntest = 1e6
+Kuniqs = setdiff(divisors(n), 1)
+
+Nsim = 3e6
+
+#we will add to the previous experiment's results
+load("K_dgp_results.RData")
+
+
+for (nsim in 1 : Nsim){
+  x = runif(n, xmin, xmax)
+  y = 2 + 3 * x^2 + rnorm(n, 0, sigma_e_ignorance) #f(x)  + delta
+  
+  #do all the oos validation
+  for (i in 1 : length(Kuniqs)){
+    K = Kuniqs[i]
+    temp = rnorm(n)
+    k_fold_idx = cut(temp, breaks = quantile(temp, seq(0, 1, length.out = K + 1)), include.lowest = TRUE, labels = FALSE)
+    
+    oos_residuals = array(NA, n)
+    for (k in 1 : K){
+      index_test = which(k_fold_idx == k)
+      index_train = setdiff(1 : n, index_test)
+      
+      x_train = x[index_train]
+      y_train = y[index_train]
+      Xytrain = data.frame(x = x_train, y = y_train)
+      x_test = x[index_test]
+      y_test = y[index_test]
+      
+      g_mod = lm(y ~ ., Xytrain)
+      y_hat_g = predict(g_mod, data.frame(x = x_test))
+      oos_residuals[index_test] = y_test - y_hat_g
+    }
+    g_k_fold_cv_s_e = sum(abs(oos_residuals)) / n
+    results = rbind(results, data.frame(s_e = g_k_fold_cv_s_e, K = paste0(K, "_cv")))
+  }
+  
+  #now estimate generalization error on g_final
+  g_final_mod = lm(y ~ x)
+  x_star = seq(from = xmin, to = xmax, length.out = Ntest)
+  y_star = 2 + 3 * x_star^2 + rnorm(Ntest, 0, sigma_e_ignorance)
+  y_hat_g_final_star = predict(g_final_mod, data.frame(x = x_star))
+  gen_error_true = sum(abs(y_star - y_hat_g_final_star)) / Ntest
+  results = rbind(results, data.frame(s_e = gen_error_true, K = "true"))
+}
+save(results, file = "K_dgp_results_K_fold.RData")
+```
+
+Let's take the average error over each simulated split and also its variability:
+
+```{r}
+load("K_dgp_results_K_fold.RData")
+#don't worry about the following code... we will learn dplyr later...
+pacman::p_load(dplyr)
+results_summary = results %>%
+  group_by(K) %>%
+  summarize(avg_s_e = mean(s_e), s_s_e = sd(s_e), s_avg_s_e = sd(s_e) / sqrt(Nsim)) %>%
+  arrange(as.numeric(K))
+results_summary
+```
+
+
+Now let's see what the distributions look like for K = 2
+
+```{r}
+sim_plot = ggplot(results) + 
+  aes(x = s_e) +
+  geom_density(aes(fill = factor(K)), alpha = 0.3) + 
+  xlim(0, NA) + 
+  geom_vline(data = results_summary, aes(xintercept = avg_s_e, color = factor(K)), size = 1)
+sim_plot
+```
+
+
+
+## Piping
+
+Take a look at this one-liner:
+
+
+```{r}
+set.seed(1984)
+mean(head(round(sample(rnorm(1000), 100), digits = 2)))
+```
+
+This is hard to read. Of course we can make it easier by using breaklines e.g.
+
+```{r}
+mean(
+  head(
+    round(
+      sample(
+        rnorm(1000), 
+        100
+      ), 
+      digits = 2
+    )
+  )
+)
+```
+
+But it doesn't make it much easier to read. And it probably makes it harder to write. 
+
+Enter an idea taken from unix / linux. Output of one function is input to next function. It is the inverse of the usual "order of operations". Let's see how this works.
+
+We first load the piping library:
+
+```{r}
+pacman::p_load(magrittr)
+```
+
+The package is named after Rene Magritte, the Belgian surrealist artist because he wrote [(Ceci n'est pas un pipe)](https://en.wikipedia.org/wiki/The_Treachery_of_Images) on a painting of a pipe.
+
+In pipe format this would look like:
+
+```{r}
+set.seed(1984)
+rnorm(1000) %>% #the pipe operator
+  sample(100) %>% 
+  round(digits = 2) %>% #the first argument is passed in automatically.
+  head %>%
+  mean
+```
+
+That's it! There's nothing more to it other than a gain in readability. Here's a cute joke based on this idea:
+
+https://www.mzes.uni-mannheim.de/socialsciencedatalab/article/efficient-data-r/figures/basertidyverse.png
+
+What if we wanted to do something like `mean(rnorm(1000) + 1)`? This `rnorm(1000) %>% +1 %>% mean` doesn't work because I imagine because the basic arithmetic operators couldn't be parsed like normal while there was a pipe. So they invented special pipe functions for this:
+
+```{r}
+rnorm(1000) %>% 
+  add(1) %>% 
+  mean
+```
+
+There are other exceptions to the rule too which you'll figure out if you adopt the pipe.
+
+Unfortunately... the world at large hasn't completely accepted this as a way to write R. So feel free to use for yourself. But be careful when using this style with others. There are places where everyone uses the pipes (we will see this when we get to dplyr). Also note the code you write with pipes will be slower than the normal syntax.
+
+# The Grammar of graphics and ggplot
+
+First load the package and the dataset of interest as a dataframe:
+
+```{r}
+pacman::p_load(ggplot2, quantreg)
+cars = MASS::Cars93 #dataframe
+```
+
+ggplot is based on the "Grammar of Graphics", a concept invented by the Statistician / Computer Scientist Leland Wilkinson who worked on SPSS, Tableau and now he works at H20, software that analyzes big data. The reference of interest is [here](http://papers.rgrossman.com/proc-094.pdf). He drew on ideas from John Tukey (one of the great statistician of the previous generation) while he was at Bell Labs, Andreas Buja (one of my professors at Penn) and Jerome Friedman (the professor that taught my data mining course when I was in college at Stanford). 
+
+It is a language that allows us to describe the components of a graphic. Previously, graphics were done in one shot and it was clunky. ggplot is a library written by Hadley Wickham based on this concept. Wickham is probably the most famous person in statistical computing today. He has commit rights in R and is one of the architects of RStudio. He calls grammar of graphics "graphical poems". Here are the basic components:
+
+* an underlying data frame
+* an "aesthetic" that maps visualization axes in the eventual plot(s) to variables in the data frame
+* a "layer" which is composed of
+  - a geometric object
+  - a statistical transformation
+  - a position adjustment
+* a "scale" for each aesthetic
+* a "coordinate" system for each aesthetic
+* optional "facets" (more graphics)
+* optional "labels" for the title, axes title, points, etc.
+
+Don't worry - everything has "smart defaults" in Wickham's implementation so you don't have to worry about most things. We will explore some of the features below. Here's a good [cheat sheet](https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf).
+
+ggplot is layered where each component is an object. The objects are added to each other since the "+" operator is overloaded to accept these additions. This is nice because each component can be saved and reused. The following initialized the graphics:
+
+```{r}
+ggplot(cars)
+```
+
+Nothing happened - except the plot window went gray (the smart default). This is already rendering a graphic, but since it hasn't been given any of the required information, it has nothing to display. Next we create an aesthetics indicating a one-way plot (one variable only).
+
+```{r}
+ggplot(cars) + 
+  aes(Price)
+```
+
+Notice how it can understand the variable name as an object name.
+
+Since we've given it an aesthetics object, it now knows which variable is the x axis (default). It already knows the ranges of the variable (a smart default) and a default scale and coordinate system (smart defaults).
+
+Usually this is done in one step by passing the aesthetics object into the ggplot:
+
+```{r}
+ggplot(cars, aes(Price))
+```
+
+Now we need to pick a layer by specifying a geometry. This is a type of plot. Since the predictor type of price is continuous, let's pick the "histogram" using the `geom_histogram` function:
+
+```{r}
+ggplot(cars, aes(Price)) +
+  geom_histogram()
+```
+
+This can be customized:
+
+```{r}
+ggplot(cars, aes(Price)) +
+  geom_histogram(binwidth = 1, col = "darkred", fill = "blue", alpha = 0.4)
+```
+
+Want to save it for your latex?
+
+```{r}
+ggsave("plot.png")
+system("open plot.png")
+ggsave("plot.pdf")
+system("open plot.pdf")
+```
+
+Here are some other options besides the histogram:
+
+```{r}
+ggplot(cars, aes(Price)) +
+  geom_dotplot()
+ggplot(cars, aes(Price)) +
+  geom_area(stat = "bin", binwidth = 2)
+ggplot(cars, aes(Price)) +
+  geom_freqpoly()
+ggplot(cars, aes(Price)) +
+  geom_density(fill = "green", alpha = 0.1)
+
+summary(cars)
+```
+
+
+Can we compare price based on different conditions? Yes, we can subset the data and use color and alpha:
+
+```{r}
+ggplot(cars, aes(Price)) +
+  geom_density(data = subset(cars, Man.trans.avail == "Yes"), col = "grey", fill = "darkgreen", alpha = 0.4) +
+  geom_density(data = subset(cars, Man.trans.avail == "No"), col = "grey", fill = "red", alpha = 0.4)
+```
+
+Sidebar: why are cars that have manual transmissions available cheaper?
+
+We can look at this also using a histogram of the conditional distributions:
+
+```{r}
+ggplot(cars, aes(Price)) +
+  geom_histogram(data = subset(cars, Man.trans.avail == "Yes"), binwidth = 1, col = "grey", fill = "darkgreen", alpha = 0.4) +
+  geom_histogram(data = subset(cars, Man.trans.avail == "No"), binwidth = 1, col = "grey", fill = "red", alpha = 0.4)
+```
+
+What if the variable is not continuous e.g. Cylinders? We can use a bar graph / bar plot.
+
+```{r}
+ggplot(cars, aes(Cylinders)) +
+  geom_bar()
+```
+
+This is essential frequency by level of the categorical variable.
+
+Now let's move on to looking at one variable versus another variable. For example price by engine power:
+
+```{r}
+ggplot(cars, aes(x = Horsepower, y = Price))
+```
+
+Since we've given it an aesthetics object, it now knows which variable is the x axis and which variable is the y axis. It already knows the ranges of the variables (a smart default) and a default scale and coordinate system (smart defaults).
+
+Just as before, now we need to pick a layer by specifying a geometry. This is a type of plot. Let's pick the "scatterplot" using the `geom_point` function:
+
+```{r}
+ggplot(cars, aes(x = Horsepower, y = Price)) +
+  geom_point()
+```
+
+Now we have a nice scatterplot. This function uses the inherited data, the inherited aesthetics. Since this "geometry" is a "layer", we can pass in options to the layer.
+
+```{r}
+base_and_aesthetics = ggplot(cars, aes(x = Horsepower, y = Price))
+base_and_aesthetics + 
+  geom_point(col = "red", fill = "green", shape = 23, size = 3, alpha = 0.3)
+```
+
+Let's handle names of axes, title and ranges:
+
+```{r}
+base_and_aesthetics_with_titles = base_and_aesthetics +
+  ggtitle("Average Car Price vs. Engine Power", subtitle = "in the Cars93 dataset") +
+  ylab("Price (in $1000's)")
+base_and_aesthetics_with_titles +
+  geom_point() +
+  xlim(0, 400) +
+  ylim(0, 50)
+  
+```
+
+Let's transform the variables:
+
+```{r}
+base_and_aesthetics_with_titles +
+  geom_point() +
+  scale_x_continuous(trans = "log2")
+```
+
+Each unit increase on the x-axis now represent a doubling increase in x (although the whole scale only spans 3 units). But look at how the grid didn't keep up. Let's fix this:
+
+```{r}
+base_and_aesthetics_with_titles +
+  geom_point() +
+  scale_x_continuous(trans = "log2", breaks = round(seq(0, max(cars$Horsepower), length.out = 6)))
+```
+
+We can do the same to the y axis:
+
+```{r}
+base_and_aesthetics_with_titles +
+  geom_point() +
+  scale_y_continuous(trans = "log10")+
+  scale_x_continuous(trans = "log10")
+```
+
+Let's look at some more geometries.
+
+```{r}
+base_and_aesthetics_with_titles +
+  geom_point() +
+  geom_smooth()
+```
+
+Here, I've added two geometries on the same aesthetic! This attempts to explain the relationship $f(x)$ using smoothing. Let's go for more.
+
+```{r}
+base_and_aesthetics_with_titles +
+  geom_point() +
+  geom_smooth() +
+  geom_rug()
+```
+
+This allows us to also see the marginal distributions of the two variables.
+
+```{r}
+base_and_aesthetics_with_titles +
+  geom_point() +
+  geom_smooth() +
+  geom_quantile(col = "red") +
+  geom_rug()
+```
+
+This fits a line and tries to indicate statistical significance of the line. We have *not* covered any statistics in this class yet (ironic!) ... so ignore how the window is generated.
+
+Can we display more than two dimensions? Yes. Let's indicate a third dimension with shape (only works with factors).
+
+```{r}
+base_and_aesthetics_with_titles = base_and_aesthetics_with_titles +
+  ggtitle("Average Car Price by Power and Transmission")
+base_and_aesthetics_with_titles +
+  geom_point(aes(shape = Man.trans.avail)) +
+  geom_smooth() +
+  geom_rug()
+```
+
+Can we display more than three dimensions? Yes. Let's indicate a fourth dimension with color.
+
+```{r}
+base_and_aesthetics_with_titles = base_and_aesthetics_with_titles +
+  ggtitle("Average Car Price by Power, Transmission & Drivetrain")
+base_and_aesthetics_with_titles +
+  geom_point(aes(shape = Man.trans.avail, col = DriveTrain)) +
+  geom_smooth() +
+  geom_rug()
+```
+
+Can we go to a fifth dimension? Maybe?
+
+```{r}
+base_and_aesthetics_with_titles = base_and_aesthetics_with_titles +
+  ggtitle("Average Car Price by Power, Transmission & Drivetrain")
+base_and_aesthetics_with_titles +
+  geom_point(aes(shape = Man.trans.avail, col = DriveTrain, size = Weight), alpha = 0.5) + #size?
+  geom_smooth() +
+  geom_rug()
+```
+
+A seventh? We can use text labels adjacent to the scatterplot's points.
+
+```{r}
+base_and_aesthetics_with_titles = base_and_aesthetics_with_titles +
+  ggtitle("Average Car Price by Power, Transmission, Drivetrain,  Weight & #Cylinders")
+base_and_aesthetics_with_titles +
+  geom_point(aes(shape = Man.trans.avail, col = DriveTrain, alpha = Weight)) + #size?
+  geom_text(aes(label = Cylinders), vjust = 1.5, col = "darkgrey", lineheight = 0.3, size = 3) +
+  geom_smooth() +
+  geom_rug()
+```
+
+Getting difficult to see what's going on.
+
+Let's move away from the scatterplot to just density estimation:
+
+```{r}
+base_and_aesthetics_with_titles = base_and_aesthetics_with_titles +
+  ggtitle("Average Car Price by Power") #reset the title
+base_and_aesthetics_with_titles +
+  geom_density2d()
+```
+
+Other alternatives:
+
+```{r}
+base_and_aesthetics_with_titles +
+  geom_bin2d(binwidth = c(8, 3))
+pacman::p_load(hexbin)
+base_and_aesthetics_with_titles +
+  geom_hex()
+```
+
+This is like a two-dimensional histogram where the bar / hexagon heights are seen with color.
+
+What if the x-axis is categorical for example Cylinders versus price? Typical is the "box and whiskers" plot:
+
+```{r}
+ggplot(cars, aes(x = Cylinders, y = Price)) +
+  geom_boxplot()
+```
+
+Clear relationship!
+
+How about multiple subplots based on the subsetting we did in the histograms? This is called "faceting". Here are two bivariate visualizations laid horizontally:
+
+```{r}
+ggplot(cars, aes(x = Horsepower, y = Price)) +
+  geom_point() +
+  geom_smooth() +
+  facet_grid(. ~ Man.trans.avail)
+```
+
+Or alternatively, vertically:
+
+```{r}
+ggplot(cars, aes(x = Horsepower, y = Price)) +
+  geom_point() +
+  geom_smooth() +
+  facet_grid(Man.trans.avail ~ .)
+```
+
+And we can even double-subset:
+
+```{r}
+ggplot(cars, aes(x = Horsepower, y = Price)) +
+  geom_point() +
+  facet_grid(Man.trans.avail ~ Origin)
+```
+
+And we can even triple-subset or more:
+
+```{r}
+cars$MedWeight = ifelse(cars$Weight > median(cars$Weight), ">MedWeight", "<MedWeight")
+ggplot(cars, aes(x = Horsepower, y = Price)) +
+  geom_point() +
+  facet_grid(Man.trans.avail ~ Origin + MedWeight, scales = "free")
+```
+
+These three varibles seem somewhat independent.
+
+There are other primitives like `geom_abline` which graphs a line and `geom_segment` we will see today. Note that if you want plots rendered within functions or loops you have to explicitly call the `plot` function:
+
+```{r}
+for (nsim in 1 : 3){
+  graphics_obj = ggplot(data.frame(x = rnorm(1000))) + 
+    geom_histogram(aes(x))
+  graphics_obj
+}
+```
+
+versus:
+
+```{r}
+for (nsim in 1 : 3){
+  graphics_obj = ggplot(data.frame(x = rnorm(1000))) + geom_histogram(aes(x))
+  plot(graphics_obj)
+}
+```
+
+
+Lastly, ggplot offers lots of nice customization themes:
+
+```{r}
+graphics_obj = base_and_aesthetics_with_titles +
+  geom_point() +
+  geom_smooth() +
+  geom_quantile(col = "red") +
+  geom_rug()
+graphics_obj + theme_bw()
+graphics_obj + theme_dark()
+graphics_obj + theme_classic()
+
+```
+
+Packages offer even more:
+
+```{r}
+pacman::p_load(forcats, lazyeval, ggthemes)
+graphics_obj + theme_economist()
+graphics_obj + theme_stata()
+graphics_obj + theme_tufte()
+```
+
+and of course, the whimsical one and only:
+
+
+```{r}
+pacman::p_load(xkcd, extrafont)
+download.file("http://simonsoftware.se/other/xkcd.ttf", dest = "xkcd.ttf", mode = "wb")
+#MAC
+# system("mv xkcd.ttf /Library/Fonts")
+# font_import(path = "/Library/Fonts", pattern = "xkcd", prompt = FALSE)
+# fonts()
+# fonttable()
+# loadfonts()
+#WINDOWS
+font_import(path = ".", pattern = "xkcd", prompt = FALSE)
+fonts()
+fonttable()
+
+loadfonts(device="win")
+
+graphics_obj + theme_xkcd()
+```
+
+## MLR library for CV
+
+"Machine Learning in R" (the `mlr3` package v0.11) is a very popular R library that makes it very simple to build models, do K-fold validation, etc. This package was recently rewritten (September, 2019).
+
+```{r}
+pacman::p_load(ggplot2, mlr3verse)
+```
+
+It splits the modeling task into conceptual pieces. The most basic pieces are:
+
+* Instantiate a "task". This consists of supplying a dataframe, identifying a variable that is the output and the type of predictions to be made.
+* Instantiate a "learner". This consists of $\mathcal{A}$ and $\mathcal{H}$. For example: OLS with all raw features.
+* Instantiate a type of validation. For example: 5-fold CV resampling.
+* Execute
+
+Here's what this would look like for our example we just did:
+
+```{r}
+modeling_task = TaskRegr$new(id = "diamonds", backend = diamonds, target = "price") #instantiate the task
+algorithm = lrn("regr.lm") #instantiate the OLS learner algorithm on the diamonds dataset and set y = price
+validation = rsmp("cv", folds = 5) #instantiate the 5-fold CV
+resample(modeling_task, algorithm, validation) #execute
+```
+
+It's squabbling about something insignificant but at least it tells me exactly what I need to do to fix! Let's correct this error and do it again:
+
+```{r}
+diamonds$cut = factor(diamonds$cut, ordered = FALSE)
+diamonds$color = factor(diamonds$color, ordered = FALSE)
+diamonds$clarity = factor(diamonds$clarity, ordered = FALSE)
+modeling_task = TaskRegr$new(id = "diamonds", backend = diamonds, target = "price")
+#note the "new" kind of looks like Java or Python. This is part of the new object-oriented package R6
+#see https://adv-r.hadley.nz/r6.html if you are interested
+res = resample(modeling_task, algorithm, validation) #execute
+#nicely parallelized for performance!
+res
+#not much info here
+```
+We need to provide an error metric of which there are lots:
+
+```{r}
+msrs()
+#see https://mlr3.mlr-org.com/reference/mlr_measures_regr.rmse.html
+#note how they define it without the p in the denominator... more confusion!
+```
+
+Let's see the results:
+
+```{r}
+res$score(msr("regr.rmse"))
+
+mean(res$score(msr("regr.rmse"))$regr.rmse)
+sd(res$score(msr("regr.rmse"))$regr.rmse)
+```
+
+
+# Model Selection and Three Data Splits
+
+This unit is split into three use cases (1) Selection among M explicit models (2) Hyperparameter Selection within one algorithm (3) Stepwise Model Construction
+
+## Use Case (I) Selecting one of M Explicit Models
+
+We have now covered non-linearities (e.g. polynomial terms) and interactions. A new complication now clearly emerges. If I have $p$ predictors, there are many linear least squares models I can build (considering non-linear least squares models makes the space of models even larger!!)
+
+For instance, here are a bunch of models and their in-sample performance:
+
+```{r}
+pacman::p_load(ggplot2)
+all_model_formulas = list( #note: need these as strings for later...
+  "price ~ carat + depth",
+  "price ~ carat + depth + color + x + y + z",
+  "price ~ .",
+  "price ~ . * ."
+)
+mods = lapply(all_model_formulas, lm, diamonds)
+lapply(mods, function(mod){summary(mod)$sigma})
+```
+
+Obviously the in-sample RMSE's are increasing due to the complexity, but which model is "best"?
+
+This is one of the most fundamental problems in statistics, and possibly all of science! 
+
+In class, we discussed validation via dividing $\mathbb{D}$ into (a) a training set and a (b) testing set. Now, we will further divide the training set into (a) a sub-training set and a (b) selection set and we still have the (c) test set. 
+
+The total training set together will fit a model and testing will estimate future performance. But within the total training set, we'll use an elaborate algorithim: we'll fit many models and take the best one. That's the "master algorithm".
+
+We'll make the selection set and the test set the same size but we don't have to. First split up the data:
+
+```{r}
+n = nrow(diamonds)
+K = 5
+set.seed(1984)
+test_indices = sample(1 : n, size = n * 1 / K)
+master_train_indices = setdiff(1 : n, test_indices)
+select_indices = sample(master_train_indices, size = n * 1 / K)
+train_indices = setdiff(master_train_indices, select_indices)
+rm(master_train_indices)
+
+#make sure we did this right:
+pacman::p_load(testthat)
+expect_equal(1 : n, sort(c(train_indices, select_indices, test_indices)))
+
+diamonds_train = diamonds[train_indices, ]
+diamonds_select = diamonds[select_indices, ]
+diamonds_test = diamonds[test_indices, ]
+
+rm(test_indices, select_indices, train_indices)
+```
+
+Now, fit all models and select the best one:
+
+```{r}
+mods = lapply(all_model_formulas, lm, diamonds_train)
+```
+
+Now predict on the selection set and look at the oos $s_e$, and select the "best" model
+
+```{r}
+yhat_selects = lapply(mods, function(mod){predict(mod, diamonds_select)})
+y_select = diamonds_select$price #the true prices
+
+s_e_s = lapply(yhat_selects, function(yhat_select){sd(yhat_select - y_select)})
+s_e_s
+#find the minimum
+which.min(s_e_s)
+```
+
+Which are overfit? Which are underfit? Were these models "poor choices"?
+
+Can we go back and fit some more models? 
+
+Yes - as long as we don't open the "lockbox" of the test set. Let's look at one more model. An expansion of the best of the previous 4 models now with a couple interactions we are convinced are real plus a couple of non-linear terms:
+
+```{r}
+all_model_formulas[[5]] = "price ~ . + carat * color + carat * depth + I(carat^2) + I(depth^2)"
+mods[[5]] = lm(all_model_formulas[[5]], diamonds_train) 
+
+yhat_selects[[5]] = predict(mods[[5]], diamonds_select)
+
+s_e_s[[5]] = sd(yhat_selects[[5]] - y_select)
+s_e_s
+#find the minimum
+which.min(s_e_s)
+```
+
+We can go further and fit more and more models but we should always be careful that we don't fit too many as we may optimize to the selection set. Here, we are lucky since the selection set is large (~11,000 observations) so this is not too much of a fear.
+
+But you can see the problem - how can we build a good model??
+
+The answer to this is non-parametric regression / machine learning. But first, we will cover two other important topics before we get there.
+
+Let us return and complete the exercise by now declaring we are done modeling and we are going to ship model 5. Let us get a conservative estimate of its performance:
+
+```{r}
+mod5_for_test = lm(all_model_formulas[[5]], rbind(diamonds_train, diamonds_select))
+yhat_test_mod5 = predict(mod5_for_test, diamonds_test)
+y_test = diamonds_test$price #the true prices
+sd(yhat_test_mod5 - y_test)
+```
+
+About the same as the selection estimate --- we did not overfit too much to the selection set.
+
+At this point the lockbox is open and we can never return (if we are honest, of course - many people in this business lie so beware).
+
+Now we can build production model 4 with all data to ship:
+
+```{r}
+mod_final = lm(all_model_formulas[[5]], diamonds)
+```
+
+No evaluation is done on the final model. It is only used to predict future diamonds' prices.
+
+We discussed last time the two improvements using CV to the above:
+
+* To reduce variance in the selection process, you make a CV of the selection set. 
+* To reduce variance in the testing process, you make an outer CV of the test set so that the first CV is a nested resampling. 
+
+This is a lot more coding! But we're in luck because it's done for us already...
+
+### Using the MLR package for Model selection
+
+Can we use MLR for Linear Model Selection?
+
+Yes, but it is not as nice as I would've liked but it sure beats doing it yourself. I've figured it out by creating my own custom code. Warning: this is the old version of mlr (v2) as I couldn't figure it out in the new version of mlr (mlr3)!!
+
+```{r}
+pacman::p_unload(mlr3verse)
+pacman::p_load(mlr)
+```
+
+
+First, we create the task and learner
+
+```{r}
+diamonds$cut = factor(diamonds$cut, ordered = FALSE)
+diamonds$color = factor(diamonds$color, ordered = FALSE)
+diamonds$clarity = factor(diamonds$clarity, ordered = FALSE)
+modeling_task = makeRegrTask(data = diamonds, target = "price") #instantiate the task
+```
+
+Now we create a new learner which is a wrapper for the linear model with a custom formula. We need to specify learning parameters, a training function (build g) and a predict function. Then we need to add theese functions to the namespace in a way mlr understands.
+
+
+```{r}
+makeRLearner.regr.custom_ols = function() {
+  makeRLearnerRegr(
+    cl = "regr.custom_ols",
+    package = "base",
+    par.set = makeParamSet(
+      makeDiscreteLearnerParam(id = "formula", default = all_model_formulas[[1]], values = all_model_formulas)
+    ),
+    properties = c("numerics", "factors", "ordered"),
+    name = "Custom OLS with a Formula",
+    short.name = "custom_ols"
+  )
+}
+
+trainLearner.regr.custom_ols = function(.learner, .task, .subset, .weights = NULL, ...){
+  lm(list(...)$formula, data = getTaskData(.task, .subset))
+}
+
+predictLearner.regr.custom_ols = function (.learner, .model, .newdata, ...){
+    predict(.model$learner.model, newdata = .newdata, ...)
+}
+
+registerS3method("makeRLearner", "regr.custom_ols", makeRLearner.regr.custom_ols)
+registerS3method("trainLearner", "regr.custom_ols", trainLearner.regr.custom_ols)
+registerS3method("predictLearner", "regr.custom_ols", predictLearner.regr.custom_ols)
+```
+
+Now we create the "inner loop". Here, we cross validate over the different models. We do this by specifying a "tune wrapper" since technically each formula is considered a tuning paramter / hyperparameter the linear model on this task.
+
+```{r}
+Kinner = 3
+all_model_param_set = makeParamSet(
+  makeDiscreteParam(id = "formula", default = all_model_formulas[[1]], values = all_model_formulas)
+)
+inner_loop = makeResampleDesc("CV", iters = Kinner)
+lrn = makeTuneWrapper("regr.custom_ols", #instantiate the OLS learner algorithm
+        resampling = inner_loop, 
+        par.set = all_model_param_set, 
+        control = makeTuneControlGrid(), 
+        measures = list(rmse))
+```
+
+We now create the outer loop and execute:
+
+```{r}
+Kouter = 5
+outer_loop = makeResampleDesc("CV", iters = Kouter)
+r = resample(lrn, modeling_task, resampling = outer_loop, extract = getTuneResult, measures = list(rmse))
+```
+
+Now we look at the results a bunch of different ways:
+
+```{r}
+r #overall estimate of oos error of the whole procedure if it were used on all of $\mathbb{D}$
+print(getNestedTuneResultsOptPathDf(r)) #results of each inner validation over all outer iterations
+r$extract #"winning" model for each outer iteration
+```
+
+See https://mlr.mlr-org.com/articles/tutorial/nested_resampling.html? for info on inner and outer loop CV.
+
+
+
+## Use Case (III) Hyperparameter Selection
+
+Now we use `mlr3`, the latest version (sorry about before!)
+
+```{r}
+pacman::p_unload(mlr)
+pacman::p_load(mlr3verse)
+```
+
+We load the breast cancer dataset from earlier in the class.
+
+```{r}
+cancer = MASS::biopsy %>%
+  select(-ID) %>% #drop the useless ID column
+  na.omit #drop all rows that are missing
+task = TaskClassif$new(id = "cancer", backend = cancer, target = "class")
+```
+
+We now create the learner. By default, SVM is not included, so we need to load an extension package. We ensure the SVM is linear like the one we studied in class (we don't have time to do nonlinear SVM's but it is basically an attempt to make the candidate space richer).
+
+```{r}
+pacman::p_load(mlr3learners, e1071)
+learner = lrn("classif.svm")
+learner$param_set$values = list(kernel = "linear")
+learner$param_set$values$type = "C-classification" #unsure why I need this...
+```
+
+Now we create the inner loop where we try many different values of the hyperparameter via a grid search. This grid search functionality has been further decomped in the new mlr3 package into a subpackage called `mlr3tuning`. 
+
+```{r}
+pacman::p_load(mlr3tuning)
+resampling = rsmp("holdout")
+search_space = ps(cost = p_dbl(lower = 0.0001, upper = 1))
+M = 30
+
+Kinner = 5
+terminator = trm("evals", n_evals = Kinner)
+tuner = tnr("grid_search", resolution = M)
+measure = msr("classif.ce") #misclassification error
+at = AutoTuner$new(learner, resampling, measure, terminator, tuner, search_space)
+```
+
+Now we create the outer loop and execute
+
+```{r}
+Kouter = 3
+resampling_outer = rsmp("cv", folds = Kouter)
+rr = resample(task = task, learner = at, resampling = resampling_outer)
+```
+
+Now we look at the results a bunch of different ways:
+
+```{r}
+rr$score()
+rr$aggregate()
+rr$prediction()$confusion
+```
+
+That gives us the estimate of future performance. Now we create the model
+
+
+```{r}
+at$train(task)
+at$tuning_result
+```
+This gives us the final hyperparameter value. Then the final model can be trained
+
+```{r}
+learner$param_set$values = c(learner$param_set$values, list(cost = at$tuning_result$cost))
+learner$train(task)
+g_final = learner$predict_newdata
+#this created g_final internally and you can predict on it for x-vec* via:
+g_final(cancer[1, ])
+```
+
+
+# Use Case (II) Forward Stepwise Model Construction
+
+There are many types of such stepwise models. Here we will look at Forward Stepwise Linear models. "Forward" meaning we start with a low complexity model and end with a high complexity model, "Stepwise" meaning we do so iteratively which each step consisting of one additional degree of freedom i.e. one incremental increase in complexity and "Linear" meaning that the model is linear. By default we use OLS.
+
+We will be using the diamonds data again as an example. Let's make sure we have unordered factors to avoid issues later:
+
+```{r}
+pacman::p_load(tidyverse, magrittr)
+diamonds$cut = factor(diamonds$cut, ordered = FALSE)
+diamonds$color = factor(diamonds$color, ordered = FALSE)
+diamonds$clarity = factor(diamonds$clarity, ordered = FALSE)
+```
+
+What we're doing will be highly computational, so let's take a random sample of the dimaonds in $\mathbb{D}$ for training and testing:
+
+```{r}
+Nsamp = 1300
+set.seed(1984)
+train_indices = sample(1 : nrow(diamonds), Nsamp)
+diamonds_train = diamonds[train_indices, ]
+test_indices = sample(setdiff(1 : nrow(diamonds), train_indices), Nsamp)
+diamonds_test = diamonds[test_indices, ]
+```
+
+Let's built a model with all second-order interactions e.g. all things that look like depth x table x clarity or depth^2 x color or depth^3.
+
+```{r}
+mod = lm(price ~ . * . * ., diamonds_train)
+```
+
+How many variables is this? And what does it look like?
+
+```{r}
+length(coef(mod))
+coef(mod)[1000 : 1100]
+```
+
+For features that are non-binary, it's p_non_binary^3 features. Binary features are more complicated because its each level in feature A times each level in feature B. There are no squared or cube terms for binary features (since they're all the same i.e. ${0,1}^d = {0,1}$).
+
+Remember we lkely overfit just using first order interactions? We'll certainly overfit using first-order interactions AND second order interactions
+
+```{r}
+summary(mod)$r.squared
+sd(summary(mod)$residuals)
+```
+
+Is that believable? Well... let's try it on the another 10,000 we didn't see...
+
+```{r}
+y_hat_test = predict(mod, diamonds_test)
+y_test = diamonds_test$price
+e_test = y_test - y_hat_test
+1 - sum((e_test)^2) / sum((y_test - mean(y_test))^2)
+sd(e_test)
+```
+
+VERY negative oos $R^2$ --- why? What should that say about the relationship between $s_e$ and $s_y$?
+
+```{r}
+sd(y_test)
+sd(e_test) / sd(y_test)
+```
+
+This is not only "overfitting"; it is an absolute trainwreck! This means you can do better using the null model (average of y) instead of this model.
+
+So let us employ stepwise to get a "good" model. We need our basis predictors to start with. How about the linear components of `. * . * .` --- there's nothing intrinsically wrong with that - it's probably a good basis for $f(x)$. Let's create the model matrix for both train and test:
+
+```{r}
+Xmm_train = model.matrix(price ~ . * . * ., diamonds_train)
+y_train = diamonds_train$price
+p_plus_one = ncol(Xmm_train)
+p_plus_one
+
+Xmm_test = model.matrix(price ~ . * . * ., diamonds_test)
+```
+
+Now let's go through one by one and add the best one based on $s_e$ gain i.e. the best new dimension to add to project the most of the vector $y$ as possible onto the column space.
+
+```{r}
+predictor_by_iteration = c() #keep a growing list of predictors by iteration
+in_sample_ses_by_iteration = c() #keep a growing list of se's by iteration
+oos_ses_by_iteration = c() #keep a growing list of se's by iteration
+i = 1
+
+repeat {
+
+  #get all predictors left to try
+  all_ses = array(NA, p_plus_one) #record all possibilities
+  for (j_try in 1 : p_plus_one){
+    if (j_try %in% predictor_by_iteration){
+      next 
+    }
+    Xmm_sub = Xmm_train[, c(predictor_by_iteration, j_try), drop = FALSE]
+    all_ses[j_try] = sd(lm.fit(Xmm_sub, y_train)$residuals) #lm.fit so much faster than lm! 
+  }
+  j_star = which.min(all_ses)
+  predictor_by_iteration = c(predictor_by_iteration, j_star)
+  in_sample_ses_by_iteration = c(in_sample_ses_by_iteration, all_ses[j_star])
+  
+  #now let's look at oos
+  Xmm_sub = Xmm_train[, predictor_by_iteration, drop = FALSE]
+  mod = lm.fit(Xmm_sub, y_train)
+  y_hat_test = Xmm_test[, predictor_by_iteration, drop = FALSE] %*% mod$coefficients
+  oos_se = sd(y_test - y_hat_test)
+  oos_ses_by_iteration = c(oos_ses_by_iteration, oos_se)
+  
+  cat("i = ", i, "in sample: se = ", all_ses[j_star], "oos_se", oos_se, "\n   predictor added:", colnames(Xmm_train)[j_star], "\n")
+  
+  i = i + 1
+  
+  if (i > Nsamp || i > p_plus_one){
+    break #why??
+  }
+}
+```
+
+Now let's look at our complexity curve:
+
+```{r}
+simulation_results = data.frame(
+  iteration = 1 : length(in_sample_ses_by_iteration),
+  in_sample_ses_by_iteration = in_sample_ses_by_iteration,
+  oos_ses_by_iteration = oos_ses_by_iteration
+)
+
+pacman::p_load(latex2exp)
+ggplot(simulation_results) + 
+  geom_line(aes(x = iteration, y = in_sample_ses_by_iteration), col = "red") +
+  geom_line(aes(x = iteration, y = oos_ses_by_iteration), col = "blue") + 
+  ylim(0, max(c(simulation_results$in_sample_ses_by_iteration, simulation_results$oos_ses_by_iteration)))
+  ylab(TeX("$s_e$"))
+```
+
+
+We can kind of see what the optimal model is above. If we want an exact procedure, we'd probably fit a separate smoothing regression to the oos results and analytically find the arg-minimum, $j^*$. That number will then be fed into the model matrix to create the right feature set and the final model will be produced with all the data. Or we can just stop as soon as oos error goes up. You can also obviously do CV within each iterations to stabilize this further (lab exercise).
+
+```{r}
+p_opt = which.min(oos_ses_by_iteration)
+colnames(Xmm_train)[predictor_by_iteration[1 : p_opt]]
+```
+
+What is the "optimal model"?
+
+Can we honestly assess future performance now? No... why? Our test set was really our select set and we don't have a third test set (lab exercise). Inner and outer folding can be done too as we discussed.
+
+
+
+
+# C++ and R
+
+R goes back to 1995 when it was adapted from S (written in 1976 by John Chambers at Bell Labs) with minor modifications. The core of base R is written in C and Fortran. These two languages are the fastest known languages (how to measure "fastest" is a huge debate). Thus, base R is very fast. For instance the `sort` function is as fast as C/Fortran since it immediately calls compiled C/Fortran routines.
+
+However, R code itself that you write is "interpreted" which means it is not compiled until you run it. And it has to compile on-the-fly, making it very slow. Prior to v3.4 (April, 2017) it was even slower since the code wasn't JIT compiled. All this "real CS" stuff you can learn in another class..
+
+One notable place to observe this slowness relative to other languages is in looping. For example:
+
+```{r}
+SIZE = 1e6
+v = 1 : SIZE
+```
+
+Take for example a simple function that computes square roots on each element
+
+```{r}
+sqrt_vector = function(v){
+  v_new = array(NA, length(v))
+  for (i in 1 : length(v)){
+    v_new[i] = sqrt(v[i])
+  }
+  v_new
+}
+```
+
+How fast does this run? Let's use a cool package called `microbenchmark` that allows us to do an operation many times and see how long it takes each time to get an average:
+
+```{r}
+pacman::p_load(microbenchmark)
+microbenchmark(
+  sqrt_vector(v), 
+  times = 10
+)
+```
+
+Does the apply function help?
+
+```{r}
+microbenchmark(
+  apply(v, 1, FUN = sqrt), 
+  times = 10
+)
+```
+
+Strange that this takes so long? So it doesn't help... it hurts A LOT. Unsure why... Be careful with apply! 
+
+How much faster in C++ should this be?
+
+Enter the `Rcpp` package - a way to compile little bits (or lotta bits) of C++ on the fly.
+
+```{r}
+pacman::p_load(Rcpp)
+```
+
+
+Let's write this for loop function to sqrt-ize in C++. We then  compile it and then save it into our namespace to be called like a regular function. Note that we use C++ classes that are not part of standard C++ e.g. "NumericVector". Rcpp comes build in with classes that are interoperable with R. It's not hard to learn, just takes a small dive into the documentation.
+
+```{r}
+cppFunction('
+  NumericVector sqrt_vector_cpp(NumericVector v) {
+    int n = v.size();
+    NumericVector v_new(n);
+    for (int i = 0; i < n; i++) { //indices from 0...n-1 not 1...n!
+      v_new[i] = sqrt(v[i]);
+    }
+    return v_new;
+  }
+')
+```
+
+What do these two functions look like?
+
+```{r}
+sqrt_vector
+sqrt_vector_cpp
+```
+
+The first one shows the R code and then says it is bytecode-compiled which means there are speedups used in R (go to an advanced CS class) but we will see these speedups aren't so speedy! The other just says we `.Call` some C++ function in a certain address (pointer) and the argument to be inputted.
+
+What is the gain in runtime?
+
+```{r}
+microbenchmark(
+  sqrt_vector_cpp(v), 
+  times = 10
+)
+```
+
+WOW. 10x!!! Can't beat that with a stick...
+
+Let's do a not-so-contrived example...
+
+Matrix distance... Let's compute the distances of all pairs of rows in a dataset. I will try to code the R as efficiently as possible by using vector subtraction so there is only two for loops. The C++ function will have an additional loop to iterate over the features in the observations.
+
+```{r}
+#a subset of the diamonds data
+SIZE = 1000
+X_diamonds = as.matrix(ggplot2::diamonds[1 : SIZE, c("carat", "depth", "table", "x", "y", "z")])
+
+compute_distance_matrix = function(X){
+  n = nrow(X)
+  D = matrix(NA, n, n)
+  for (i_1 in 1 : (n - 1)){
+    for (i_2 in (i_1 + 1) : n){
+      D[i_1, i_2] = sqrt(sum((X[i_1, ] - X[i_2, ])^2))
+    }
+  }
+  D
+}
+
+cppFunction('
+  NumericMatrix compute_distance_matrix_cpp(NumericMatrix X) {
+    int n = X.nrow();
+    int p = X.ncol();
+    NumericMatrix D(n, n);
+    std::fill(D.begin(), D.end(), NA_REAL);
+
+    for (int i_1 = 0; i_1 < (n - 1); i_1++){
+      //Rcout << "computing for row #: " << (i_1 + 1) << "\\n";
+      for (int i_2 = i_1 + 1; i_2 < n; i_2++){
+        double sqd_diff = 0;
+        for (int j = 0; j < p; j++){
+          sqd_diff += pow(X(i_1, j) - X(i_2, j), 2); //by default the cmath library in std is loaded
+        }
+        D(i_1, i_2) = sqrt(sqd_diff); //by default the cmath library in std is loaded
+      }
+    }
+    return D;
+  }
+')
+```
+
+```{r}
+microbenchmark(
+  {D = compute_distance_matrix(X_diamonds)},
+  times = 10
+)
+
+round(D[1 : 5, 1 : 5], 2)
+```
+
+Slow...
+
+```{r}
+microbenchmark(
+  {D = compute_distance_matrix_cpp(X_diamonds)},
+  times = 10
+)
+round(D[1 : 5, 1 : 5], 2)
+```
+
+Absolutely lightning... ~200x faster on my laptop than R's runtime.
+
+Writing functions as strings that compile is annoying. It is better to have separate files. For instance...
+
+```{r}
+sourceCpp("distance_matrix.cpp")
+```
+
+Here are a list of the data structures in Rcpp: https://teuder.github.io/rcpp4everyone_en/070_data_types.html#vector-and-matrix
+
+Another place where C++ pays the rent is recursion. Here is a quicksort implementation in R taken from somewhere on the internet.
+
+```{r}
+quicksort_R <- function(arr) {
+  # Pick a number at random.
+  mid <- sample(arr, 1)
+
+  # Place-holders for left and right values.
+  left <- c()
+  right <- c()
+  
+  # Move all the smaller values to the left, bigger values to the right.
+  lapply(arr[arr != mid], function(d) {
+    if (d < mid) {
+      left <<- c(left, d)
+    }
+    else {
+      right <<- c(right, d)
+    }
+  })
+  
+  if (length(left) > 1) {
+    left <- quicksort_R(left)
+  }
+  
+  if (length(right) > 1) {
+    right <- quicksort_R(right)
+  }
+  
+  # Finally, return the sorted values.
+  c(left, mid, right)
+}
+```
+
+Let's create a random array to test these sorts on:
+
+```{r}
+n = 10000
+x = rnorm(n)
+```
+
+
+Let's profile the pure R sort function:
+
+```{r}
+microbenchmark(
+  x_sorted_pure_R = quicksort_R(x),
+  times = 10
+)
+```
+
+Let's profile R's `sort` function.
+
+```{r}
+microbenchmark(
+  x_sorted_base_R = sort(x),
+  times = 10
+)
+```
+
+Let's just ensure our method worked...
+
+```{r}
+x_sorted_pure_R = quicksort_R(x)
+x_sorted_base_R = sort(x)
+pacman::p_load(testthat)
+expect_equal(x_sorted_pure_R, x_sorted_base_R)
+```
+
+Basically infinitely faster. Let's make our own C++ implementation.
+
+```{r}
+sourceCpp("quicksort.cpp")
+```
+
+and profile it:
+
+```{r}
+microbenchmark(
+  x_sorted_cpp = quicksort_cpp(x),
+  times = 10
+)
+```
+
+Let's just ensure this method worked...
+
+```{r}
+pacman::p_load(testthat)
+expect_equal(x_sorted_cpp, x_sorted_base_R)
+```
+
+Why is our C++ slower than `sort`. Because `sort` is also in C++ or Fortran and it's been likely optimized and reoptimized up to wazoo for decades. Also, Rcpp's data structures may be slower than base R's data structures. There may be some speed lost to translating to `NumericVector` from `double[]` or something like that.
+
+Can you call R from Rcpp? You bet:
+
+```{r}
+cppFunction('
+  NumericVector rnorm_cpp_R(int n, double mean, double sd){
+      // get a pointer to R\'s rnorm() function
+      Function f("rnorm");   
+  
+      // Next code is interpreted as rnorm(n, mean, sd)
+      return f(n, Named("sd")=sd, _["mean"]=mean);
+  }
+')
+
+rnorm_cpp_R(5, 1, .01)
+```
+
+A few math functions are implemented for you already:
+
+```{r}
+evalCpp('R::qnorm(0.5, 0, 1, 1, 0)')
+evalCpp('R::qnorm(0.5, 0, 1)') #BOOM
+```
+
+Further, there are many common functions that are already wrapped for you via "Rcpp-sugar" which was the Rcpp's author's attempt to make Rcpp a whole lot easier, see [here](http://dirk.eddelbuettel.com/code/rcpp/Rcpp-sugar.pdf).
+
+```{r}
+evalCpp('rnorm(10, 100, 3)')
+```
+
+If you want blazing fast linear algebra, check out package `RcppArmadillo` which is a wrapper around Apache's Armadillo (namespace is "arma" in the code), an optimized linear algebra package in C++. Here is an example taken from [here](https://scholar.princeton.edu/sites/default/files/q-aps/files/slides_day4_am.pdf). It involves solving for b-vec in a standard OLS.
+
+```{r}
+pacman::p_load(RcppArmadillo)
+
+cppFunction('
+  arma::mat ols_cpp(arma::mat X, arma::mat y){
+    arma::mat Xt = X.t();
+    return solve(Xt * X, Xt * y);
+  }
+', depends = "RcppArmadillo")
+
+n = 500
+Xy = data.frame(int = rep(1, n), x1 = rnorm(n), x2 = rnorm(n), x3 = rnorm(n), y = rnorm(n))
+X = as.matrix(Xy[, 1 : 4])
+y = as.matrix(Xy[, 5])
+
+#does the function work?
+expect_equal(as.numeric(ols_cpp(X, y)), as.numeric(solve(t(X) %*% X) %*% t(X) %*% y))
+```
+
+Now how fast is it?
+
+```{r}
+microbenchmark(
+  R_via_lm = lm(y ~ 0 + ., data = Xy),
+  R_matrix_multiplication = solve(t(X) %*% X) %*% t(X) %*% y,
+  cpp_with_armadillo = ols_cpp(X, y),
+    times = 100
+)
+```
+
+About 4x faster than R's optimized linear algebra routines. Supposedly it can go even faster if you enable parallelization within Armadillo. I couldn't get that demo to work...
+
+Note lm is slow because it does all sorts of other stuff besides computing b-vec e.g. builds the model matrix, computes Rsq, computes residuals, does statistical testing, etc...
+
+Here are the places where Rcpp is recommended to be used (from https://teuder.github.io/rcpp4everyone_en/010_Rcpp_merit.html)
+
+* Loop operations in which later iterations depend on previous iterations.
+* Accessing each element of a vector/matrix.
+* Recurrent function calls within loops.
+* Changing the size of vectors dynamically.
+* Operations that need advanced data structures and algorithms (we don't do this in this class).
+
+# Java and R
+
+We just did C++ with R. Is there a bridge to Java? Yes (and there's bridges to many other languages too). Java and R can speak to each other through proper configuration of the `rJava` package. You need to have a full JDK of Java installed on your computer and have its binary executables in the proper path. This demo will be in Java JDK 8 (released in 2014 and not officially supported after 2020) since I haven't tested on the more modern Java JDK's yet. We first install `rJava` if necessary:
+
+```{r}
+if (!pacman::p_isinstalled(rJava)){
+  pacman::p_load(pkgbuild)
+  if (pkgbuild::check_build_tools()){
+    install.packages("rJava", type = "source")
+  }
+  install.packages("rJava")
+}
+```
+
+Now we load the package. Before we do, we set the JVM to have 4G of RAM. After we load it, we initialize te JVM. This should print out nothing or "0" to indicate success.
+
+```{r}
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(rJava)
+.jinit() #this initializes the JVM in the background and if this runs with no issues nor output, you probably have rJava installed and connected to the JDK properly.
+```
+
+Just like the whole `Rcpp` demo, we can do a whole demo with `rJava`, but we won't. Here's just an example of creating a Java object and running a method on it:
+
+```{r}
+java_double = .jnew("java/lang/Double", 3.1415)
+java_double
+class(java_double)
+.jclass(java_double)
+#call an instance method 
+.jcall(java_double, "I", "intValue") #java_double.intValue();
+#call a static method
+J("java/lang/String", "valueOf", java_double)
+```
+
+A note on rJava vs Rcpp. 
+
+* If you're doing quick and dirty fast functions for loops and recursion, do it in Rcpp since there is lower overhead of programming. 
+* If you are programming more full-featured software, go with rJava. 
+* Also, if you need full-featured parallelized execution and threading control e.g. thread pooling and the ease of debugging, my personal opinion is that rJava is easier to get working with less dependencies. My experience is that the Rcpp threading libraries just aren't there yet and neither is openMP directives within Rcpp. 
+* Further, the JVM is fully asynchronous which means it runs completely independently of R. What this means is that you can execute something in Java, Java can "thread it off" and return you to the R prompt with a pointer to the object that houses its execution. You can then query the object. We will see dems of this.
+
+
+
+###### Ignore
+
+First, we create the task and learner
+
+```{r}
+diamonds$cut = factor(diamonds$cut, ordered = FALSE)
+diamonds$color = factor(diamonds$color, ordered = FALSE)
+diamonds$clarity = factor(diamonds$clarity, ordered = FALSE)
+modeling_task = TaskRegr$new(id = "diamonds", backend = diamonds, target = "price") #instantiate the task
+```
+
+Now we create a new learner which is a wrapper for the linear model with a custom formula. We need to specify learning parameters, a training function (build g) and a predict function. Then we need to add theese functions to the namespace in a way mlr understands.
+
+
+```{r}
+pacman::p_load(R6, mlr3misc, mlr3learners)
+LearnerRegrLMCusotmFormulas = R6Class("LearnerRegrLMCusotmFormulas",
+  inherit = LearnerRegr,
+
+  public = list(
+
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
+    initialize = function(task) {
+      ps = ps(
+        df          = p_dbl(default = Inf, tags = "predict"),
+        interval    = p_fct(c("none", "confidence", "prediction"), tags = "predict"),
+        level       = p_dbl(default = 0.95, tags = "predict"),
+        model       = p_lgl(default = TRUE, tags = "train"),
+        offset      = p_lgl(tags = "train"),
+        pred.var    = p_uty(tags = "predict"),
+        qr          = p_lgl(default = TRUE, tags = "train"),
+        scale       = p_dbl(default = NULL, special_vals = list(NULL), tags = "predict"),
+        singular.ok = p_lgl(default = TRUE, tags = "train"),
+        x           = p_lgl(default = FALSE, tags = "train"),
+        y           = p_lgl(default = FALSE, tags = "train"),
+        formula     = p_fct(deparse(task$formula()), tags = "train")
+      )
+
+      super$initialize(
+        id = "regr.lm.custom_formulas",
+        param_set = ps,
+        predict_types = c("response", "se"),
+        feature_types = c("logical", "integer", "numeric", "factor", "character")
+      )
+    }
+  ),
+
+  private = list(
+    .train = function(task) {
+      cat("formula", as.character(self$param_set$params$formula$levels[1]), "\n")
+      pv = self$param_set$get_values(tags = "train")
+      if ("weights" %in% task$properties) {
+        pv = insert_named(pv, list(weights = task$weights$weight))
+      }
+      
+      
+
+      invoke(stats::lm,
+        formula = as.formula(self$param_set$params$formula$levels[1]), data = task$data(),
+        .args = pv)
+    },
+
+    .predict = function(task) {
+      pv = self$param_set$get_values(tags = "predict")
+      newdata = mlr3learners:::ordered_features(task, self)
+      se_fit = self$predict_type == "se"
+      prediction = invoke(predict, object = self$model, newdata = newdata, se.fit = se_fit, .args = pv)
+
+      if (se_fit) {
+        list(response = unname(prediction$fit), se = unname(prediction$se.fit))
+      } else {
+        list(response = unname(prediction))
+      }
+    }
+  )
+)
+```
+
+
+
+```{r}
+algorithm = LearnerRegrLMCusotmFormulas$new(modeling_task)
+
+
+validation = rsmp("cv", folds = 5) #instantiate the 5-fold CV
+res = resample(modeling_task, algorithm, validation) #execute
+
+
+pacman::p_load(mlr3tuning)
+resampling = rsmp("holdout")
+# search_space = ps(formula = p_fct(levels = c("price ~ x", "price ~ y", "price ~ z", "price ~ .")))
+# search_space = ps(formula = p_fct(levels = c("price ~ .")))
+search_space = ps(interval = p_fct(c("none", "confidence", "prediction")))
+  
+  
+  
+Kinner = 5
+terminator = trm("evals", n_evals = Kinner)
+tuner = tnr("design_points")
+measure = msr("regr.rmse")
+at = AutoTuner$new(algorithm, resampling, measure, terminator, tuner, search_space)
+at$train(modeling_task)
+```
