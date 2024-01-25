@@ -55,8 +55,8 @@ My lectures are scanned in as PDF files.
 * [(Midterm I Review Lab, *not* due)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/midterm1review.Rmd)
 * [Lab 4, due 3/13](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab04.Rmd)
 * [Lab 3, due 3/06](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab03.Rmd)
-* [Lab 2, due 2/24](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab02.Rmd) 
-* Lab 1, due 2/13 [(R language)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab01.Rmd) -->
+* [Lab 2, due 2/24](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab02.Rmd)  -->
+* [Lab 1, due 2/1](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab01.Rmd)
 
 ## Theory Homeworks
 

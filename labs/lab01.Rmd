@@ -1,0 +1,308 @@
+---
+title: "Lab 1"
+author: "Your Name Here"
+output: pdf_document
+date: "11:59PM February 1"
+---
+
+You should have RStudio installed to edit this file. You will write code in places marked "TO-DO" to complete the problems. Most of this will be a pure programming assignment but there are some questions that instead ask you to "write a few sentences". This is a W class! The tools for the solutions to these problems can be found in the class practice lectures. I prefer you to use the methods I taught you. If you google and find esoteric code you don't understand, this doesn't do you too much good.
+
+To "hand in" the homework, you should first download this file. The best way to do this is by cloning the class repository then copying this file from the folder of that clone into the folder that is your personal class repository. Then do the assignment by filling in the TO-DO's. After you're done, compile this file into a PDF (use the "knit to PDF" button on the submenu above). This PDF will include output of your code. Then push the PDF and this Rmd file by the deadline to your github repository in a directory called "labs".
+
+
+# Basic R Skills
+
+* Print out the numerical constant pi with ten digits after the decimal point using the internal constant `pi`.
+
+```{r}
+#TO-DO
+```
+
+* Sum up the first 103 terms of the series 1 + 1/2 + 1/4 + 1/8 + ...
+
+```{r}
+#TO-DO
+```
+
+* Find the product of the first 37 terms in the sequence 1/3, 1/6, 1/9  ...
+
+```{r}
+#TO-DO
+```
+
+
+* Find the product of the first 387 terms of `1 * 1/2 * 1/4 * 1/8 *` ...
+
+```{r}
+#TO-DO
+```
+
+Is this answer *exactly* correct? 
+  
+#TO-DO
+  
+* Figure out a means to express the answer more exactly. Not compute exactly, but express more exactly.
+
+```{r}
+#TO-DO
+```
+
+* Create the sequence `x = [Inf, 20, 18, ..., -20]`.
+
+```{r}
+#TO-DO
+```
+
+Create the sequence `x = [log_3(Inf), log_3(100), log_3(98), ... log_3(-20)]`.
+
+```{r}
+#TO-DO
+```
+
+Comment on the appropriateness of the non-numeric values NAN and -Inf.
+
+* Create a vector of booleans where the entry is true if `x[i]` is positive and finite.
+
+```{r}
+#TO-DO
+```
+
+* Locate the indices of the non-real numbers in this vector. Hint: use the `which` function. Don't hesitate to use the documentation via `?which`.
+
+```{r}
+#TO-DO
+```
+
+* Locate the indices of the infinite quantities in this vector. 
+
+```{r}
+#TO-DO
+```
+
+* Locate the indices of the min and max in this vector. Hint: use the `which.min` and `which.max` functions.
+
+```{r}
+#TO-DO
+```
+
+* Count the number of unique values in `x`.
+
+```{r}
+#TO-DO
+```
+
+* Cast `x` to a factor. Do the number of levels make sense?
+
+```{r}
+#TO-DO
+```
+
+* Cast `x` to integers. What do we learn about R's infinity representation in the integer data type?
+  
+```{r}
+#TO-DO
+```
+
+* Use `x` to create a new vector `y` containing only the real numbers in x.
+
+```{r}
+#TO-DO
+```
+
+* Use the left rectangle method to numerically integrate x^2 from 0 to 1 with rectangle width size 1e-6.
+
+```{r}
+#TO-DO
+```
+
+
+* Calculate the average of 100 realizations of standard Bernoullis in one line using the `sample` function.
+
+```{r}
+#TO-DO
+```
+
+
+* Calculate the average of 500 realizations of Bernoullis with p = 0.9 in one line using the `sample` and `mean` functions.
+
+```{r}
+#TO-DO
+```
+
+
+* Calculate the average of 1000 realizations of Bernoullis with p = 0.9 in one line using `rbinom`.
+
+```{r}
+#TO-DO
+```
+
+
+* Let `n = 50`. Create a n x n matrix `R` of exactly 50% entries 0's, 25% 1's 25% 2's. These values should be in random locations.
+
+```{r}
+#TO-DO
+```
+
+* Randomly punch holes (i.e. `NA`) values in this matrix so that an each entry is missing with probability 30%.
+
+```{r}
+n = 100
+X = matrix(rnorm(n^2), nrow = n, ncol = n)
+for (i in 1 : n){
+  for (j in 1 : n){
+    if (runif(1) < 0.3){
+      X[i,j] = NA
+    }
+  }
+}
+```
+
+* Sort the rows in matrix `R` by the largest row sum to lowest. Be careful about the NA's!
+
+```{r}
+#TO-DO
+```
+
+* We will now learn the `apply` function. This is a handy function that saves writing for loops which should be eschewed in R. Use the apply function to compute a vector whose entries are the standard deviation of each row. Use the apply function to compute a vector whose entries are the standard deviation of each column. Be careful about the NA's! This should be one line.
+
+```{r}
+#TO-DO
+```
+
+* Use the `apply` function to compute a vector whose entries are the count of entries that are 1 or 2 in each column. This should be one line.
+
+```{r}
+#TO-DO
+```
+
+* Use the `split` function to create a list whose keys are the column number and values are the vector of the columns. Look at the last example in the documentation `?split`.
+
+```{r}
+#TO-DO
+```
+
+* In one statement, use the `lapply` function to create a list whose keys are the column number and values are themselves a list with keys: "min" whose value is the minimum of the column, "max" whose value is the maximum of the column, "pct_missing" is the proportion of missingness in the column and "first_NA" whose value is the row number of the first time the NA appears.
+
+```{r}
+#TO-DO
+```
+
+* Set a seed and then create a vector `v` consisting of a sample of 1,000 iid normal realizations with mean -10 and variance 100.
+
+```{r}
+#TO-DO
+```
+
+* Repeat this exercise by resetting the seed to ensure you obtain the same results.
+
+```{r}
+#TO-DO
+```
+
+* Find the average of `v` and the standard error of `v`.
+
+```{r}
+#TO-DO
+```
+
+* Find the 5%ile of `v` and use the `qnorm` function to compute what it theoretically should be. Is the estimate about what is expected by theory?
+
+```{r}
+#TO-DO
+```
+
+* What is the percentile of `v` that corresponds to the value 0? What should it be theoretically? Is the estimate about what is expected by theory?
+
+```{r}
+#TO-DO
+```
+
+* Create a function `my_reverse` which takes as required input a vector `v` and returns the vector in reverse where the first entry is the last entry, etc. No function calls are allowed inside your function otherwise that would defeat the purpose of the exercise! (Yes, there is a base R function that does this called `rev`). Use `head` on `v` and `tail` on `my_reverse(v)` to verify it works.
+
+```{r}
+#TO-DO
+```
+
+* Create a function `flip_matrix` which takes as required input a matrix, an argument `dim_to_rev` that returns the matrix with the rows in reverse order or the columns in reverse order depending on the `dim_to_rev` argument. Let the default be the dimension of the matrix that is greater. If the number of rows 
+
+```{r}
+#TO-DO
+```
+
+* Create a list named `my_list` with keys "A", "B", ... where the entries are arrays of size 1, 2 x 2, 3 x 3 x 3, etc. Fill the array with the numbers 1, 2, 3, etc. Make 8 entries according to this sequence.
+
+```{r}
+#TO-DO
+```
+
+Run the following code:
+
+```{r}
+lapply(my_list, object.size)
+```
+
+Use `?object.size` to read about what these functions do. Then explain the output you see above. For the later arrays, does it make sense given the dimensions of the arrays?
+
+#TO-DO
+
+## Packages
+
+Install the package `pacman` using regular base R.
+
+```{r}
+install.packages("pacman")
+```
+
+
+First, install the package `testthat` (a widely accepted testing suite for R) from https://github.com/r-lib/testthat using `pacman`. If you are using Windows, this will be a long install, but you have to go through it for some of the stuff we are doing in class. LINUX (or MAC) is preferred for coding. If you can't get it to work, install this package from CRAN (still using `pacman`), but this is not recommended long term.
+
+```{r}
+pacman::p_load(testthat)
+```
+
+* Create vector `v` consisting of all numbers from -100 to 100 and test using the second line of code su
+
+```{r}
+v = seq(-100, 100)
+expect_equal(v, -100 : 101)
+```
+
+If there are any errors, the `expect_equal` function will tell you about them. If there are no errors, then it will be silent.
+
+Test the `my_reverse` function using the following code:
+
+```{r}
+expect_equal(my_reverse(v), rev(v))
+expect_equal(my_reverse(c("A", "B", "C")), c("C", "B", "A"))
+```
+
+## A little about strings
+
+* Use the `strsplit` function and `sample` to put the sentences in the string `lorem` below in random order. You will also need to manipulate the output of `strsplit` which is a list. You may need to learn basic concepts of regular expressions.
+
+```{r}
+lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi posuere varius volutpat. Morbi faucibus ligula id massa ultricies viverra. Donec vehicula sagittis nisi non semper. Donec at tempor erat. Integer dapibus mi lectus, eu posuere arcu ultricies in. Cras suscipit id nibh lacinia elementum. Curabitur est augue, congue eget quam in, scelerisque semper magna. Aenean nulla ante, iaculis sed vehicula ac, finibus vel arcu. Mauris at sodales augue. "
+```
+
+You have a set of names divided by gender (M / F) and generation (Boomer / GenX / Millenial):
+
+* M / Boomer      "Theodore, Bernard, Gene, Herbert, Ray, Tom, Lee, Alfred, Leroy, Eddie"
+* M / GenX        "Marc, Jamie, Greg, Darryl, Tim, Dean, Jon, Chris, Troy, Jeff"
+* M / Millennial  "Zachary, Dylan, Christian, Wesley, Seth, Austin, Gabriel, Evan, Casey, Luis"
+* F / Boomer      "Gloria, Joan, Dorothy, Shirley, Betty, Dianne, Kay, Marjorie, Lorraine, Mildred"
+* F / GenX        "Tracy, Dawn, Tina, Tammy, Melinda, Tamara, Tracey, Colleen, Sherri, Heidi"
+* F / Millennial  "Samantha, Alexis, Brittany, Lauren, Taylor, Bethany, Latoya, Candice, Brittney, Cheyenne"
+
+Create a list-within-a-list that will intelligently store this data.
+
+```{r}
+#HINT: 
+#strsplit("Theodore, Bernard, Gene, Herbert, Ray, Tom, Lee, Alfred, Leroy, Eddie", split = ", ")[[1]]
+#TO-DO
+```
+
+Now cleanup the namespace by deleting all stored objects and functions:
+
+```{r}
+#TO-DO
+```
