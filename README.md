@@ -1,6 +1,6 @@
 # MATH 342W Introdution to Data Science Spring 2024
 
-This is the course homepage for Math 342W (and Masters level 642 and RM 742) at Queens College, City University of New York taught by Professor Adam Kapelner. The course syllabus can be found [here](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/syllabus/syllabus.pdf). We use [slack](https://slack.com/) for class announcements and discussions (see syllabus for link).
+This is the course homepage for Math 342W (and Masters level 642 and RM 742) at Queens College, City University of New York taught by Professor Adam Kapelner. The course syllabus can be found [here](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/syllabus/syllabus.pdf). We use [slack](https://slack.com/) for class announcements and discussions (see syllabus for link). We will use github and [git](https://en.wikipedia.org/wiki/Git) for sharing code from this repository which you will edit then push to your own repository in order to hand in assignments. Instructions for setting up github and git, pulling this repository and creating your own repository can be found [here](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/syllabus/git_github_class_setup.pdf) for MAC, Windows and Linux.
 
 ## Lectures
 
@@ -56,7 +56,7 @@ My lectures are scanned in as PDF files.
 * [Lab 4, due 3/13](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab04.Rmd)
 * [Lab 3, due 3/06](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab03.Rmd)
 * [Lab 2, due 2/24](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab02.Rmd)  -->
-* [Lab 1, due 2/1](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab01.Rmd)
+* [Lab 1](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab01.Rmd) (due 2/1)
 
 ## Theory Homeworks
 

@@ -1,419 +1,722 @@
 ---
 title: "Practice Lectures Week 2 MATH 342W Queens College"
 author: "Professor Adam Kapelner"
-date: "Feb 7, 2022"
+date: "Jan 30, 2024"
 ---
 
+## Matrices
 
-
-## First modeling exercise
-
-Before we model, let's fabricate the training data! Let's try to build a data matrix similar to the one in the class example. Let's imagine $n = 100$ and $x_1$ is salary, $x_2$ is a dummy variable for missing loan payment in their credit history, $x_3$ is a ordinal variable for crime type coded 0, 1, 2 or 3.
-
-We can "make up" a dataset using the sampling we just learned.
+Now that we finished vectors, let's learn about the matrix object. Let's use the dimension of the learning problem in class.
 
 ```{r}
 n = 100 #number of historical objects: the people
 p = 3 #number of features about each
 
-X = matrix(NA, nrow = n, ncol = p)
+random_junk = round(runif(n * p), 2)
+random_junk
+X = matrix(random_junk, nrow = n, ncol = p)
+X
+class(X)
+X[1, 1] #the square brackets are still the getter but since there's two dimensions there's two indices
+X[1, ] #first row
+class(X[1, ]) #note: not matrix anymore
+X[1, , drop = FALSE]
+class(X[1, , drop = FALSE]) #still matrix... this matters sometimes and we will see an example of it
+X[, 1] #first column
+class(X[, 1]) #note: not matrix anymore
+X[, 1, drop = FALSE]
+class(X[, 1, drop = FALSE])
+#other ways of subsetting matrices
+X[1 : 4, ]
+X[, 2 : 3]
+X[, c(1, 3)]
+X[seq(1, n, by = 2), ]
+X[1, 1] = 1984 #the squarae brackets are still the setter
+X[1, 1] = "1984" #warning: this will wind up casting all values in the matrix to string
+head(X)
+```
+
+Sometimes handy but not recommended is getting / setting with only one index.
+
+```{r}
+head(X)
+X[1] #first entry i.e. the 1,1 entry
+X[2] #first entry i.e. the 2,1 entry (column major indexing, see https://cran.r-project.org/web/packages/reticulate/vignettes/arrays.html)
+X[n * p] #last entry i.e. n,p entry
+X[n * p + 1] #beyond last entry returns missing / illegal
+X[-1] #returns everything but the first entry and it automatically vectorizes
+X[1 : 100] #returns the first 100 i.e. the first column
+X[X > 0.5] = NA #replace all values no matter what row / col they exist in
 X
 ```
 
-Some more useful matrix functions:
+
+A few handy functions for numerical matrices:
 
 ```{r}
-nrow(X)
-ncol(X)
-dim(X)
-length(X) #countless bugs!
-c(X)
+X = matrix(random_junk, nrow = n, ncol = p) #reset
+rowSums(X)
+colSums(X)
+rowMeans(X)
+colMeans(X)
 ```
 
-Why should we fill up this matrix with NA's? No technical reason; it is done for a practical reason. Every value is currently "missing" until it's filled in i.e. it will let you know if you didn't fill any of the values.
+## Conditional statements and looping
 
-We can also name rows and columns. Each row is a historical person and each column is a feature about that person.
+We will now learn how to program in R.
+
+# Conditional Statements (and ways to print to screen too).
 
 ```{r}
-colnames(X) = c(
-  "salary", 
-  "has_past_unpaid_loan", 
-  "past_crime_severity"
-)
-colnames(X) #setter and a getter
-fake_first_names = c(
-  "Sophia", "Emma", "Olivia", "Ava", "Mia", "Isabella", "Riley", 
-  "Aria", "Zoe", "Charlotte", "Lily", "Layla", "Amelia", "Emily", 
-  "Madelyn", "Aubrey", "Adalyn", "Madison", "Chloe", "Harper", 
-  "Abigail", "Aaliyah", "Avery", "Evelyn", "Kaylee", "Ella", "Ellie", 
-  "Scarlett", "Arianna", "Hailey", "Nora", "Addison", "Brooklyn", 
-  "Hannah", "Mila", "Leah", "Elizabeth", "Sarah", "Eliana", "Mackenzie", 
-  "Peyton", "Maria", "Grace", "Adeline", "Elena", "Anna", "Victoria", 
-  "Camilla", "Lillian", "Natalie", "Jackson", "Aiden", "Lucas", 
-  "Liam", "Noah", "Ethan", "Mason", "Caden", "Oliver", "Elijah", 
-  "Grayson", "Jacob", "Michael", "Benjamin", "Carter", "James", 
-  "Jayden", "Logan", "Alexander", "Caleb", "Ryan", "Luke", "Daniel", 
-  "Jack", "William", "Owen", "Gabriel", "Matthew", "Connor", "Jayce", 
-  "Isaac", "Sebastian", "Henry", "Muhammad", "Cameron", "Wyatt", 
-  "Dylan", "Nathan", "Nicholas", "Julian", "Eli", "Levi", "Isaiah", 
-  "Landon", "David", "Christian", "Andrew", "Brayden", "John", 
-  "Lincoln"
-)
-rownames(X) = fake_first_names
-rownames(X) #setter and getter
-X
+x = 3
+if (x > 0){
+  cat("The value of x is", x, "\n") #concatenate and print to screen
+} else {
+  print("The value of x is"); print(x) #each gets its own line
+}
+
+if (x > 0){
+  ##
+} 
+else { ##NOTE: ELSE MUST GO ON SAME LINE AS THE IF'S CLOSE BRACE!!! This is not Java or C++!
+  ##
+}
+
+x = -5
+if (x > 0){
+  cat("The value of x is", x, "\n") #concatenate and print to screen
+} else if (x < -3) { ##NOTE: ELSE IF MUST GO ON SAME LINE AS THE IF'S CLOSE BRACE!!!
+  print(paste("The value of x is", x, collapse = " ")) #paste with collapse is like a string join
+} else {
+  print("The value of x is"); print(x) #each gets its own line
+}
 ```
 
-Let's pretend "salary" is normally distributed with mean \$50,000 and standard error \$20,000. Let's make up some data
+There is a one line convenience function called ifelse:
 
 ```{r}
-X[, 1] = round(rnorm(n, 50000, 20000))
-X
-#another way to set this feature:
-X[, "salary"] = round(rnorm(n, 50000, 20000))
-X
+x = -10 : 10
+b = -10 : 10
+a = ifelse(x > 0, b, -1)
+a
+x = -5 : 5
+a = ifelse(x > 0, 1, -1)
+a
 ```
 
-A quick sidebar about vectors within matrices with row or column names:
+There is also a switch in R. It is _not_ an official keyword (despite RStudio's endorsement), but it is useful for non-vector character expressions:
 
 ```{r}
-salaries = X[, 1] 
-salaries #it's a vector with names
-names(salaries) #access to its names
-names(salaries)[3] = "Adam"
-salaries
-salaries[3]
-salaries["Adam"]
-sort(salaries)
-#how do we sort salaries by name?
-salaries[order(names(salaries))]
-?order #it's like sort, but it returns indices
-rm(salaries)
-```
-
-Are the salary values independent? Yes, or at least we assume so... Hopefully we will get to models in this semester where they are not independent.
-
-We will eventually do visualization, but first let's take a look at a summary of this data:
-
-```{r}
-summary(X[, "salary"])
-```
-
-There are other base functions to know:
-
-```{r}
-mean(X[, "salary"]) #mean should be "average"!!
-sum(X[, "salary"]) / length(X[, "salary"])
-var(X[, "salary"])
-sd(X[, "salary"])
-median(X[, "salary"])
-min(X[, "salary"])
-max(X[, "salary"])
-IQR(X[, "salary"])
-```
-
-There is also the convenient quantile and inverse quantile function
-
-```{r}
-quantile(X[, "salary"], probs = 0.5)
-quantile(X[, "salary"], probs = c(.1, .9))
-inverse_quantile_obj = ecdf(X[, "salary"]) #the "empirical" CDF
-inverse_quantile_obj(50000)
-inverse_quantile_obj(70000)
-inverse_quantile_obj(0)
-inverse_quantile_obj(-10000)
-inverse_quantile_obj(200000)
-```
-
-
-Let's pretend "has_past_unpaid_loan" is benoulli distributed with probability 0.2
-
-```{r}
-X[, "has_past_unpaid_loan"] = rbinom(n, size = 1, prob = 0.2)
-X
-```
-
-Is this a reasonable fabrication of this dataset? No... since salary and not paying back a loan are dependent r.v.'s. But... we will ignore this now.
-
-It would be nice to see a summary of values. Would median and mean be appropriate here? No. For categorical variables, you should "table" them:
-
-```{r}
-table(X[, "has_past_unpaid_loan"])
-```
-
-
-Also, 50\% of people have no crime, 40\% have an infraction, 8\% a misdimeanor and 2\% a felony. Let's try to add this to the matrix. We first need to simulate this. Here's how:
-
-```{r}
-X[, "past_crime_severity"] = sample(
-  c("no crime", "infraction", "misdimeanor", "felony"),
-  size = n,
-  replace = TRUE,
-  prob = c(.50, .40, .08, .02)
-)
-X
-```
-
-Oh no - what happened?? Our matrix went all characters... The matrix type cannot handle numeric and categorical variables simultaneously! It would be nice to keep factor or character information in a matrix but this is not the spec.
-
-Enter the key data type, the "data.frame" - this is the object that is used for modeling in the R ecosystem. It is essentially an upgraded matrix.
-
-```{r}
-X = data.frame(
-  salary = round(rnorm(n, 50000, 20000)),
-  has_past_unpaid_loan = rbinom(n, size = 1, prob = 0.2),
-  past_crime_severity = sample(
-    c("no crime", "infraction", "misdimeanor", "felony"),
-    size = n,
-    replace = TRUE,
-    prob = c(.50, .40, .08, .02)
-  )
-)
-rownames(X) = fake_first_names
-X
-```
-
-RStudio gives us a nicer rendering of the information. You can open it up in a separate tab via:
-
-```{r}
-View(X)
-```
-
-and you can view summaries of each feature and data type of each feature via
-
-```{r}
-summary(X)
-str(X)
-```
-
-Again, summary doesn't work for "has_past_unpaid_loan". We should convert it to factor and try again. Note the "$" operator which is now valid for data.frame objects.
-
-```{r}
-X$has_past_unpaid_loan = factor(X$has_past_unpaid_loan, labels = c("Never", ">=1"))
-head(X) #make sure that worked
-summary(X) #much better now!
-str(X)
-```
-
-Now that we have two categorical variables, we can do a "cross tab":
-
-```{r}
-table(X$has_past_unpaid_loan)
-table(X$past_crime_severity)
-table(X$has_past_unpaid_loan, X$past_crime_severity) / 100
-#to avoid needing the "X$" over and over, use the convenience "with"
-with(X,
-  table(has_past_unpaid_loan, past_crime_severity)
+ch = "two"
+# ch = c("one", "two")
+switch(ch,
+   "one" = 1,
+   "two" = 2,
+   "three" = 3,
+   -99
 )
 ```
 
-In our training set D, we are missing one final variable, the response! Let's add it and say that 90\% of people are creditworthy i.e. they paid back their loan:
+
+# Looping
+
+A for loop contains three ingredients: (a) a looping variable joined with keyword "in" to (b) a vector or list (which we will discuss later) and executes over (c) an expression recommended to be enclosed in curly braces:
 
 ```{r}
-X$paid_back_loan = factor(rbinom(n, size = 1, prob = 0.9), labels = c("No", "Yes"))
-head(X) #make sure that worked
-summary(X) #much better now!
+for (i in 1 : 10){
+  my_loop_variable = i
+  print(my_loop_variable)
+}
 ```
 
-Conceptually - why does this make no sense at all??? y is independent of X --- what happens then? No function f can ever have any predictive / explanatory power! This is just a silly example to show you the data types. We will work with real data soon. Don't worry.
-
-
-
-
-## Continue discussion concerning data frames and the modeling from class
-
-We quickly recreate our data frame from last class:
+A slight difference from most other functional languages: after the loop is executed both the looping variable (i) still exists and the variable(s) within the scope of the looped expression (my_loop_variable) still exist:
 
 ```{r}
-n = 100
-X = data.frame(
-  salary = round(rnorm(n, 50000, 20000)),
-  has_past_unpaid_loan = rbinom(n, size = 1, prob = 0.2),
-  past_crime_severity = sample(
-    c("no crime", "infraction", "misdimeanor", "felony"),
-    size = n,
-    replace = TRUE,
-    prob = c(.50, .40, .08, .02)
-  )
-)
-row.names(X) = c(
-  "Sophia", "Emma", "Olivia", "Ava", "Mia", "Isabella", "Riley", 
-  "Aria", "Zoe", "Charlotte", "Lily", "Layla", "Amelia", "Emily", 
-  "Madelyn", "Aubrey", "Adalyn", "Madison", "Chloe", "Harper", 
-  "Abigail", "Aaliyah", "Avery", "Evelyn", "Kaylee", "Ella", "Ellie", 
-  "Scarlett", "Arianna", "Hailey", "Nora", "Addison", "Brooklyn", 
-  "Hannah", "Mila", "Leah", "Elizabeth", "Sarah", "Eliana", "Mackenzie", 
-  "Peyton", "Maria", "Grace", "Adeline", "Elena", "Anna", "Victoria", 
-  "Camilla", "Lillian", "Natalie", "Jackson", "Aiden", "Lucas", 
-  "Liam", "Noah", "Ethan", "Mason", "Caden", "Oliver", "Elijah", 
-  "Grayson", "Jacob", "Michael", "Benjamin", "Carter", "James", 
-  "Jayden", "Logan", "Alexander", "Caleb", "Ryan", "Luke", "Daniel", 
-  "Jack", "William", "Owen", "Gabriel", "Matthew", "Connor", "Jayce", 
-  "Isaac", "Sebastian", "Henry", "Muhammad", "Cameron", "Wyatt", 
-  "Dylan", "Nathan", "Nicholas", "Julian", "Eli", "Levi", "Isaiah", 
-  "Landon", "David", "Christian", "Andrew", "Brayden", "John", 
-  "Lincoln"
-)
-X
+i
+my_loop_variable
 ```
 
-Remember our cross tab? Now we can get fancier using our new libary skills. Any Stata fans out there?
+It is recommended to "clean up your namespace" whenever you can.
 
 ```{r}
-pacman::p_load(gmodels)
-CrossTable(X$has_past_unpaid_loan, X$past_crime_severity, chisq = TRUE)
+for (i in 1 : 10){
+  my_loop_variable = i
+  print(my_loop_variable)
+}
+rm(i, my_loop_variable)
 ```
 
+Remember, these two variables would vanish in C++ / Java when the for loop ended as it goes out of scope.
 
-And add a new variable, the response to the data frame:
+You can iterate over a vector as well Python-style or Java-generic-style:
 
 ```{r}
-X$paid_back_loan = factor(rbinom(n, size = 1, prob = 0.9), labels = c("No", "Yes"))
+vec = seq(1, 10)
+for (i in vec){
+  print(i)
+}
 ```
 
-Note that our matrix is now no longer just $X$; it includes $y$. I could make a renamed copy, but I want to show off dropping this column and create a new object that's both features and response column-binded together:
+And the vector does not have to be numeric:
 
 ```{r}
-y = X$paid_back_loan
-X$paid_back_loan = NULL #drop column
-Xy = cbind(X, y) #an aside: what do you think the "rbind" function does?
-head(Xy) #make sure that worked
-summary(Xy) #much better now!
-#Note: Xy = X; rm(X) would've been easier
+vec = c("a", "b", "c")
+for (ch in vec){
+  print(ch)
+}
 ```
 
-I prefer calling the full training set ${X, y}$ a data frame called $Xy$. 
-
-
-The object $X$ is now extraneous, so we should clean up our workspace now.
+There is also the while loop but not a "do-while" loop
 
 ```{r}
-rm(list = setdiff(ls(), "Xy"))
+x = 1
+while (x <= 10){
+  print(x)
+  x = x + 1 #note: there is no "++" incrementing in R
+}
 ```
 
-
-## The Null Model
+This can also be done using the while-true and a break:
 
 ```{r}
-#There's no standard R function for sample mode!!!
-sample_mode = function(data){
-  mode_name = names(sort(-table(data)))[1]
-  if (class(data) == "factor"){
-    factor(mode_name, levels = levels(data))
-  } else if (class(data) == "numeric"){
-    as.numeric(mode_name)
-  } else if (class(data) == "integer"){
-    as.integer(mode_name)
-  } else {
-    mode_name
+x = 1
+while (TRUE){
+  print(x)
+  x = x + 1 #note: there is no "++" incrementing in R
+  if (x > 10){
+    break
   }
 }
-
-g0 = function(){
-  sample_mode(Xy$y) #return mode regardless of x
-} 
-
-g0()
 ```
 
-
-## The Threshold Model
-
-Let's compute the threshold model and see what happens. Here's an inefficent but quite pedagogical way to do this:
+The "repeat" keyword is the same as the while-true. It is slightly more esoteric but still good to know:
 
 ```{r}
-n = nrow(Xy)
-num_errors_by_parameter = matrix(NA, nrow = n, ncol = 2)
-colnames(num_errors_by_parameter) = c("threshold_param", "num_errors")
-y_logical = Xy$y == "Yes"
-for (i in 1 : n){
-  threshold = Xy$salary[i]
-  num_errors = sum((Xy$salary > threshold) != y_logical)
-  num_errors_by_parameter[i, ] = c(threshold, num_errors)
+x = 1
+repeat {
+  print(x)
+  x = x + 1 #note: there is no "++" incrementing in R
+  if (x > 10){
+    break
+  }
 }
-num_errors_by_parameter
-
-#look at all thresholds in order
-num_errors_by_parameter[order(num_errors_by_parameter[, "num_errors"]), ]
-
-#now grab the smallest num errors
-best_row = order(num_errors_by_parameter[, "num_errors"])[1]
-x_star = c(num_errors_by_parameter[best_row, "threshold_param"], use.names = FALSE)
-x_star
 ```
 
-Let's program `g`, the model that is shipped as the prediction function for future `x_*`
+The final control keyword tells the loop to break the current iteration but continue to the next:
 
 ```{r}
-g = function(x){
-  ifelse(x > x_star, 1, 0)
-} 
+xs = rep(NA, 10)
+xs[3] = 3
+xs[7] = 7
+xs
 
-g(15000)
+tot = 0
+for (x in xs){
+  if (is.na(x)){
+    next #move to next element in the list in the for loop
+  }
+  tot = tot + x
+}
+tot
+```
+
+Note: "real" R programmers avoid loops since they are slow. Instead they use the "apply" function (but not "sapply" or "lapply" which are not faster). We will cover these in the future. The latest trend is to use in-line C++ code (we will get to this).
+
+## More data types
+
+Before we get back to modeling, it is worth knowing a couple more data structures in R. These are not "data [science] types", these are "[computer science] data types" that are used frequently in data science applications. 
+
+The first are "lists" which are "ordered hashmaps" or "ordered dictionaries" or "hash tables". if You don't know what this is, you should read about this online as it should have been covered in a intro to CS class.
+
+```{r}
+dict = list()
+dict$a = "first"
+dict$b = "second"
+dict$c = "third"
+dict
+length(dict)
+names(dict) #keys
+dict_unlisted = unlist(dict) #values
+dict_unlisted
+class(dict_unlisted) #i.e. a vector
+#three ways to access values by key / ordered location
+dict$a
+dict[["a"]]
+dict[[1]] #value of first entered key
+class(dict[[1]])
+dict[[1 : 2]] #bombs
+#now let's try to access a value for a non-existent key / ordered location
+dict$q
+dict[["q"]]
+dict[[4]] #bombs
+#convenient means to subset the list
+dict[1]
+class(dict[1])
+dict[1 : 2]
+dict[1 : 4] #this is the reason this type of access is not recommended
+dict = list("first", "second", "third") #no key => value... what happens?
+dict #default keys are the numbers 1, 2, ...
+dict[[1]]
+dict = list("a" = "first", "b" = "second", "c" = "third") #key => value
+dict
+dict = list(a = "first", b = "second", c = "third") #key => value
+dict
+```
+
+There is no "hash set" native to the language. You can create a dictionary and fill it with missings:
+
+
+```{r}
+dict = list()
+dict$a = NA
+dict$b = NA
+dict$c = NA
+dict
+length(dict)
+names(dict) #keys
+```
+
+Lists conveniently allow all sorts of data types (as values only).
+
+```{r}
+varied_dict = list()
+varied_dict$a = "first"
+varied_dict$b = 2
+varied_dict$c = 1 : 7
+varied_dict$d = matrix(NA, nrow = 2, ncol = 2)
+varied_dict[["some function"]] = function(x){x^2} #this key is not recommended
+varied_dict
+varied_dict$`some function` #note the tick marks (sometimes seen) needed due to spaces in key name
+length(varied_dict)
+names(varied_dict)
+```
+
+They have lots of uses in data science applications. We will likely see them in class and if not, you'll definitely see them in the real world. Note that data.frame objects are implemented as lists as well as many other common R objects.
+
+Unfortunately, list can only truly accept characters as keys. If you really need more flexibility here, we will need a library (coming soon).
+
+
+We will now discuss arrays i.e. multidimensional vectors
+
+```{r}
+x = array(1 : 5, 5)
+x
+X = array(1 : 25, dim = c(5, 5))
+X
+X = array(1 : 125, dim = c(5, 5, 5))
+X
+X[1, , ]
+X[, 1, ]
+X[, , 1]
+X[1, 1, 1]
+```
+
+These can be associative arrays too and operate like a hash of vectors across arbitrary dimensions:
+
+```{r}
+X = array(1 : 125, 
+          dim = c(5, 5, 5),
+          dimnames = list(
+            c("A", "B", "C", "D", "E"),
+            c("I", "II", "III", "IV", "V"),
+            c("blue", "red", "green", "yellow", "orange")
+          ))
+X
+X["A", , ]
+X[, "III", ]
+X[, , "orange"]
+X["C", , "orange"]
+X["C", "IV", "orange"]
 ```
 
 
-## The Perceptron
+* Functions
 
-Time for some new data first... we are bored of the fabricated creditworthiness data.
+```{r}
+my_function = function(x){
+  x
+}
+##You may be used to:
+# int my_function(int x){
+#  //something
+#  return x;
+# }
+```
+
+* Functions are objects in R. This is why you are actually assigning the function to an object.
+* We don't need to declare type since R is not "statically typed" (higher level languages usually are not statically typed). Objects can be coerced into different types on the fly (R is "dynamically typed").
+* No need for a "return" statement as the last line is the data that is returned. It is considered bad style to use "return" in R.
+
+Let's make sure this works:
+
+```{r}
+my_function(3)
+my_function("asd")
+my_function(x = 3) #you can specify that 3 is the value for argument "x"
+my_function(y = 3) #illegal argument
+(function(x){x + 1})(3) #anonymous function or "lambda" (see https://en.wikipedia.org/wiki/Anonymous_function)
+```
+
+R is somewhat user friendly as it allows for default argument values, making those arguments optional to specify when calling the function:
+
+```{r}
+my_function = function(x = 1, y = 2, z = 3, p = 4, q = 5, r = 6){
+  (x + y + z) / (p + q + r)
+}
+my_function() #default execution
+my_function(p = 0) #one optional argument specified, others defaulted
+my_function(y = -2, q = 0) #two optional arguments specified, others defaulted
+
+my_function = function(x = 1, y, z = 3, p = 4, q = 5, r = 6){
+  (x + y + z) / (p + q + r)
+}
+my_function() #no dice
+my_function(1, 0) #required argument specified
+my_function(y = 0, q = 7) #required argument specified and one optional argument
+rm(my_function) #can be deleted since it's an object
+```
+
+There are also common functional programming functions. 
+
+* Reduce uses a binary function to successively combine the elements of a given vector and a possibly given initial value. 
+* Filter extracts the elements of a vector for which a predicate (logical) function gives true. 
+* Find and Position give the first or last such element and its position in the vector, respectively. 
+* Map applies a function to the corresponding elements of given vectors. 
+
+If you like this, there are many packages that extend this and organize it nicely e.g. `purrr` (we will get to packages next class).
+
+```{r}
+x = c(1, 2, 3, 4, 5) * 10
+x
+Reduce(sum, x)
+Filter(function(x){x <= 30}, x)
+Find(function(x){x <= 30}, x)
+Position(function(x){x <= 30}, x)
+Map(function(x){x + 100}, x) #what happened here?? Map will return a list (for flexibility)
+unlist(Map(function(x){x + 100}, x)) #collect values into a vector and the keys became the names of the indices
+```
+
+## Libraries in R
+
+So far we've only made use of "base R". This is the funcionality included from a vanilla installation of R. 
+
+R has a huge worldwide community of contributors. Some contribute to newer versions of base R, but the vast majority of contributors contribute by creating and maintaining open-source "R packages" or "libraries". I'm one of the latter - check it out [here](https://scholar.rpkg.net/authordetails.php?author=Adam+Kapelner). 
+
+Many libraries come preinstalled. For instance, the MASS library which stands for "Modern Applied Statistics with S" (a famous textbook of R). We can call a function from the MASS library via the following:
+
+```{r}
+MASS::as.fractions(0.99)
+MASS::as.fractions(pi)
+```
+
+But we cannot just execute the following as the function is not included in "base R".
+
+```{r}
+as.fractions(pi)
+```
+
+We made use of the scope operator "::" to access a namespace beyond the usual "global namespace" which we've been used to. Parenthetically, you can use the ":::" to access the private / internal functions and variables. Anyone who understands object-oriented programming with public interfaces / APIs would cringe at this!!!
+
+If we are using the MASS library a lot, using the scope operator may get annoying. So similar to the "with" command, we can call
+
+```{r}
+library(MASS)
+```
+
+which loads all public methods (aka "exported" functions) into the public namespace. 
+
+Now, after the library invocation we can do the following and treat it as a normal function:
+
+```{r}
+as.fractions(pi)
+```
+
+Is this always a good idea? No... everytime you call `library` it "dirties" the namespace by putting all the functions there and rewriting over functions there previously. This is bad because you are more likely to get namespace conflicts. For instance. Let's say package `kapelner` had a weird `sample` function. This would be clear:
+
+```{r}
+v = rnorm(100)
+kapelner::sample(v)
+sample(v)
+```
+
+The first line is doing the special sample function and the second is using base R's sample. But if I do this:
+
+```{r}
+library(kapelner)
+#...
+#...
+###10,000 lines of code in which you forget about the fact that the kapelner library is loaded
+#...
+#...
+sample(v)
+```
+
+You may think you're getting base R sample function, but you're not and now you're in bug-city! You would have to do the following to be explicit:
+
+```{r}
+library(kapelner)
+sample(v)
+base::sample(v)
+```
+
+This is not a recommended thing to do. It's also not recommended for package developers to name functions the same as common base R functions. But this doesn't stop them!
+
+Back to real packages... the content for the MASS package was sitting on the hard drive since it comes with R. But what if you want to use a package that does not come with R? We'll have to install the package just like pip for Python, Rubygems for Ruby, R has a package management system built in. For example, here's a useful package for time series / finance stuff:
+
+```{r}
+install.packages("tseries")
+```
+
+Note that it knew where to go online - it went to a CRAN mirror. CRAN is the official repository for R packages. Now that it's installed, step 2 is to load it into namespace so we can more seamlessly access its functionality.
+
+```{r}
+library(tseries)
+```
+
+That was a welcome message.
+
+This library is really cool e.g.
+
+```{r}
+ibm_stock_history = get.hist.quote(instrument = "IBM", start = "2018-01-01", end = "2018-02-01")
+ibm_stock_history
+```
+
+Is this a data frame?
+
+```{r}
+class(ibm_stock_history)
+```
+
+Nope - they made their own data type. If we had a unit on "writing your own R packages", I would explain how this is done but alas there is no time...
+
+Let's say you're sharing your code with someone and one of your lines is loading a library e.g.
+
+```{r}
+library(a_library_my_computer_does_not_have_installed_yet)
+```
+
+And my computer doesn't have this library. Then we need to stop what we're doing and install. This could be annoying. Here is a convenience: use the pacman package that installs if necessary:
+
+```{r}
+if (!require("pacman")){install.packages("pacman")} #installs pacman if necessary but does not load it!
+pacman::p_load(devtools) #ensures that devtools gets installed and loaded into the workspace but pacman does not (very tidy)!
+```
+
+It is typical to then have a few lines declaring all packages on top of your R/Rmd script file. Here is an example header from one of my projects. 
+
+```{r}
+#if (!require("pacman")){install.packages("pacman")}
+#pacman::p_load(knitr, randomForest, dplyr, tidyverse, doParallel, xtable, pracma, yaml)
+```
+
+We will be seeing this in pretty much all our demos in the future. It is very rare to be coding in R without making use of packages beyond base R. I'm going to require the use of pacman for HW / projects, etc. It just makes code easier to share, run, etc.
+
+The devtools package is important for modern R usage. It allows downloading R packages directly from source that are not even on CRAN. This allows you to get "bleeding edge" features. For example:
+
+```{r}
+install_github("yihui/knitr")
+```
+
+However this doesn't always work!
+
+```{r}
+install_github("hadley/ggplot2")
+```
+
+Why can this fail? Because the computer you're running this on is not setup for compiling C++. Admittedly, MAC's usually succeed here and Windows usually fails here. To make it succeed you need to install a separate program beyond R called Rtools. This is one of the big advantages of using Linux and MAC over Windows - Windows just is more buggy when it comes to "real coding" and it gets in the way when you're out there trying to get stuff done. Linux absolutely is the best here and because Linux is usually the production environment anyway, it may make sense to use it for all your assignments and coding anyway.
+
+Note, you can use the pacman library for this type of installation too. So your header becomes:
+
+```{r}
+if (!require("pacman")){install.packages("pacman")}
+pacman::p_load(devtools)
+pacman::p_load_gh("hadley/ggplot2")
+```
+
+
+# Convenient Mapping Function for Lists with the purrr package
+
+We first load the library.
+
+```{r}
+pacman::p_load(purrr)
+```
+
+We will see later that the library `purrr` is part of a collection of libraries called the `tidyverse`.
+
+Now imagine you have a collection of objects in a list. For example, let's let the object be matrices with different sizes:
+
+```{r}
+my_matrix_list = list()
+my_matrix_list[["first"]] = matrix(rnorm(9), nrow = 3)
+my_matrix_list[["second"]] = matrix(rnorm(12), nrow = 2)
+my_matrix_list[["third"]] = matrix(rnorm(8), nrow = 4)
+my_matrix_list
+```
+
+And you want to operate on each of those objects and return a list. Let's say I want to get back the dimensions, or the first rows, or the average values and return the same keys:
+
+```{r}
+my_dims_list = modify(my_matrix_list, ~ dim(.x))
+my_dims_list
+my_first_rows_list = modify(my_matrix_list, ~ .x[1, ])
+my_first_rows_list
+my_avgs_list = modify(my_matrix_list, ~ mean(.x))
+my_avgs_list
+```
+
+This is a very convenient function known as "mapping" in functional programming. It saves a few lines of code e.g. the first `modify` would be:
+
+```{r}
+my_dims_list = list() #make new list to store keys --> dimensions of original matrices
+for (key in names(my_matrix_list)){ #iterate over all list by key
+  .x = my_matrix_list[[key]] #get value at the key for this iteration
+  my_dims_list[[key]] = dim(.x) #run function on value and save it to new list
+}
+my_dims_list
+```
+
+The above which takes 5 lines and is repeated again and again and again in code all takes one line using the `modify` function. 
+
+The `modify` function uses funky syntax which is not standard R. And it doesn't have to be; packages are allowed to extend the language and use symbols to create their own little mini-language. The `.x` above is a dummy variable for the value in the iteration in the imagined for loop (like in my rewritten boilerplate code above). The "~" tilde symbol we will be seeing in base R later on in class but in a completely different context. Here it just means "run the following function".
+
+Modify is just one of the functions in the `purrr` package. See the following cheatsheet for more convenient functions: https://github.com/rstudio/cheatsheets/blob/master/purrr.pdf.
+
+
+## Loading datasets from R packages
+
+Since R is a language built for data and statistics, it has a ton of interesting data sets by default and even more that are contained in packages. There is really just one command to know:
 
 ```{r}
 rm(list = ls())
-Xy = na.omit(MASS::biopsy) #The "breast cancer" data
-?MASS::biopsy
-head(Xy)
-X = Xy[, 2 : 10] #V1, V2, ..., V9
-head(X)
-y_binary = as.numeric(Xy$class == "malignant")
-table(y_binary)
+data(iris) #load the iris dataset (as a data frame). This dataset is included in the package "datasets" which is autoloaded by default
+class(iris)
+?iris
+#3 things I always do immediately upon getting a dataset
+head(iris)
+str(iris)
+summary(iris)
 ```
 
-First question. Let $\mathcal{H}$ be the set $\{0, 1\}$ meaning $g = 0$ or $g = 1$. What are the error rates then on $\mathbb{D}$? 
+Here is another very famous dataset
 
 ```{r}
-#If always 0, all the 1's are errors
-239 / (444 + 239)
-#If always 1, all the 0's are errors
-444 / (444 + 239)
-
-g0 = function(){
-  sample_mode(y_binary) #return mode regardless of x's
-} 
-
-g0()
+MASS::Boston #this just references the object but does not load it into the environment
+data(Boston) #error since package MASS is not loaded by default
+data(Boston, package = "MASS") #package argument not needed if package loaded 
+head(Boston)
 ```
 
-If your $g$ can't beat that, either your features $x_1, \ldots, x_p$ are terrible, and/or $\mathcal{H}$ was a terrible choice and/or $\mathcal{A}$ can't pull its weight.
-
-Okay... back to the "perceptron learning algorithm".
-
-Let's do so for one dimension - just "V1" in the breast cancer data. You will do an example with more features for the lab.
+Most data sets are names some descriptive name like "loandata" or "cars". R has so many datasets. Here they all are by package installed:
 
 ```{r}
-# y_binary = ifelse(y_binary == 1, 0, 1)
-MAX_ITER = 1000
-w_vec = rep(0, 2) #intialize a 2-dim vector
+data(package = .packages(all.available = TRUE))
+```
 
-X1 = as.matrix(cbind(1, X[, 1, drop = FALSE]))
 
-for (iter in 1 : MAX_ITER){  
-  for (i in 1 : nrow(X1)){
-    x_i = X1[i, ]
-    yhat_i = ifelse(sum(x_i * w_vec) > 0, 1, 0)
-    y_i = y_binary[i]
-    w_vec[1] = w_vec[1] + (y_i - yhat_i) * x_i[1]
-    w_vec[2] = w_vec[2] + (y_i - yhat_i) * x_i[2]
+## Errors and Warnings
+
+You can write better functions if you make use of errors and warnings. Java forces you to catch likely errors via the "throws" designation for a method but there is no such requirement in R.
+
+* Errors are unrecoverable, they halt execution i.e. red lights
+* Warnings (under usual execution) do not halt execution, but they display a message, i.e. yellow lights
+
+Here's how they work:
+
+```{r}
+my_vector_sum = function(xs){
+  
+  if (!(class(xs) %in% c("numeric", "integer"))){ #short for class(xs) == "numeric" | class(xs) == "integer"
+    stop("You need to pass in a vector of numbers not a vector of type \"", class(xs), "\".\n") #throw error!
+    # warning("Your vector of type \"", class(xs), "\" will be coerced to numbers.\n") #throw warning!
+    # xs = as.numeric(as.factor(xs))
   }
+  
+  tot = 0
+  for (x in xs){
+    tot = tot + x
+  }
+  tot
 }
-w_vec
+my_vector_sum(c(1, 2, 3))
+my_vector_sum(c("a", "b", "c"))
 ```
 
-What is our error rate?
+There is a try-catch as well:
 
 ```{r}
-yhat = ifelse(X1 %*% w_vec > 0, 1, 0)
-sum(y_binary != yhat) / length(y_binary)
+xs = c("a", "b", "c")
+tot = my_vector_sum(xs)
+
+tot = tryCatch(
+  {
+    my_vector_sum(xs)
+  },
+  error = function(e){
+    print("xs was non-numeric... coercing xs to numeric...")
+    my_vector_sum(as.numeric(as.factor(xs)))
+  }
+)
+tot
 ```
 
-Looks like the perceptron fit to just the first feature beat the null model (at least on the data in $\mathbb{D}$). Is this expected? Yes if the first feature is at all predictive of `y`.
+The recommended thing to do of course is to query if it is non-numeric within the function `my_vector_sum` and cast it then. Possibly create an argument toggling this behavior on/off with a default of off.
+
+
+## Matrix operations in R
+
+R can do all the standard matrix operations. Let's go through them quickly. First initialize two example matrices:
+
+```{r}
+A = matrix(rep(1, 4), nrow = 2)
+A
+B = array(seq(1, 4), dim = c(2, 2))
+B
+I = diag(2) #create an identity matrix of size 2x2
+I
+```
+
+Now we show off some operations:
+
+```{r}
+A * B #element-wise multiplication
+A %*% B #matrix multiplication
+B %*% I
+t(B) #transpose
+solve(B)
+solve(A) #BOOM - why?
+
+#alternative method - to be wrapped in a function
+tryCatch(
+  {
+    solve(A)
+  },
+  error = function(e){
+    print("matrix not invertible, doing Moore-Penrose generalized pseudoinverse instead...")
+    MASS::ginv(A)
+  }
+)
+
+#how would you wrap this and handle it in the real world?
+solve(I)
+#rank(A) = 1 #no such function... but... there are tons of add-on libraries for matrix computations e.g.
+pacman::p_load(Matrix) #load the Matrix library
+rankMatrix(B)
+rankMatrix(A)
+rankMatrix(I)
+```
+
+Note that vectors and matrices are not the same:
+
+```{r}
+v = c(1, 2, 3) #3-d vector
+t(v) #converts to 1x3 vector... unsure why
+t(t(v))
+v %*% v #seems to default to dot product
+t(v) %*% t(t(v)) #dot product
+I = diag(3)
+I %*% v #seems to default correctly!
+I %*% t(v) #actually non-comformable
+```
 

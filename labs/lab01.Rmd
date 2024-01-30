@@ -56,7 +56,7 @@ Is this answer *exactly* correct?
 Create the sequence `x = [log_3(Inf), log_3(100), log_3(98), ... log_3(-20)]`.
 
 ```{r}
-#TO-DO
+x = log(c(Inf, seq(100, -20, by = -2)), base = 3)
 ```
 
 Comment on the appropriateness of the non-numeric values NAN and -Inf.
@@ -82,7 +82,10 @@ Comment on the appropriateness of the non-numeric values NAN and -Inf.
 * Locate the indices of the min and max in this vector. Hint: use the `which.min` and `which.max` functions.
 
 ```{r}
-#TO-DO
+x_within_infs = ifelse(is.infinite(x), NA, x)
+which.min(x_within_infs)
+which.max(x_within_infs)
+rm(x_within_infs)
 ```
 
 * Count the number of unique values in `x`.
