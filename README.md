@@ -4,7 +4,7 @@ This is the course homepage for Math 342W (and Masters level 642 and RM 742) at 
 
 ## Lectures
 
-My lectures are scanned in as PDF files.
+My theory lectures are following my previous class notes (see [here](https://github.com/kapelner/QC_Math_342W_Spring_2022)) unless specified otherwise.
 
 <!--
 * Lecture 24 [(Notes 1)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec25kap.pdf) [(Notes 2)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec26kap.pdf)
@@ -39,9 +39,10 @@ My lectures are scanned in as PDF files.
 * Week 2 [Practice Notes in R](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/week02.Rmd)
 * Lecture 5/6 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec05kap.pdf)
 * Lecture 3/4 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec04kap.pdf)
-* Lecture 2/3 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec02kap.pdf)
-* Lecture 1/2 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec01kap.pdf) -->
-* Week 1 [Practice Notes in R](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/week01.Rmd)
+* Lecture 2/3 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec02kap.pdf)-->
+* Lecture 1/2 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec01kap.pdf) 
+* Practice Lecture 2 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec02.Rmd)
+* Practice Lecture 1 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec01.Rmd)
 
 ## Labs
 

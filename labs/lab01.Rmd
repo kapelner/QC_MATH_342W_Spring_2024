@@ -149,15 +149,7 @@ rm(x_within_infs)
 * Randomly punch holes (i.e. `NA`) values in this matrix so that an each entry is missing with probability 30%.
 
 ```{r}
-n = 100
-X = matrix(rnorm(n^2), nrow = n, ncol = n)
-for (i in 1 : n){
-  for (j in 1 : n){
-    if (runif(1) < 0.3){
-      X[i,j] = NA
-    }
-  }
-}
+#TO-DO
 ```
 
 * Sort the rows in matrix `R` by the largest row sum to lowest. Be careful about the NA's!

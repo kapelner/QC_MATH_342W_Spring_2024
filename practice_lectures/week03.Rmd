@@ -1,5 +1,5 @@
 ---
-title: "Practice Lectures Week 3 MATH 342W Queens College"
+title: "Practice Lecture 3 MATH 342W Queens College"
 author: "Professor Adam Kapelner"
 date: "Feb 14, 2022"
 ---
@@ -209,9 +209,11 @@ with(X,
 In our training set D, we are missing one final variable, the response! Let's add it and say that 90\% of people are creditworthy i.e. they paid back their loan:
 
 ```{r}
-X$paid_back_loan = factor(rbinom(n, size = 1, prob = 0.9), labels = c("No", "Yes"))
-head(X) #make sure that worked
-summary(X) #much better now!
+y = factor(rbinom(n, size = 1, prob = 0.9), labels = c("No", "Yes"))
+Xy = X #deep copy of X (not a pointer copy)
+Xy$paid_back_loan = y #add y to training set so it now has X and y
+head(Xy) #make sure that worked
+summary(Xy) #much better now!
 ```
 
 Conceptually - why does this make no sense at all??? y is independent of X --- what happens then? No function f can ever have any predictive / explanatory power! This is just a silly example to show you the data types. We will work with real data soon. Don't worry.

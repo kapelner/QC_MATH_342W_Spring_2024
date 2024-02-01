@@ -1,5 +1,5 @@
 ---
-title: "Practice Lectures Week 2 MATH 342W Queens College"
+title: "Practice Lecture 2 MATH 342W Queens College"
 author: "Professor Adam Kapelner"
 date: "Jan 30, 2024"
 ---

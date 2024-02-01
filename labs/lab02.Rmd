@@ -111,6 +111,15 @@ n = 14 * 3 * 2 * 3 * 10
 #TO-DO
 ```
 
+* Now that you've done it with the `rep` function. Try it with the `expand.grid` function which will be much easier.
+
+```{r}
+#X = data.frame(expand.grid(
+#
+#))
+
+#TO-DO
+```
 
 ## Basic Binary Classification Modeling
 
