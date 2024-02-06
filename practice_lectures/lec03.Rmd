@@ -1,0 +1,186 @@
+---
+title: "Practice Lecture 3 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+date: "Feb 1, 2022"
+---
+
+
+## First modeling exercise
+
+Before we model, let's fabricate the training data! Let's try to build a data matrix similar to the one in the class example. Let's imagine $n = 100$ and $x_1$ is salary, $x_2$ is a dummy variable for missing loan payment in their credit history, $x_3$ is a ordinal variable for crime type coded 0, 1, 2 or 3.
+
+We can "make up" a dataset using the sampling we just learned.
+
+```{r}
+n = 100 #number of historical objects: the people
+p = 3 #number of features about each
+
+X = matrix(NA, nrow = n, ncol = p)
+X
+```
+
+Some more useful matrix functions:
+
+```{r}
+nrow(X)
+ncol(X)
+dim(X)
+length(X) #countless bugs!
+c(X)
+```
+
+Why should we fill up this matrix with NA's? No technical reason; it is done for a practical reason. Every value is currently "missing" until it's filled in i.e. it will let you know if you didn't fill any of the values.
+
+We can also name rows and columns. Each row is a historical person and each column is a feature about that person.
+
+```{r}
+colnames(X) = c(
+  "salary", 
+  "has_past_unpaid_loan", 
+  "past_crime_severity"
+)
+colnames(X) #setter and a getter
+fake_first_names = c(
+  "Sophia", "Emma", "Olivia", "Ava", "Mia", "Isabella", "Riley", 
+  "Aria", "Zoe", "Charlotte", "Lily", "Layla", "Amelia", "Emily", 
+  "Madelyn", "Aubrey", "Adalyn", "Madison", "Chloe", "Harper", 
+  "Abigail", "Aaliyah", "Avery", "Evelyn", "Kaylee", "Ella", "Ellie", 
+  "Scarlett", "Arianna", "Hailey", "Nora", "Addison", "Brooklyn", 
+  "Hannah", "Mila", "Leah", "Elizabeth", "Sarah", "Eliana", "Mackenzie", 
+  "Peyton", "Maria", "Grace", "Adeline", "Elena", "Anna", "Victoria", 
+  "Camilla", "Lillian", "Natalie", "Jackson", "Aiden", "Lucas", 
+  "Liam", "Noah", "Ethan", "Mason", "Caden", "Oliver", "Elijah", 
+  "Grayson", "Jacob", "Michael", "Benjamin", "Carter", "James", 
+  "Jayden", "Logan", "Alexander", "Caleb", "Ryan", "Luke", "Daniel", 
+  "Jack", "William", "Owen", "Gabriel", "Matthew", "Connor", "Jayce", 
+  "Isaac", "Sebastian", "Henry", "Muhammad", "Cameron", "Wyatt", 
+  "Dylan", "Nathan", "Nicholas", "Julian", "Eli", "Levi", "Isaiah", 
+  "Landon", "David", "Christian", "Andrew", "Brayden", "John", 
+  "Lincoln"
+)
+rownames(X) = fake_first_names
+rownames(X) #setter and getter
+X
+```
+
+Let's pretend "salary" is normally distributed with mean \$50,000 and standard error \$20,000. Let's make up some data
+
+```{r}
+X[, 1] = round(rnorm(n, 50000, 20000))
+X
+#another way to set this feature:
+X[, "salary"] = round(rnorm(n, 50000, 20000))
+X
+```
+
+A quick sidebar about vectors within matrices with row or column names:
+
+```{r}
+salaries = X[, 1] 
+salaries #it's a vector with names
+names(salaries) #access to its names
+names(salaries)[3] = "Adam"
+salaries
+salaries[3]
+salaries["Adam"]
+sort(salaries)
+#how do we sort salaries by name?
+salaries[order(names(salaries))]
+?order #it's like sort, but it returns indices
+rm(salaries)
+```
+
+Are the salary values independent? Yes, or at least we assume so... Hopefully we will get to models in this semester where they are not independent.
+
+We will eventually do visualization, but first let's take a look at a summary of this data:
+
+```{r}
+summary(X[, "salary"])
+```
+
+There are other base functions to know:
+
+```{r}
+mean(X[, "salary"]) #mean should be "average"!!
+sum(X[, "salary"]) / length(X[, "salary"])
+var(X[, "salary"])
+sd(X[, "salary"])
+median(X[, "salary"])
+min(X[, "salary"])
+max(X[, "salary"])
+IQR(X[, "salary"])
+```
+
+There is also the convenient quantile and inverse quantile function
+
+```{r}
+quantile(X[, "salary"], probs = 0.5)
+quantile(X[, "salary"], probs = c(.1, .9))
+inverse_quantile_obj = ecdf(X[, "salary"]) #the "empirical" CDF
+inverse_quantile_obj(50000)
+inverse_quantile_obj(70000)
+inverse_quantile_obj(0)
+inverse_quantile_obj(-10000)
+inverse_quantile_obj(200000)
+```
+
+
+Let's pretend "has_past_unpaid_loan" is benoulli distributed with probability 0.2
+
+```{r}
+X[, "has_past_unpaid_loan"] = rbinom(n, size = 1, prob = 0.2)
+X
+```
+
+Is this a reasonable fabrication of this dataset? No... since salary and not paying back a loan are dependent r.v.'s. But... we will ignore this now.
+
+It would be nice to see a summary of values. Would median and mean be appropriate here? No. For categorical variables, you should "table" them:
+
+```{r}
+table(X[, "has_past_unpaid_loan"])
+```
+
+
+Also, 50\% of people have no crime, 40\% have an infraction, 8\% a misdimeanor and 2\% a felony. Let's try to add this to the matrix. We first need to simulate this. Here's how:
+
+```{r}
+X[, "past_crime_severity"] = sample(
+  c("no crime", "infraction", "misdimeanor", "felony"),
+  size = n,
+  replace = TRUE,
+  prob = c(.50, .40, .08, .02)
+)
+X
+```
+
+Oh no - what happened?? Our matrix went all characters... The matrix type cannot handle numeric and categorical variables simultaneously! It would be nice to keep factor or character information in a matrix but this is not the spec.
+
+Enter the key data type, the "data.frame" - this is the object that is used for modeling in the R ecosystem. It is essentially an upgraded matrix.
+
+```{r}
+X = data.frame(
+  salary = round(rnorm(n, 50000, 20000)),
+  has_past_unpaid_loan = rbinom(n, size = 1, prob = 0.2),
+  past_crime_severity = sample(
+    c("no crime", "infraction", "misdimeanor", "felony"),
+    size = n,
+    replace = TRUE,
+    prob = c(.50, .40, .08, .02)
+  )
+)
+rownames(X) = fake_first_names
+X
+```
+
+RStudio gives us a nicer rendering of the information. You can open it up in a separate tab via:
+
+```{r}
+View(X)
+```
+
+and you can view summaries of each feature and data type of each feature via
+
+```{r}
+summary(X)
+str(X)
+```
