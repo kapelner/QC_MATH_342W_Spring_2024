@@ -1,0 +1,168 @@
+---
+title: "Lab 4"
+author: "Your Name Here"
+output: pdf_document
+date: 
+---
+
+Load up the famous iris dataset. We are going to do a different prediction problem. Imagine the only input x is Species and you are trying to predict y which is Petal.Length. A reasonable prediction is the average petal length within each Species. Prove that this is the OLS model by fitting an appropriate `lm` and then using the predict function to verify.
+
+```{r}
+data(iris)
+```
+
+Construct the design matrix with an intercept, X without using `model.matrix`.
+
+```{r}
+#TO-DO
+```
+
+Find the hat matrix H for this regression.
+
+```{r}
+#TO-DO
+```
+
+Verify this hat matrix is symmetric using the `expect_equal` function in the package `testthat`.
+
+```{r}
+#TO-DO
+```
+
+Verify this hat matrix is idempotent using the `expect_equal` function in the package `testthat`.
+
+```{r}
+#TO-DO
+```
+
+Using the `diag` function, find the trace of the hat matrix.
+
+```{r}
+#TO-DO
+```
+
+It turns out the trace of a hat matrix is the same as its rank! But we don't have time to prove these interesting and useful facts..
+
+For masters students: create a matrix X-perpendicular.
+
+```{r}
+#TO-DO
+```
+
+Using the hat matrix, compute the yhat vector and using the projection onto the residual space, compute the e vector and verify they are orthogonal to each other.
+
+```{r}
+#TO-DO
+```
+
+Compute SST, SSR and SSE and R^2 and then show that SST = SSR + SSE.
+
+```{r}
+#TO-DO
+```
+
+Find the angle theta between y - ybar 1 and yhat - ybar 1 and then verify that its cosine squared is the same as the R^2 from the previous problem.
+
+```{r}
+#TO-DO
+```
+
+Project the y vector onto each column of the X matrix and test if the sum of these projections is the same as yhat.
+
+```{r}
+#TO-DO
+```
+
+Construct the design matrix without an intercept, X, without using `model.matrix`.
+
+```{r}
+#TO-DO
+```
+
+Find the OLS estimates using this design matrix. It should be the sample averages of the petal lengths within species.
+
+```{r}
+#TO-DO
+```
+
+Verify the hat matrix constructed from this design matrix is the same as the hat matrix constructed from the design matrix with the intercept. (Fact: orthogonal projection matrices are unique).
+
+```{r}
+#TO-DO
+```
+
+Project the y vector onto each column of the X matrix and test if the sum of these projections is the same as yhat.
+
+```{r}
+#TO-DO
+```
+
+Convert this design matrix into Q, an orthonormal matrix.
+
+```{r}
+#TO-DO
+```
+
+Project the y vector onto each column of the Q matrix and test if the sum of these projections is the same as yhat.
+
+```{r}
+#TO-DO
+```
+
+Find the p=3 linear OLS estimates if Q is used as the design matrix using the `lm` method. Is the OLS solution the same as the OLS solution for X?
+
+```{r}
+#TO-DO
+```
+
+Use the predict function and ensure that the predicted values are the same for both linear models: the one created with X  as its design matrix and the one created with Q as its design matrix.
+
+```{r}
+#TO-DO
+```
+
+
+Clear the workspace and load the boston housing data and extract X and y. The dimensions are n = 506 and p = 13. Create a matrix that is (p + 1) x (p + 1) full of NA's. Label the columns the same columns as X. Do not label the rows. For the first row, find the OLS estimate of the y regressed on the first column only and put that in the first entry. For the second row, find the OLS estimates of the y regressed on the first and second columns of X only and put them in the first and second entries. For the third row, find the OLS estimates of the y regressed on the first, second and third columns of X only and put them in the first, second and third entries, etc. For the last row, fill it with the full OLS estimates.
+
+```{r}
+#TO-DO
+```
+
+Why are the estimates changing from row to row as you add in more predictors?
+
+#TO-DO
+
+Create a vector of length p+1 and compute the R^2 values for each of the above models. 
+
+```{r}
+#TO-DO
+```
+
+Is R^2 monotonically increasing? Why?
+
+#TO-DO
+
+Create a 2x2 matrix with the first column 1's and the next column iid normals. Find the absolute value of the angle (in degrees, not radians) between the two columns in absolute difference from 90 degrees.
+
+```{r}
+n = 100
+
+X = matrix(rnorm(2 * n), ncol = 2)
+acos(t(X[,1]) %*% X[,2] / sqrt(sum(X[, 1]^2) * sum(X[, 2]^2))) * 180 / pi
+```
+
+Repeat this exercise `Nsim = 1e5` times and report the average absolute angle.
+
+```{r}
+#TO-DO
+```
+
+Create a n x 2 matrix with the first column 1's and the next column iid normals. Find the absolute value of the angle (in degrees, not radians) between the two columns. For n = 10, 50, 100, 200, 500, 1000, report the average absolute angle over `Nsim = 1e5` simulations.
+
+```{r}
+#TO-DO
+```
+
+What is this absolute angle difference from 90 degrees converging to? Why does this make sense?
+
+#TO-DO

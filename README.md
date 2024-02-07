@@ -39,8 +39,11 @@ My theory lectures are following my previous class notes (see [here](https://git
 * Week 2 [Practice Notes in R](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/week02.Rmd)
 * Lecture 5/6 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec05kap.pdf)
 * Lecture 3/4 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec04kap.pdf)
-* Lecture 2/3 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec02kap.pdf)-->
-* Lecture 1/2 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec01kap.pdf) 
+* Lecture 2/3 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec02kap.pdf)
+* Lecture 1/2 [(Notes)](https://github.com/kapelner/QC_Math_342W_Spring_2021/blob/master/lectures/lec01kap.pdf) -->
+* Practice Lecture 5 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec05.Rmd)
+* Practice Lecture 4 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec04.Rmd)
+* Practice Lecture 3 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec03.Rmd)
 * Practice Lecture 2 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec02.Rmd)
 * Practice Lecture 1 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec01.Rmd)
 
@@ -54,10 +57,10 @@ My theory lectures are following my previous class notes (see [here](https://git
 * [(Lab 6, due 4/10)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab06.Rmd)
 * [(Lab 5, due 4/3)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab05.Rmd)
 * [(Midterm I Review Lab, *not* due)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/midterm1review.Rmd)
-* [Lab 4, due 3/13](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab04.Rmd)
+* [Lab 4, due 3/13](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab04.Rmd)  -->
 * [Lab 3, due 3/06](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab03.Rmd)
-* [Lab 2, due 2/24](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab02.Rmd)  -->
-* [Lab 1](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab01.Rmd) (due 2/1)
+* [Lab 2, due 2/8](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab02.Rmd)
+* [Lab 1, due 2/1](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab01.Rmd)
 
 ## Theory Homeworks
 

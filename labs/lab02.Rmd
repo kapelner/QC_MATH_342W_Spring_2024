@@ -2,7 +2,7 @@
 title: "Lab 2"
 author: "Your Name Here"
 output: pdf_document
-date: "11:59PM February 20"
+date: "11:59PM February 8"
 ---
 
 # Basic Modeling
@@ -178,86 +178,4 @@ g = function(x){
   #TO-DO
 }
 ```
-
-
-## Perceptron
-
-You will code the "perceptron learning algorithm" for arbitrary number of features p. Take a look at the comments above the function. Respect the spec below:
-
-```{r}
-#' TO-DO: Provide a name for this function 
-#'
-#' TO-DO: Explain what this function does in a few sentences
-#'
-#' @param Xinput      TO-DO: Explain this
-#' @param y_binary    TO-DO: Explain this
-#' @param MAX_ITER    TO-DO: Explain this
-#' @param w           TO-DO: Explain this
-#'
-#' @return            The computed final parameter (weight) as a vector of length p + 1
-perceptron_learning_algorithm = function(Xinput, y_binary, MAX_ITER = 1000, w = NULL){
-  #TO-DO
-}
-```
-
-To understand what the algorithm is doing - linear "discrimination" between two response categories, we can draw a picture. First let's make up some very simple training data D.
-
-```{r}
-Xy_simple = data.frame(
- response = factor(c(0, 0, 0, 1, 1, 1)), #nominal
- first_feature = c(1, 1, 2, 3, 3, 4),    #continuous
- second_feature = c(1, 2, 1, 3, 4, 3)    #continuous
-)
-```
-
-We haven't spoken about visualization yet, but it is important we do some of it now. Thus, I will write this code for you and you will just run it. First we load the visualization library we're going to use:
-
-```{r}
-pacman::p_load(ggplot2)
-```
-
-We are going to just get some plots and not talk about the code to generate them as we will have a whole unit on visualization using `ggplot2` in the future.
-
-Let's first plot y by the two features so the coordinate plane will be the two features and we use different colors to represent the third dimension, y.
-
-```{r}
-simple_viz_obj = ggplot(Xy_simple, aes(x = first_feature, y = second_feature, color = response)) + 
-  geom_point(size = 5)
-simple_viz_obj
-```
-
-TO-DO: Explain this picture.
-
-Now, let us run the algorithm and see what happens:
-
-```{r}
-w_vec_simple_per = perceptron_learning_algorithm(
-  cbind(Xy_simple$first_feature, Xy_simple$second_feature),
-  as.numeric(Xy_simple$response == 1))
-w_vec_simple_per
-```
-
-Explain this output. What do the numbers mean? What is the intercept of this line and the slope? You will have to do some algebra.
-
-TO-DO
-
-
-```{r}
-simple_perceptron_line = geom_abline(
-    intercept = -w_vec_simple_per[1] / w_vec_simple_per[3], 
-    slope = -w_vec_simple_per[2] / w_vec_simple_per[3], 
-    color = "orange")
-simple_viz_obj + simple_perceptron_line
-```
-
-Explain this picture. Why is this line of separation not "satisfying" to you?
-
-TO-DO 
-
-For extra credit, program the maximum-margin hyperplane perceptron that provides the best linear discrimination model for linearly separable data. Make sure you provide ROxygen documentation for this function.
-
-```{r}
-#TO-DO
-```
-
 
