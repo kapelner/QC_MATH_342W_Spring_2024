@@ -36,37 +36,66 @@ g0()
 
 If your $g$ can't beat that, either your features $x_1, \ldots, x_p$ are terrible, and/or $\mathcal{H}$ was a terrible choice and/or $\mathcal{A}$ can't pull its weight.
 
-Okay... back to the "perceptron learning algorithm".
+Okay... back to the "perceptron learning algorithm". Let's use the code from lab. I've added a warning if it didn't converge. And a verbose option to print out the iterations. And a casting to matrix.
+
+```{r}
+perceptron_learning_algorithm = function(Xinput, y_binary, MAX_ITER = 1000, w_0 = NULL, verbose = FALSE){
+  p = ncol(Xinput)
+  n = nrow(Xinput)
+  Xinput = as.matrix(cbind(1, Xinput))
+  if (is.null(w_0)){
+    w_0 = rep(0, p + 1)
+  }
+  w_prev = w_0
+  w = w_0
+  for(iter in 1 : MAX_ITER){
+    if (verbose & iter %% 10 == 0){
+      cat("  perceptron iteration:", iter, "\n")
+    }
+    for (i in 1 : n) {
+      x_i = Xinput[i,]
+      y_hat_i = ifelse(sum(w_prev * x_i) >= 0, 1, 0)
+      w = w + (y_binary[i] - y_hat_i) * x_i
+    }
+    if (identical(w, w_prev)){
+      break
+    }
+    if (iter == MAX_ITER){
+      warning("Perception did not converge in ", MAX_ITER, " iterations.")
+    }
+    w_prev = w
+  }
+  w
+}
+```
 
 Let's do so for one dimension - just "V1" in the breast cancer data. You will do an example with more features for the lab.
 
 ```{r}
-MAX_ITER = 1000
-w_vec = rep(0, 2) #intialize a 2-dim vector
-
-X1 = as.matrix(cbind(1, X[, 1, drop = FALSE]))
-
-for (iter in 1 : MAX_ITER){  
-  for (i in 1 : nrow(X1)){
-    x_i = X1[i, ]
-    yhat_i = ifelse(sum(x_i * w_vec) > 0, 1, 0)
-    y_i = y_binary[i]
-    w_vec[1] = w_vec[1] + (y_i - yhat_i) * x_i[1]
-    w_vec[2] = w_vec[2] + (y_i - yhat_i) * x_i[2]
-  }
-}
+X1 = X[, 1, drop = FALSE]
+w_vec = perceptron_learning_algorithm(X1, y_binary)
 w_vec
 ```
 
-What is our error rate?
+It didn't converge. But it returned something... What is the error rate?
 
 ```{r}
-yhat = ifelse(X1 %*% w_vec > 0, 1, 0)
+yhat = ifelse(as.matrix(cbind(1, X1)) %*% w_vec > 0, 1, 0)
 sum(y_binary != yhat) / length(y_binary)
 ```
 
-Looks like the perceptron fit to just the first feature beat the null model (at least on the data in $\mathbb{D}$). Is this expected? Yes if the first feature is at all predictive of `y`.
+Looks like the perceptron fit to just the first feature beat the null model (at least on the data in $\mathbb{D}$). Is this expected? Yes if the first feature is at all predictive of `y`. Not bad considering it wasn't designed to even handle non-linearly separable datasets!
 
+Let's try all features
+
+```{r}
+w_vec = perceptron_learning_algorithm(X, y_binary, verbose = TRUE)
+w_vec
+yhat = ifelse(as.matrix(cbind(1, X)) %*% w_vec > 0, 1, 0)
+sum(y_binary != yhat) / length(y_binary)
+```
+
+Still not bad. Even though the dataset is not linearly separable, the perceptron algorithm still "travels in the right direction".
 
 
 ## Support Vector Machines (SVM)
@@ -101,23 +130,22 @@ simple_viz_obj = ggplot(Xy_simple, aes(x = first_feature, y = second_feature, co
 simple_viz_obj
 ```
 
-Now we fit a linear SVM. Since it is linearly separable, we can make $\lambda = 0$. Since the package doesn't allow zero, we make it trivially small. 
+Now we fit a linear SVM. As for the cost, which is related to lambda from class (although I'm not entirely sure how exactly it is related), we will leave the default which is 1.
 
 ```{r}
 Xy_simple_feature_matrix = as.matrix(Xy_simple[, 2 : 3])
-lambda = 1e-9
 n = nrow(Xy_simple_feature_matrix)
-svm_model = svm(Xy_simple_feature_matrix, Xy_simple$response, kernel = "linear", cost = (2 * n * lambda)^-1, scale = FALSE)
+svm_model = svm(Xy_simple_feature_matrix, Xy_simple$response, kernel = "linear", cost = 1, scale = FALSE)
 ```
 
 The model object can be queried to find the "support vectors" i.e. the observations that lie on the wedge. Let's visualize them too.
 
 ```{r}
-svm_model$index
 Xy_simple$is_support_vector = rep("no", n)
 Xy_simple$is_support_vector[svm_model$index] = "yes"
 simple_viz_obj = ggplot(Xy_simple, aes(x = first_feature, y = second_feature, color = response, shape = is_support_vector)) + 
   geom_point(size = 5)
+Xy_simple$is_support_vector = NULL #cleanup
 simple_viz_obj
 ```
 
@@ -177,7 +205,13 @@ simple_viz_obj
 Let's try SVM at different $\lambda$ values.
 
 ```{r}
-lambda = 0.001#0.001 #1.3
+#From documentation:
+#"Parameters of SVM-models usually must be tuned to yield sensible results!"
+
+lambda = 0.01
+# lambda = 0.1
+# lambda = 1
+# lambda = 2
 
 Xy_simple_feature_matrix = as.matrix(Xy_simple[, 2 : 3])
 n = nrow(Xy_simple_feature_matrix)
@@ -209,7 +243,9 @@ simple_svm_bottom_line = geom_abline(
 simple_viz_obj + simple_svm_line + simple_svm_top_line + simple_svm_bottom_line
 ```
 
-What lesson did we learn here? This hyperparameter really matters! (In the method's documentation note, it says "Parameters of SVM-models usually must be tuned to yield sensible results!") And it is not clear to me what the "wedge" is anymore when there isn't separability, nor what the support vectors are, and nor how `cost` parameter has much to do with the lambda from the notes. What is clear is that we need to figure out a way to deal with selecting the "right" hyperparameter value automatically. So far neither the perceptron nor the SVM is an algorithm for binary classification that comes without flaws.
+What lesson did we learn here? This hyperparameter really matters! We need to figure out a way to deal with selecting the "right" hyperparameter value automatically. So far neither the perceptron nor the SVM is an algorithm for binary classification that comes without flaws.
+
+What are the support vectors now? Any data point that would change the dividing line if removed. It's a more expansive definition than when there was no hinge loss term.
 
 
 ## Nearest Neighbor algorithm
@@ -254,7 +290,7 @@ y_hat = knn(X, c(4, 2, 1, 1, 2, 1, 2, 1, 1), y_binary, k = 1)
 y_hat
 ```
 
-Why is build model and predict in one shot natural in knn?
+Why is computing the model g and predicting in tandem natural in knn?
 
 Now for an interesting exercise that will setup future classes:
 
