@@ -1,15 +1,25 @@
 ---
-title: "Practice Lecture 5 MATH 342W Queens College"
+title: "Practice Lecture 6 MATH 342W Queens College"
 author: "Professor Adam Kapelner"
 ---
 
+```{r}
+sample_mode = function(data){
+  mode_val = names(sort(-table(data)))[1]
+  switch(class(data),
+    factor = factor(mode_val, levels = levels(data)),
+    numeric = as.numeric(mode_val),
+    integer = as.integer(mode_val),
+    mode_val
+  )
+}
+```
 
 ## The Perceptron
 
 Time for some new data first... we are bored of the fabricated creditworthiness data.
 
 ```{r}
-rm(list = setdiff(ls(), "sample_mode"))
 Xy = na.omit(MASS::biopsy) #The "breast cancer" data
 ?MASS::biopsy
 head(Xy)
@@ -97,10 +107,42 @@ sum(y_binary != yhat) / length(y_binary)
 
 Still not bad. Even though the dataset is not linearly separable, the perceptron algorithm still "travels in the right direction".
 
+Nobody uses perceptrons due to this linear separability problem. 
+
+# Intro to Optimization in R
+
+You will code a basic SVM for homework.  In order to do so, you need to minimize the Vapnik Objective function. We use the `optimx` library. It has many different options for doing optimization including gradient descent (which we studied in 340). Optimization is really the subject of a whole other class which I suggest you all take.
+
+```{r}
+pacman::p_load(optimx)
+```
+
+Here's an example of locating the minimum of (w_1 - 3)^2+5 + (w_2 + 4)+12. The minimum is 17 and it occurs when w_1 = 3 and w_2 = -4.
+
+```{r}
+wvec_0 = c(0, 0) #the starting values
+objective_function = function(wvec){(wvec[1] - 3)^2+5 + (wvec[2] + 4)^2+12}
+#this optimization runs minimization by default
+optimx(wvec_0, objective_function, 
+       method = c('Nelder-Mead', 'BFGS', 'CG', 'L-BFGS-B', 'nlm', 'nlminb', 'spg', 'ucminf', 'newuoa', 'bobyqa', 'nmkb', 'hjkb', 'Rcgmin', 'Rvmmin'))
+```
+
+Optimization becomes more accurate if we supply the gradient vector and Hessian matrix. This is usually worth it if it's easy to compute but it's usually difficult to compute.
+
+```{r}
+objective_function_gradient = function(wvec){c(2 * wvec[1] - 6, 2 * wvec[2] + 8)}
+objective_function_hessian = function(wvec){matrix(c(2, 0, 0, 2), nrow = 2)}
+optimx(wvec_0, objective_function, gr = objective_function_gradient, hess = objective_function_hessian, method = c('Nelder-Mead', 'BFGS', 'CG', 'L-BFGS-B', 'nlm', 'nlminb', 'spg', 'ucminf', 'newuoa', 'bobyqa', 'nmkb', 'hjkb', 'Rcgmin', 'Rvmmin'))
+```
+
+In this case, the function was so ridiculously easy to minimize (being differentiable and of dimension of only 2) we only get improvements in far off decimal places if we give it the first and second derivatives.
+
+For the purposes of the homework, you should use the method "BFGS". In real life, you have to play around and see what happens! No optimization method works well for all situtations. Read the documentation and read up on these methods on wikipedia.
+
 
 ## Support Vector Machines (SVM)
 
-You will code a basic SVM for homework. Here we use the `e1071` library.
+Here we use the `e1071` library.
 
 ```{r}
 pacman::p_load(e1071)
@@ -154,8 +196,8 @@ Now we calculate the weight vector. This is technical and not covered in the cla
 
 ```{r}
 w_vec_simple_svm = c(
-  svm_model$rho, #the b term
-  -t(svm_model$coefs) %*% Xy_simple_feature_matrix[svm_model$index, ] # the other terms
+  -svm_model$rho, #the b term
+  t(svm_model$coefs) %*% Xy_simple_feature_matrix[svm_model$index, ] # the other terms
 )
 w_vec_simple_svm
 w_norm = sqrt(sum(w_vec_simple_svm^2))
@@ -218,8 +260,8 @@ n = nrow(Xy_simple_feature_matrix)
 svm_model = svm(Xy_simple_feature_matrix, Xy_simple$response, kernel = "linear", cost = (2 * n * lambda)^-1, scale = FALSE)
 summary(svm_model)
 w_vec_simple_svm = c(
-  svm_model$rho, #the b term
-  -t(svm_model$coefs) %*% Xy_simple_feature_matrix[svm_model$index, ] # the other terms
+  -svm_model$rho, #the b term
+  t(svm_model$coefs) %*% Xy_simple_feature_matrix[svm_model$index, ] # the other terms
 )
 sqrt(sum(w_vec_simple_svm^2))
 
@@ -247,14 +289,36 @@ What lesson did we learn here? This hyperparameter really matters! We need to fi
 
 What are the support vectors now? Any data point that would change the dividing line if removed. It's a more expansive definition than when there was no hinge loss term.
 
+Let's see how the SVM does on the breast cancer data.
 
-## Nearest Neighbor algorithm
+```{r}
+rm(list = ls())
+Xy = na.omit(MASS::biopsy) #The "breast cancer" data
+?MASS::biopsy
+head(Xy)
+X = as.matrix(Xy[, 2 : 10]) #V1, V2, ..., V9
+y_binary = as.numeric(Xy$class == "malignant")
+
+svm_model = svm(X, y_binary, kernel = "linear", cost = 3e-5)
+w_vec = c(
+  -svm_model$rho, #the b term
+  t(svm_model$coefs) %*% X[svm_model$index, ] # the other terms
+)
+yhat = ifelse(cbind(1, X) %*% w_vec > 0, 1, 0)
+table(yhat)
+sum(y_binary != yhat) / length(y_binary)
+```
+
+That did pretty well (after I tried a bunch of cost values for the hyperparameter).
+
+## Nearest Neighbor (NN) model
 
 Load up the breast cancer data set again.
 
 ```{r}
+rm(list = ls())
 Xy = na.omit(MASS::biopsy) #The "breast cancer" data with all observations with missing values dropped
-X = Xy[, 2 : 10] #V1, V2, ..., V9
+X = as.matrix(Xy[, 2 : 10]) #V1, V2, ..., V9
 y_binary = as.numeric(Xy$class == "malignant")
 ```
 
@@ -271,7 +335,7 @@ nn_function(5.2)
 Why is this silly for this dataset?
 
 ```{r}
-str(X)
+table(X[, 1])
 ```
 
 The features are not truly continuous. Would it make sense in higher dimensions? Your homework...
@@ -283,7 +347,7 @@ pacman::p_load(class)
 ?knn
 ```
 
-We can fit a knn model *and* predict in one shot via:
+We can fit a NN model *and* predict in one shot via:
 
 ```{r}
 y_hat = knn(X, c(4, 2, 1, 1, 2, 1, 2, 1, 1), y_binary, k = 1)
@@ -311,6 +375,7 @@ Let's see $K > 1$
 y_hat = knn(X, X, y_binary, k = 10)
 y_hat
 all.equal(y_hat, factor(y_binary))
+mean(y_hat != factor(y_binary))
 ```
 
 Why would there be difference now between predictions and the actual data?
