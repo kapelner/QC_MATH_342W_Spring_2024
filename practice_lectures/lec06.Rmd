@@ -111,7 +111,7 @@ Nobody uses perceptrons due to this linear separability problem.
 
 # Intro to Optimization in R
 
-You will code a basic SVM for homework.  In order to do so, you need to minimize the Vapnik Objective function. We use the `optimx` library. It has many different options for doing optimization including gradient descent (which we studied in 340). Optimization is really the subject of a whole other class which I suggest you all take.
+You will code a basic SVM for lab. In order to do so, you need to minimize the Vapnik Objective function. We use the `optimx` library. It has many different options for doing optimization including gradient descent (which we studied in 340). Optimization is really the subject of a whole other class which I suggest you all take.
 
 ```{r}
 pacman::p_load(optimx)
@@ -137,7 +137,7 @@ optimx(wvec_0, objective_function, gr = objective_function_gradient, hess = obje
 
 In this case, the function was so ridiculously easy to minimize (being differentiable and of dimension of only 2) we only get improvements in far off decimal places if we give it the first and second derivatives.
 
-For the purposes of the homework, you should use the method "BFGS". In real life, you have to play around and see what happens! No optimization method works well for all situtations. Read the documentation and read up on these methods on wikipedia.
+For the purposes of the homework, you should use the method "BFGS". In real life, you have to play around and see what happens! No optimization method works well for all situations. Read the documentation and read up on these methods on wikipedia.
 
 
 ## Support Vector Machines (SVM)
@@ -250,10 +250,10 @@ Let's try SVM at different $\lambda$ values.
 #From documentation:
 #"Parameters of SVM-models usually must be tuned to yield sensible results!"
 
-lambda = 0.01
+#lambda = 0.01
 # lambda = 0.1
 # lambda = 1
-# lambda = 2
+lambda = 2
 
 Xy_simple_feature_matrix = as.matrix(Xy_simple[, 2 : 3])
 n = nrow(Xy_simple_feature_matrix)
@@ -373,7 +373,6 @@ Let's see $K > 1$
 
 ```{r}
 y_hat = knn(X, X, y_binary, k = 10)
-y_hat
 all.equal(y_hat, factor(y_binary))
 mean(y_hat != factor(y_binary))
 ```
@@ -385,92 +384,4 @@ rm(list = ls())
 ```
 
 
-
-## Simple Linear Regression (p = 1)
-
-To understand what the algorithm is doing - best linear fit by minimizing the squared errors, we can draw a picture. First let's make up some very simple training data $\mathbb{D}$.
-
-```{r}
-set.seed(1984)
-n = 20
-x = runif(n)
-beta_0 = 3
-beta_1 = -2
-h_star = beta_0 + beta_1 * x
-epsilons = rnorm(n, mean = 0, sd = 0.33)
-y = h_star + epsilons 
-```
-
-And let's plot the data:
-
-
-```{r}
-pacman::p_load(ggplot2)
-simple_df = data.frame(x = x, y = y)
-simple_viz_obj = ggplot(simple_df, aes(x, y)) + 
-  geom_point(size = 2)
-simple_viz_obj
-```
-
-And its true $h^*$ line:
-
-```{r}
-true_hstar_line = geom_abline(intercept = beta_0, slope = beta_1, color = "green")
-simple_viz_obj + true_hstar_line
-```
-
-Now let's calculate the simple least squares coefficients:
-
-```{r}
-r = cor(x, y)
-s_x = sd(x)
-s_y = sd(y)
-ybar = mean(y)
-xbar = mean(x)
-
-b_1 = r * s_y / s_x
-b_0 = ybar - b_1 * xbar
-b_0
-b_1
-```
-
-Note how $b_0$ and $b_1$ are not exactly the same as $\beta_0$ and $\beta_1$. Why?
-
-And we can plot it:
-
-
-```{r}
-simple_ls_regression_line = geom_abline(intercept = b_0, slope = b_1, color = "red")
-simple_viz_obj + simple_ls_regression_line + true_hstar_line
-```
-
-Review of the modeling framework:
-
-The difference between the green line and red line is the "estimation error". The difference between the green line and the points is a combination of error due to ignorance and error due to misspecification of $f$ as a straight line. In most real-world applications, estimation error is usually small relative to the other two. In the era of "big data", $n$ is usually big so estimation error is pretty small.
-
-Recall that the noise (epsilons) are the difference between the data and the green line:
-
-```{r}
-simple_df$hstar = beta_0 + beta_1 * simple_df$x
-simple_viz_obj = ggplot(simple_df, aes(x, y)) + 
-  geom_point(size = 2)
-epsilon_line_segments = geom_segment(aes(xend = x, yend = hstar), position = position_nudge(x = 0.002))
-simple_viz_obj + epsilon_line_segments + true_hstar_line
-```
-
-And that the residuals (e's) are the difference between the measurements of the response in the actual data and the green line:
-
-```{r}
-simple_df$gs = b_0 + b_1 * simple_df$x
-simple_viz_obj = ggplot(simple_df, aes(x, y)) + 
-  geom_point(size = 2)
-e_line_segments = geom_segment(aes(xend = x, yend = gs), color = "purple")
-simple_viz_obj + simple_ls_regression_line + e_line_segments
-```
-
-Examining both at the same time:
-
-```{r}
-simple_viz_obj + simple_ls_regression_line + true_hstar_line + e_line_segments + epsilon_line_segments
-```
 

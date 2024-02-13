@@ -2,7 +2,7 @@
 title: "Lab 3"
 author: "Your Name Here"
 output: pdf_document
-date: "11:59PM February 15"
+date: "5PM February 16"
 ---
 
 
@@ -110,8 +110,8 @@ Use the `e1071` package to fit an SVM model to the simple data. Use a formula to
 ```{r}
 pacman::p_load(e1071)
 svm_model = svm(
-  formula = #TO-DO, 
-  data = #TO-DO, 
+  formula = response ~ ., 
+  data = Xy_simple, 
   kernel = "linear", 
   scale = FALSE
 )
@@ -151,7 +151,7 @@ Is this SVM line a better fit than the perceptron?
 
 TO-DO
 
-Now write pseuocode for your own implementation of the linear support vector machine algorithm using the Vapnik objective function we discussed.
+Now write pseudocode for your own implementation of the linear support vector machine algorithm using the Vapnik objective function we discussed.
 
 Note there are differences between this spec and the perceptron learning algorithm spec in question #1. You should figure out a way to respect the `MAX_ITER` argument value. 
 
