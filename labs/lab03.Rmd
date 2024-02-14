@@ -2,7 +2,7 @@
 title: "Lab 3"
 author: "Your Name Here"
 output: pdf_document
-date: "5PM February 16"
+date: "5PM February 18"
 ---
 
 
