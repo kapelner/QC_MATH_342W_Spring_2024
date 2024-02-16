@@ -5,6 +5,15 @@ output: pdf_document
 date: "11:59PM February 29"
 ---
 
+
+Create a dataset D which we call `Xy` such that the linear model has R^2 about 0\% but x, y are clearly associated.
+
+```{r}
+x = #TO-DO
+y = #TO-DO
+Xy = data.frame(x = x, y = y)
+```
+
 Write a function `my_ols` that takes in `X`, a matrix with with p columns representing the feature measurements for each of the n units, a vector of n responses `y` and returns a list that contains the `b`, the p+1-sized column vector of OLS coefficients, `yhat` (the vector of n predictions), `e` (the vector of n residuals), `df` for degrees of freedom of the model, `SSE`, `SST`, `MSE`, `RMSE` and `Rsq` (for the R-squared metric). Internally, you cannot use `lm` or any other package; it must be done manually. You should throw errors if the inputs are non-numeric or not the same length. Or if `X` is not otherwise suitable. You should also name the class of the return value `my_ols` by using the `class` function as a setter. No need to create ROxygen documentation here.
 
 
