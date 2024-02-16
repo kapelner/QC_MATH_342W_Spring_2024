@@ -151,29 +151,7 @@ Is this SVM line a better fit than the perceptron?
 
 TO-DO
 
-Now write pseudocode for your own implementation of the linear support vector machine algorithm using the Vapnik objective function we discussed.
-
-Note there are differences between this spec and the perceptron learning algorithm spec in question #1. You should figure out a way to respect the `MAX_ITER` argument value. 
-
-
-```{r}
-#' Support Vector Machine 
-#
-#' This function implements the hinge-loss + maximum margin linear support vector machine algorithm of Vladimir Vapnik (1963).
-#'
-#' @param Xinput      The training data features as an n x p matrix.
-#' @param y_binary    The training data responses as a vector of length n consisting of only 0's and 1's.
-#' @param MAX_ITER    The maximum number of iterations the algorithm performs. Defaults to 5000.
-#' @param lambda      A scalar hyperparameter trading off margin of the hyperplane versus average hinge loss.
-#'                    The default value is 1.
-#' @return            The computed final parameter (weight) as a vector of length p + 1
-linear_svm_learning_algorithm = function(Xinput, y_binary, MAX_ITER = 5000, lambda = 0.1){
-  #TO-DO: write pseudo code in comments
-}
-```
-
-
-If you are enrolled in 342W the following is extra credit but if you're enrolled in a masters section, the following is required. Write the actual code. You may want to take a look at the `optimx` package. You can feel free to define another function (a "private" function) in this chunk if you wish. R has a way to create public and private functions, but I believe you need to create a package to do that (beyond the scope of this course).
+Now write your own implementation of the linear support vector machine algorithm using the Vapnik objective function we discussed in class.
 
 ```{r}
 #' This function implements the hinge-loss + maximum margin linear support vector machine algorithm of Vladimir Vapnik (1963).
@@ -473,29 +451,6 @@ M = 1000
 ```
 
 
-Write a function `my_ols` that takes in `X`, a matrix with with p columns representing the feature measurements for each of the n units, a vector of n responses `y` and returns a list that contains the `b`, the p+1-sized column vector of OLS coefficients, `yhat` (the vector of n predictions), `e` (the vector of n residuals), `df` for degrees of freedom of the model, `SSE`, `SST`, `MSE`, `RMSE` and `Rsq` (for the R-squared metric). Internally, you cannot use `lm` or any other package; it must be done manually. You should throw errors if the inputs are non-numeric or not the same length. Or if `X` is not otherwise suitable. You should also name the class of the return value `my_ols` by using the `class` function as a setter. No need to create ROxygen documentation here.
-
-
-```{r}
-my_ols = function(X, y){
-  #TO-DO
-}
-```
-
-Verify that the OLS coefficients for the `Type` of cars in the cars dataset gives you the same results as we did in class (i.e. the ybar's within group). 
-
-```{r}
-#TO-DO
-```
-
-
-Create a prediction method `g` that takes in a vector `x_star` and the dataset D i.e. `X` and `y` and returns the OLS predictions. Let `X` be a matrix with with p columns representing the feature measurements for each of the n units
-
-```{r}
-g = function(x_star, X, y){
-  #TO-DO
-}
-```
 
 
 
