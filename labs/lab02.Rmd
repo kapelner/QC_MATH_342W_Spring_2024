@@ -1,5 +1,5 @@
 ---
-title: "Lab 2"
+title: "Lab 2 MATH 342W"
 author: "Your Name Here"
 output: pdf_document
 date: "11:59PM February 8"

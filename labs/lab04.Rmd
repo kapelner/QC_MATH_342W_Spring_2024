@@ -1,5 +1,5 @@
 ---
-title: "Lab 4"
+title: "Lab 4 MATH 342W"
 author: "Your Name Here"
 output: pdf_document
 date: "11:59PM February 29"
@@ -11,7 +11,11 @@ Create a dataset D which we call `Xy` such that the linear model has R^2 about 0
 ```{r}
 x = #TO-DO
 y = #TO-DO
-Xy = data.frame(x = x, y = y)
+
+#first check that Rsq is around zero
+summary(lm(y ~ x))$r.squared
+#now check association visually
+ggplot(data.frame(x = x, y = y)) + geom_point(aes(x = x, y = y))
 ```
 
 Write a function `my_ols` that takes in `X`, a matrix with with p columns representing the feature measurements for each of the n units, a vector of n responses `y` and returns a list that contains the `b`, the p+1-sized column vector of OLS coefficients, `yhat` (the vector of n predictions), `e` (the vector of n residuals), `df` for degrees of freedom of the model, `SSE`, `SST`, `MSE`, `RMSE` and `Rsq` (for the R-squared metric). Internally, you cannot use `lm` or any other package; it must be done manually. You should throw errors if the inputs are non-numeric or not the same length. Or if `X` is not otherwise suitable. You should also name the class of the return value `my_ols` by using the `class` function as a setter. No need to create ROxygen documentation here.
@@ -51,9 +55,71 @@ Construct the design matrix with an intercept, X without using `model.matrix`.
 #TO-DO
 ```
 
-Find the hat matrix H for this regression.
+We now load the diamonds dataset. Skim the dataset using skimr or summary. What is the datatype of the color feature?
+
 
 ```{r}
+rm(list = ls())
+pacman::p_load(ggplot2, skim)
+diamonds = ggplot2::diamonds
+#TO-DO
+```
+
+Find the levels of the color feature.
+
+```{r}
+levels(diamonds$color)
+```
+
+Create new feature in the diamonds dataset, `color_as_numeric`, which is color expressed as a continuous interval value. 
+
+```{r}
+#TO-DO
+```
+
+Use that converted feature as the one predictor in a regression. How well does this regression do as measured by RMSE?
+
+```{r}
+#TO-DO
+```
+
+
+Create new feature in the diamonds dataset, `color_as_nominal`, which is color expressed as a nominal categorical variable. 
+
+```{r}
+#TO-DO
+```
+
+Use that converted feature as the one predictor in a regression. How well does this regression do as measured by RMSE?
+
+```{r}
+#TO-DO
+```
+
+Which regression does better - `color_as_numeric` or `color_as_nominal`? Why?
+
+#TO-DO
+
+Now regress both `color_as_numeric` and `color_as_nominal` in a regression. Does this regression do any better (as gauged by RMSE) than either color_as_numeric` or `color_as_nominal` alone?
+
+```{r}
+#TO-DO
+```
+
+What are the coefficients (the b vector)? 
+
+```{r}
+#TO-DO
+```
+
+Something appears to be anomalous in the coefficients. What is it? Why?
+
+#TO-DO
+
+Return to the iris dataset. Find the hat matrix H for this regression.
+
+```{r}
+rm(list = ls())
 #TO-DO
 ```
 

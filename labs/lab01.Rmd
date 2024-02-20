@@ -1,13 +1,17 @@
 ---
-title: "Lab 1"
+title: "Lab 1 MATH 342W"
 author: "Your Name Here"
 output: pdf_document
 date: "11:59PM February 1"
 ---
 
-You should have RStudio installed to edit this file. You will write code in places marked "TO-DO" to complete the problems. Most of this will be a pure programming assignment but there are some questions that instead ask you to "write a few sentences". This is a W class! The tools for the solutions to these problems can be found in the class practice lectures. I prefer you to use the methods I taught you. If you google and find esoteric code you don't understand, this doesn't do you too much good.
+You should have R and RStudio (latest versions) installed to edit this file. You will write code in places marked "TO-DO" to complete the problems. Most of this will be a pure programming assignment but there are some questions that instead ask you to "write a few sentences" which are not R chunks. This is a W class! 
 
-To "hand in" the homework, you should first download this file. The best way to do this is by cloning the class repository then copying this file from the folder of that clone into the folder that is your personal class repository. Then do the assignment by filling in the TO-DO's. After you're done, compile this file into a PDF (use the "knit to PDF" button on the submenu above). This PDF will include output of your code. Then push the PDF and this Rmd file by the deadline to your github repository in a directory called "labs".
+The tools for solving these problems can be found in the class practice lectures. I prefer you to use the methods I taught you. If you google and find esoteric code you don't understand or if you use chat GPT, this doesn't do you too much good in the long run.
+
+To "hand in" the homework, you should follow the github repo setup instructions on the course homepage. Once you have your own class repo e.g. located in ~, make a /labs directory. Then go back to ~ and clone the class repo. Then copy this file into your repo/labs directory. Edits made there can be committed and pushed. You must push this completed file by the due date to avoid late penalties. 
+
+NOT REQUIRED: After you're done, you have the option to compile this file into a PDF (use the "knit to PDF" button on the submenu above). These final PDF's look pretty as it includes the output of your code. You can push the PDF as well. It will look nice in your portfolio.
 
 
 # Basic R Skills

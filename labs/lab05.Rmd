@@ -1,11 +1,12 @@
 ---
-title: "Lab 5"
+title: "Lab 5 MATH 342W"
 author: "Your Name Here"
 output: pdf_document
+date: "11:59PM February 29"
 ---
 
 
-We will work with the diamonds dataset from last lecture:
+We will work with the diamonds dataset again. Here we load up the dataset and convert all factors to nominal type:
 
 ```{r}
 pacman::p_load(ggplot2) #this loads the diamonds data set too
@@ -253,7 +254,7 @@ Does K-fold CV help reduce variance in the oos s_e? Discuss.
 
 #TO-DO
 
-Imagine using the entire rest of the dataset besides the 2,000 training observations divvied up into slices of 200. Measure the oos error for each slice on Model F in a vector s_e_s_F and compute the s_s_e_F and also plot it.
+Imagine using the entire rest of the dataset besides the 2,000 training observations divvied up into slices of 200. Measure the oos error for each slice on Model F in a vector `s_e_s_F` and compute the `s_s_e_F` and also plot it.
 
 ```{r}
 #TO-DO
