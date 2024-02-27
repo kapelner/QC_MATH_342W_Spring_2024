@@ -98,7 +98,7 @@ Regressions without an intercept are not recommended. Here's why. What if we wer
 table(cars$AirBags)
 ```
 
-Airags is another nominal categorical variable, this time with three levels.
+Airbags is another nominal categorical variable, this time with three levels.
 
 We invoke the model as follows.
 
@@ -134,7 +134,7 @@ summary(ancova_mod)$r.squared
 summary(ancova_mod)$sigma
 ```
 
-Interpretation of estimated coefficients? Why did $R^2$ increase? (We will be explaining this in detail in the next unit).
+Interpretation of estimated coefficients? Why did $R^2$ increase?.
 
 What's going on the design / model matrix?
 
@@ -227,7 +227,7 @@ yhat = H %*% y
 head(yhat)
 ```
 
-Can you tell this is projected onto a 13 dimensionsal space from a 506 dimensional space? Not really... but it is...
+Can you tell this is projected onto a 13 dimensional space from a 506 dimensional space? Not really... but it is...
 
 Now let's project over and over...
 
@@ -235,7 +235,7 @@ Now let's project over and over...
 head(H %*% H %*% H %*% H %*% H %*% H %*% H %*% H %*% H %*% y)
 ```
 
-Same thing! Once you project, you're there. That's the idempotency of $H$.
+Same thing! Once you project, you're there. That's the idempotency property of the matrix $H$.
 
 Let's make sure that it really does represent the column space of $X$. Let's try to project different columns of $X$:
 
