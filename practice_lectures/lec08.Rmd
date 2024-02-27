@@ -341,3 +341,124 @@ raw_mod$coefficients
 
 We will soon see the internals of the `lm.fit` algorithm when we do the linear algebra of QR decomposition.
 
+
+## OLS using categorical predictors
+
+
+Note that historically this is called "Analysis of Variance" or "ANOVA" for short. But there is no difference to the computer, it still crunches the same matrices.
+
+Let's get the cars data again:
+
+```{r}
+cars = MASS::Cars93
+str(cars)
+```
+
+Let's try to model `Type`, a factor with 6 levels.
+
+```{r}
+table(cars$Type)
+```
+
+What will $\hay{y}$ look like? Should be the $\bar{y}$'s for each level. What is $p$? 6. Let' see:
+
+```{r}
+anova_mod = lm(Price ~ Type, cars)
+coef(anova_mod)
+summary(anova_mod)$r.squared
+```
+
+The one categorical variable got blown up into 5 features. How to interpret? First need to know the "reference category" i.e. which level is missing in the list. We can see from cross-referencing the coefficient names with the table of the raw feature that the reference category is `Compact`. So what is prediction for the compact type? The intercept. What is prediction of Large type? Intercept + Large, etc. 
+
+What actually happened to get the OLS estimates? Let's see the model matrix:
+
+```{r}
+Xmm = model.matrix(Price ~ Type, cars)
+head(Xmm, 20)
+table(rowSums(Xmm))
+```
+
+The predictor `Type` got "dummified" (remember we spoke about this in lecture 1 or 2). There are now 5 dummy variables each representing one of the levels and the reference level is omitted because it is accounted for in the intercept. Let's make sure this is exactly what's going on.
+
+```{r}
+y = cars$Price
+Xt = t(Xmm) 
+XtX = Xt %*% Xmm
+XtXinv = solve(XtX)
+b = XtXinv %*% Xt %*% y
+b
+yhat = Xmm %*% b
+e = y - yhat
+Rsq = (var(y) - var(e)) / var(y)
+Rsq
+sqrt(sum(e^2) / (nrow(cars) - 6))
+```
+
+And of course the coefficients and $R^2$ are identical to the output from `lm`.
+
+If we want to do a more "pure ANOVA", we can get rid of the intercept and see the $\bar{y}$'s immediately. This is handled in R's formula designation by adding a zero:
+
+```{r}
+anova_mod = lm(Price ~ 0 + Type, cars)
+coef(anova_mod)
+```
+
+Is this correct?
+
+```{r}
+mean(cars$Price[cars$Type == "Compact"])
+mean(cars$Price[cars$Type == "Large"])
+mean(cars$Price[cars$Type == "Midsize"])
+mean(cars$Price[cars$Type == "Small"])
+mean(cars$Price[cars$Type == "Sporty"])
+mean(cars$Price[cars$Type == "Van"])
+```
+
+What does $R^2$ look like?
+
+```{r}
+summary(anova_mod)$r.squared
+```
+
+Remember this from last time? What happened? The $R^2$ calculation in `lm` is not accurate without the intercept. Keep this in mind. 
+
+What does the design matrx (model matrix) look like? we can use the `model.matrix` function to generate the columns of $X$ from the data frame. The argument is the formula we wish to generate the model matrix for. Since model matrices don't require
+
+```{r}
+Xmm = model.matrix(~ 0 + Type, cars)
+head(Xmm, 20)
+table(rowSums(Xmm))
+```
+
+Very similar. 
+
+Regressions without an intercept are not recommended. Here's why. What if we were doing two factors? I want a linear model with both Type and Airbags:
+
+```{r}
+table(cars$AirBags)
+```
+
+Airbags is another nominal categorical variable, this time with three levels.
+
+We invoke the model as follows.
+
+```{r}
+anova_mod = lm(Price ~ Type + AirBags, cars)
+coef(anova_mod)
+summary(anova_mod)$r.squared
+summary(anova_mod)$sigma
+```
+
+What are interpretations now? What is the "reference level"? It's actually two levels in one: Type = compact and Airbags = Driver \& Passenger. 
+
+A deeper question: can we read off Type = Midsize and AirBags = none? No... this is a modeling "enhancement" we will discuss in a few lectures from now.
+
+If we model it without an intercept,
+
+
+```{r}
+anova_mod = lm(Price ~ 0 + AirBags + Type, cars)
+coef(anova_mod)
+```
+
+we only get $\bar{y}$'s for the first factor predictor crossed with the reference category of the second. So above `TypeCompact` refers to the average of Type = Compact and Airbags = Driver \& Passenger.
