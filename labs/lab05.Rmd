@@ -2,9 +2,208 @@
 title: "Lab 5 MATH 342W"
 author: "Your Name Here"
 output: pdf_document
-date: "11:59PM February 29"
+date: "11:59PM March 12"
 ---
 
+Write a function spec'd as follows:
+
+```{r}
+#' Orthogonal Projection
+#'
+#' Projects vector a onto v.
+#'
+#' @param a   the vector to project
+#' @param v   the vector projected onto
+#'
+#' @returns   a list of two vectors, the orthogonal projection parallel to v named a_parallel, 
+#'            and the orthogonal error orthogonal to v called a_perpendicular
+orthogonal_projection = function(a, v){
+  #TO-DO
+  list(a_parallel = a_parallel, a_perpendicular = a_perpendicular)
+}
+```
+
+Provide predictions for each of these computations and then run them to make sure you're correct.
+
+```{r}
+orthogonal_projection(c(1,2,3,4), c(1,2,3,4))
+#prediction:
+orthogonal_projection(c(1, 2, 3, 4), c(0, 2, 0, -1))
+#prediction:
+result = orthogonal_projection(c(2, 6, 7, 3), c(1, 3, 5, 7))
+t(result$a_parallel) %*% result$a_perpendicular
+#prediction:
+result$a_parallel + result$a_perpendicular
+#prediction:
+result$a_parallel / c(1, 3, 5, 7)
+#prediction:
+```
+
+
+
+Create a vector y by simulating n = 100 standard iid normals. Create a matrix of size 100 x 2 and populate the first column by all ones (for the intercept) and the second column by 100 standard iid normals. Find the R^2 of an OLS regression of `y ~ X`. Use matrix algebra.
+
+```{r}
+#TO-DO
+```
+
+Write a for loop to each time bind a new column of 100 standard iid normals to the matrix X and find the R^2 each time until the number of columns is 100. Create a vector to save all R^2's. What happened??
+
+```{r}
+#TO-DO
+```
+
+Test that the projection matrix onto this X is the same as I_n. You may have to vectorize the matrices in the `expect_equal` function for the test to work.
+
+```{r}
+pacman::p_load(testthat)
+#TO-DO
+```
+
+Add one final column to X to bring the number of columns to 101. Then try to compute R^2. What happens? 
+
+```{r}
+#TO-DO
+```
+
+Why does this make sense?
+
+#TO-DO
+
+Let's use the Boston Housing Data for the following exercises
+
+```{r}
+y = MASS::Boston$medv
+X = model.matrix(medv ~ ., MASS::Boston)
+p_plus_one = ncol(X)
+n = nrow(X)
+```
+
+Using your function `orthogonal_projection` orthogonally project onto the column space of X by projecting y on each vector of X individually and adding up the projections and call the sum `yhat_naive`.
+
+```{r}
+yhat_naive = #TO-DO
+```
+
+How much double counting occurred? Measure the magnitude relative to the true LS orthogonal projection.
+
+```{r}
+yhat = lm(medv ~ ., MASS::Boston)$fitted.values
+sqrt(sum(yhat_naive^2)) / sqrt(sum(yhat^2))
+```
+
+Is this ratio expected? Why or why not?
+
+#TO-DO
+
+Convert X into V where V has the same column space as X but has orthogonal columns. You can use the function `orthogonal_projection`. This is the Gram-Schmidt orthogonalization algorithm (part A).
+
+```{r}
+V = matrix(NA, nrow = n, ncol = p_plus_one)
+V[, 1] = X[, 1]
+for (j in 2 : ncol(X)){
+  V[, j] = X[, j]
+  
+  for (k in 1:(j-1)){
+    v_k = V[, k, drop = FALSE]
+    V[, j] = V[, j] - #fill in here
+  }
+}
+```
+
+Convert V into Q whose columns are the same except normalized. This is the Gram-Schmidt orthogonalization algorithm (part B).
+
+```{r}
+Q = matrix(NA, nrow = n, ncol = p_plus_one)
+for(j in 1 : p_plus_one){
+  Q[, j] = V[, j] / sqrt(sum(V[, j]^2))
+}
+rm(V)
+```
+
+Verify Q^T Q is I_{p+1} i.e. Q is an orthonormal matrix.
+
+```{r}
+#TO-DO
+```
+
+Is your Q the same as what results from R's built-in QR-decomposition function?
+
+```{r}
+Q_from_Rs_builtin = #TO-DO
+```
+ 
+Is this expected? Why did this happen?
+
+#TO-DO
+
+Project y onto colsp[Q] and verify it is the same as the OLS fit. You may have to use the function `unname` to compare the vectors since they the entries will likely have different names.
+
+```{r}
+#TO-DO
+expect
+```
+
+Project y onto colsp[Q] one by one and verify it sums to be the projection onto the whole space.
+
+```{r}
+yhat_naive = #TO-DO
+```
+
+Split the Boston Housing Data into a training set and a test set where the training set is 80% of the observations. Do so at random.
+
+```{r}
+K = 5
+n_test = round(n * 1 / K)
+n_train = n - n_test
+#TO-DO
+```
+
+Fit an OLS model. Find the s_e in sample and out of sample. Which one is greater? Note: we are now using s_e and not RMSE since RMSE has the n-(p + 1) in the denominator not n-1 which attempts to de-bias the error estimate by inflating the estimate when overfitting in high p. Again, we're just using `sd(e)`, the sample standard deviation of the residuals.
+
+```{r}
+#TODO
+```
+
+Do these two exercises `Nsim = 1000` times and find the average difference between s_e and ooss_e. 
+
+```{r}
+#TODO
+```
+
+We'll now add random junk to the data so that `p_plus_one = n_train` and create a new data matrix `X_with_junk.`
+
+```{r}
+X_with_junk = cbind(X, matrix(rnorm(n * (n_train - p_plus_one)), nrow = n))
+dim(X)
+dim(X_with_junk)
+```
+
+Repeat the exercise above measuring the average s_e and ooss_e but this time record these metrics by number of features used. That is, do it for the first column of `X_with_junk` (the intercept column), then do it for the first and second columns, then the first three columns, etc until you do it for all columns of `X_with_junk`. Save these in `s_e_by_p` and `ooss_e_by_p`.
+
+
+```{r}
+#TODO
+```
+
+You can graph them here:
+
+```{r}
+pacman::p_load(ggplot2)
+ggplot(
+  rbind(
+    data.frame(s_e = s_e_by_p, p = 1 : n_train, series = "in-sample"),
+    data.frame(s_e = ooss_e_by_p, p = 1 : n_train, series = "out-of-sample")
+  )) +
+  geom_line(aes(x = p, y = s_e, col = series))
+```
+ 
+Is this shape expected? Explain.
+
+
+
+
+#TO-DO
 
 We will work with the diamonds dataset again. Here we load up the dataset and convert all factors to nominal type:
 

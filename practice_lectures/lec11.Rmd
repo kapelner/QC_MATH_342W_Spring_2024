@@ -1,8 +1,206 @@
 ---
-title: "Practice Lectures Week 7 MATH 342W Queens College"
+title: "Practice Lecture 11 MATH 342W Queens College"
 author: "Professor Adam Kapelner"
-date: "Mar 14, 2022"
 ---
+
+
+# QR Decomposition
+
+Let's go back to the Boston data and regenerate all our quantities:
+
+```{r}
+y = MASS::Boston$medv
+ybar = mean(y)
+SST = sum((y - ybar)^2)
+SST
+
+
+X = as.matrix(cbind(1, MASS::Boston[, 1 : 13]))
+n = nrow(X)
+p_plus_one = ncol(X)
+Xt = t(X)
+XtXinv = solve(Xt %*% X)
+b = XtXinv %*% Xt %*% y
+b
+yhat = X %*% b
+head(yhat)
+# e = y - yhat
+# SSE = sum(e^2)
+SSR = sum((yhat - ybar)^2)
+SSR
+Rsq = SSR / SST
+Rsq
+```
+
+Now let's do the QR decomposition and see if the projections work.
+
+```{r}
+nrow(X)
+p_plus_one
+qrX = qr(X)
+class(qrX)
+Q = qr.Q(qrX)
+R = qr.R(qrX)
+dim(Q)
+dim(R)
+Matrix::rankMatrix(Q)
+Matrix::rankMatrix(R)
+
+head(Q[, 1], 50)
+head(Q[, 2], 50)
+1 / sqrt(nrow(X))
+sum(Q[, 1]^2) #normalized?
+sum(Q[, 2]^2) #normalized?
+Q[, 1] %*% Q[, 2] #orthogonal?
+Q[, 7] %*% Q[, 13] #orthogonal?
+
+Qt = t(Q)
+yhat_via_Q = Q %*% Qt %*% y
+head(yhat)
+head(yhat_via_Q)
+testthat::expect_equal(c(yhat), c(yhat_via_Q)) #needed to vectorize to make dimensions equal
+```
+
+Can we get the $b$ vector from the $Q$ matrix?
+
+```{r}
+solve(R) %*% Qt %*% y
+b_Q = Qt %*% y
+b_Q
+head(Q %*% b_Q)
+head(X %*% b)
+```
+
+Nope - this is not the same! Why not?
+
+
+Nope - this is not the same! Why not?
+
+Each dimension gives one piece of SSR and thus one piece of R^2 i.e. SSR = SSR_1 + ... + SSR_p and R^2 = R^2_1 + ... + R^2_p
+
+Our definition of SSR removed the ybar i.e. the contribution of the intercept. So we will do so here. That is the first column of $Q$. Now we add up all the features besides the intercept
+
+```{r}
+partial_SSRs = array(NA, p_plus_one)
+for (j in 2 : p_plus_one){
+  qj = Q[, j, drop = FALSE]
+  yhat_j = qj %*% t(qj) %*% y #the projection onto the jth dimension of Q
+  partial_SSRs[j] = sum(yhat_j^2)
+}
+round(partial_SSRs)
+SSR
+sum(partial_SSRs, na.rm = TRUE)
+SST
+partial_Rsqs = partial_SSRs / SST
+round(partial_Rsqs, 2)
+sum(partial_Rsqs, na.rm = TRUE)
+```
+
+Some dimensions in this subspace matter more than others. We can do approximately the same regression with less than p features. Let's try this:
+
+```{r}
+partial_Rsqs_sorted = sort(partial_Rsqs, decreasing = TRUE)
+partial_Rsqs_sorted_cumul = cumsum(partial_Rsqs_sorted)
+partial_Rsqs_sorted_cumul
+#sort Q by Rsq
+Qsorted = Q[, order(partial_Rsqs, na.last = FALSE, decreasing = TRUE)]
+#let's take the first 8
+Qreduced = Qsorted[, 1 : 8]
+mod = lm(y ~ Qreduced)
+summary(mod)$r.squared
+```
+
+Why was the first column of `Qsorted` dropped?
+
+# Correlation zero means orthogonality
+
+Let's generate some fake data. In this example we'll have one predictor which will be orthogonal to the centered response. We enforce the response to be centered by adding a column of 1's:
+
+```{r}
+n = 100; p = 2
+Q = qr.Q(qr(cbind(1, matrix(rnorm(n * p), nrow = n))))
+y = Q[, p + 1]
+x = Q[, 2]
+```
+
+Let's make sure it's orthogonal:
+
+```{r}
+x %*% y
+```
+
+If they're orthogonal and y is mean-centered, what is the correlation?
+
+```{r}
+cor(x, y)
+```
+
+If the correlation is 0, what is $b_1$, the slope? It has to be zero. Thus $b_0$ has to be $bar{x}$. Since x was also orthogonalized to the vector of 1's, it's centered and hence has average = 0. So both intercept and slope are 0:
+
+What is $b$?
+
+```{r}
+mod = lm(y ~ x)
+coef(mod)
+```
+
+What is $R^2$? Since $x$ and $y$ are orthogonal... a projection onto the colspace of $X$ gets annhilated.
+
+```{r}
+summary(mod)$r.squared
+```
+
+# Random correlations are non-zero
+
+```{r}
+set.seed(1984)
+n = 100
+x = rnorm(n)
+x = x - mean(x)
+y = rnorm(n)
+y = y - mean(y)
+x
+y
+```
+
+In this setup, $x$ and $y$ are centered Gaussian random vectors. Are they orthogonal?
+
+```{r}
+x %*% y
+theta_in_rad = acos(x %*% y / sqrt(sum(x^2) * sum(y^2)))
+theta_in_rad
+theta_in_rad * 180 / pi
+abs(90 - theta_in_rad * 180 / pi)
+```
+
+Nope... what about correlated?
+
+```{r}
+cor(x, y)
+cor(x, y)^2
+```
+
+They *nearly* uncorrelated but they still have some correlation. How is this possible? 
+
+There is "random chance"" AKA "chance capitalization"!
+
+What about the best fitting line?
+
+```{r}
+mod = lm(y ~ x)
+coef(mod)
+```
+
+Slope is about 0.09 which is small but non-zero.
+
+What is $R^2$? Since $x$ and $y$ are nearly orthogonal... a projection onto the colspace of $X$ gets nearly annhilated...
+
+```{r}
+summary(mod)$r.squared
+```
+
+...but not entirely annhilated. Lesson learned: random noise can be correlated with the response $y$ and give you the illusion of fit!
+
 
 # The monotonicity of SSR (or $R^2$) with more features
 
@@ -313,6 +511,8 @@ basic_with_yhat +
 Lesson: it takes a bit of time to overfit badly. Don't worry about a few extra degrees of freedom if you have $n$ much larger than $p$. But it will eventually be corrosive!
 
 
+
+
 # Assessing overfitting in practice
 
 Let's examine this again. This time we use one data set which is split between training and testing.
@@ -381,4 +581,3 @@ MUCH worse!! Why? We overfit big time...
 Can we go back now and fit a new model and see how we did? NO...
 
 So how are we supposed to fix a "bad" model? We can't unless we do something smarter. We'll get there.
-
