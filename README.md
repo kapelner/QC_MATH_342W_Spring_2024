@@ -42,7 +42,7 @@ My theory lectures are following my previous class notes (see [here](https://git
 
 ## Writing Assignments
 
-* Modeling Essay [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_revised.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_revised.pdf) (draft due 3/28 by email, revision due 10d after draft is graded) [(example essay)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_example.pdf)
+* Modeling Essay [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_revised.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_revised.pdf) (draft due 3/28 by email, revision due 10d after draft is graded) [(example essay 1)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_example_1.pdf) [(example essay 2)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_example_2.pdf)
 * Final Project [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/final_project.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/final_project.pdf) (due 5/24 by email)
 
 ## Exams
