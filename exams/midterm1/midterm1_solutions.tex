@@ -131,19 +131,19 @@ Because this model both (1) gives high accuracy i.e. it can prevent people from 
 
 \inred{
 \beqn
-&& s^2_y = \oneover{n-1} \sum_{i=1}^n (y_i - \ybar)^2 = \oneover{n-1} SST \\
+&& \text{The sample variance of the responses},~s^2_y = \oneover{n-1} \sum_{i=1}^n (y_i - \ybar)^2 = \oneover{n-1} SST \\
 && \Rightarrow~ SST = (n-1) s^2_y = (506-1) \times 84.58672 = 42716.29
 \eeqn
-The numbers 506 and 84.58672 are found in the code above.
-}
+The numbers 506 and 84.58672 are found in the code above, lines 7 and 3 respectively.}
+\vspace{-0.6cm}
 \subquestionwithpoints{3} Compute SSE to the nearest two decimals.
-
+\vspace{-0.0cm}
 \inred{
 \beqn
-&& s^2_e = \oneover{n-1} \sum_{i=1}^n (e_i - \bar{e})^2 = \oneover{n-1} \sum_{i=1}^n e_i^2 = \oneover{n-1} SSE\\
-&& ~\Rightarrow~ SSE = (n-1) s^2_e = (506-1) \times 21.93819 = 11078.79
+&& \text{The sample variance of the residuals},~s^2_e = \oneover{n-1} \sum_{i=1}^n (e_i - \bar{e})^2 = \oneover{n-1} \sum_{i=1}^n e_i^2 = \\
+&& \oneover{n-1} SSE~\Rightarrow~ SSE = (n-1) s^2_e = (506-1) \times 21.93819 = 11078.79
 \eeqn
-The numbers 506 and 21.93819 are found in the code above.
+The numbers 506 and 21.93819 are found in the code above, lines 7 and 19 respectively.
 }
 \pagebreak
 
@@ -156,6 +156,24 @@ $n - (p+1) = 506 - 14 = 492$
 \subquestionwithpoints{2} If you add too many random predictors, which line number does the code throw this error and halt? \inred{
 10 at the \texttt{solve} function which does matrix inversion}
 \subquestionwithpoints{5} Graph the expected $R^2$ by number of predictors from 1 to the maximum number that can be considered before OLS fails. Label the x-axis \qu{number of predictors}; label the y-axis \qu{$R^2$}. Graph it to scale. Be sure to mark critical points along both axes.\\
+
+%delta = (1 - .741) / (506 - 15)
+%x = 1 : 506
+%y = c(seq(0, 0.741, length.out = 14), seq(from = 0.741 + delta, to = 1, length.out = 506 - 14))
+%
+%ggplot(data.frame(number_of_predictors = x, Rsq = y)) + 
+%  geom_line(aes(x = number_of_predictors, y = Rsq)) + 
+%  scale_y_continuous(breaks=c(0,0.741,1)) + 
+%  scale_x_continuous(breaks=c(1,14,506)) + 
+%  theme(panel.grid.major = element_line(color = "lightgreen"), panel.grid.minor = element_blank())
+%
+%
+%y = c(seq(0, 0.741, length.out = 14), seq(from = 0.741 + delta, to = -1, length.out = 455 - 14))
+%ggplot(data.frame(number_of_predictors = x, oosRsq = y)) + 
+%  geom_line(aes(x = number_of_predictors, y = oosRsq)) + 
+%  scale_y_continuous(breaks=c(0,0.741,1)) + 
+%  scale_x_continuous(breaks=c(1,14,455)) + 
+%  theme(panel.grid.major = element_line(color = "lightgreen"), panel.grid.minor = element_blank())
 
 \inred{
 At $j=1$ features, this will be a regression onto the $\onevec$ and definitionally $R^2 = 0$.
@@ -178,13 +196,13 @@ Now consider that 10\% of the data was left out in a test set.
 \subquestionwithpoints{6} Graph expected $oosR^2$ by number of predictors from 1 to the maximum number that can be considered before OLS fails. Label the x-axis \qu{number of predictors}; label the y-axis \qu{$R^2$}. Graph it to scale. Be sure to mark critical points along both axes.
 
 \inred{\footnotesize
-From $j=1$ to 14 features, this plot will be nearly identical to the in-sample plot on the previous page as there is not too much estimation error in $n_{\text{train}} \approx 450$ with $p+1 = 14$ slope coefficients to estimate. If you want to make the $R^2$'s slightly lower here it would not be wrong. The stark difference is from $j=15$ to 506 features. Here we are overfitting the noise and the noise during training will be different than noise during test and hence performance will be degraded. Here, the $R^2$ will be monotonically decreasing and could very well be negative. As long as this piece was shown decreasing, full credit.
+From $j=1$ to 14 features, this plot will be nearly identical to the in-sample plot on the previous page as there is not too much estimation error in $n_{\text{train}} \approx 450$ with $p+1 = 14$ slope coefficients to estimate. If you want to make the $R^2$'s slightly lower here it would not be wrong. The stark difference is from $j=15$ to 455 (which is 10\% less than the original $n=506$) features. Here we are overfitting the noise and the noise during training will be different than noise during test and hence performance will be degraded. Here, the $R^2$ will be monotonically decreasing and could very well be negative. As long as this segment is seen decreasing, full credit.
 }
 \normalsize
 
 \begin{figure}[htp]
 \centering
-\includegraphics[width=5.5in]{out_of_sample}
+\includegraphics[width=5.0in]{out_of_sample}
 \end{figure}
 \eenum
 
@@ -270,20 +288,20 @@ Ignorance: there doesn't seem to be any simple pattern on this plot that isolate
 \subquestionwithpoints{4} Let \texttt{carat} = 1.6 and \texttt{depth} = 63.5 and let $\mathcal{A}$ be the 6-nearest neighbors algorithm with the Euclidean distance function. Predict $y$.
 
 \inred{
-Very Good
+$\hat{y}$ = Good (the symbol on the plot is the $\blacktriangle$)
 }
 
 Consider $\mathbb{D}$ to be only records where \texttt{depth} $\geq$ 64.5. Employ the KNN algorithm with $K=3$ and the Euclidean distance function. 
 \subquestionwithpoints{3} What would the in-sample error be?
 
 \inred{
-Zero (for any reasonably defined error metric)
+Zero (for any error metric as the number of misclassifications is zero)
 }
 
 \subquestionwithpoints{4} Use leave-one-out cross validation (i.e. the test set consists of one record for each fold). What would the out of sample error be? 
 
 \inred{
-Zero (for any reasonably defined error metric)
+Zero (for any error metric as the number of misclassifications is zero)
 }
 \pagebreak
 
@@ -302,8 +320,8 @@ Binary classification
 Circle the following bullet circles which are true:
 \subquestionwithpoints{2} \texttt{depth} and \texttt{carat} are likely dependent. \inred{TRUE} \spc{-0.5}
 \subquestionwithpoints{2} \texttt{depth} and \texttt{carat} are likely associated. \inred{TRUE}\spc{-0.5}
-\subquestionwithpoints{2} \texttt{depth} and \texttt{is\_more\_than\_fair} are likely dependent. \inred{TRUE}\spc{-0.5}
-\subquestionwithpoints{2} This dataset is linearly separable.\inred{TRUE}\spc{-0.5}
+\subquestionwithpoints{2} \texttt{depth} and \texttt{is\_more\_than\_fair} are likely dependent.  \inred{TRUE}\spc{-0.5}
+\subquestionwithpoints{2} This dataset is linearly separable. \inred{TRUE}\spc{-0.5}
 \subquestionwithpoints{2} If the perceptron is employed, it will converge. \inred{TRUE} \spc{-0.5}
 \subquestionwithpoints{2} Assuming the perceptron algorithm converges, regardless of the starting position, the perceptron will converge to the same place. \inred{FALSE} \spc{-0.5}
 \subquestionwithpoints{2} If the SVM is employed with the Vapnik objective function, the hinge error will be zero. \inred{TRUE}\spc{-0.5}
@@ -313,13 +331,13 @@ Circle the following bullet circles which are true:
 \eenum
 \pagebreak
 
-\problem Assume $\X \in \reals^{n \times (p+1)}$ with $p >1$ composed of random realizations from iid standard normal random variables, full rank. Let $\Q$, $\R$ be the matrix results of the QR-decomposition procedure run on $\X$. Let $\y \in \reals^n$ which a vector of measurements of a phenomenon of interest.  %Let $\e$ denote the vector of in-sample residuals where $\e \neq \y$ and $\sum_{i=1}^n e_i^2 \neq 0$.
+\problem Assume $\X \in \reals^{n \times (p+1)}$ with $p >1$ composed of random realizations from iid standard normal random variables, full rank. Let $\Q$, $\R$ be the matrix results of the QR-decomposition procedure run on $\X$. Let $\y \in \reals^n$ which represents a vector of measurements of a phenomenon of interest.  %Let $\e$ denote the vector of in-sample residuals where $\e \neq \y$ and $\sum_{i=1}^n e_i^2 \neq 0$.
 
 \benum
 \subquestionwithpoints{10} Prove that the $\normsq{\Q\Q^\top\y} \Big/ \normsq{\y} \in \zeroonecl$.\\
 
 \inred{
-We know that $\H$, the orthogonal projection matrix, can be equivalently computed as $\Q\Q^\top$. Thus $\Q\Q^\top\y = \yhat$. As this is the orthogonal projection, there is the remainder $\e$ so that $\yhat + \e = \y$ and $\yhat^\top \e = 0$. Thus, $\y, \yhat, \e$ form a right triangle and by Pythagorean Theorem, $\normsq{\y} = \normsq{\yhat} + \normsq{\e}$. Putting these facts together we have:
+We know that $\H$, the orthogonal projection matrix, can be equivalently computed as $\Q\Q^\top$. Thus $\Q\Q^\top\y = \yhat$. As this is the orthogonal projection, there is the remainder $\e$ so that $\yhat + \e = \y$ and $\yhat^\top \e = 0$. Thus, $\y, \yhat, \e$ form a right triangle and by Pythagorean's Theorem, $\normsq{\y} = \normsq{\yhat} + \normsq{\e}$. Putting these facts together we have:
 
 \beqn
 \frac{\normsq{\Q\Q^\top\y}}{\normsq{\y}} = \frac{\normsq{\yhat}}{\normsq{\y}} = \frac{\normsq{\yhat}}{\normsq{\yhat} + \normsq{\e}} \in \zeroonecl
@@ -327,12 +345,17 @@ We know that $\H$, the orthogonal projection matrix, can be equivalently compute
 
 since $\normsq{\yhat}  \geq 0$ and $\normsq{\e} \geq 0$ as they are norm-squared quantities.
 }
-\vspace{8cm}
+\vspace{2cm}
 
 \subquestionwithpoints{2} If you were to use $\mathcal{A} =$ OLS to generate $g$, which of the three sources of error would be the main source of error in $g$? 
 
 \inred{
-Ignorance. The $\x_{\cdot j}$'s are all random noise and thus they absolutely will not be good proxies for the true proximal causal drivers.
+Keep in mind model \qu{error} means generalization error in the future. It does not mean in-sample error as that is not an important nor believable performance metric. There are two acceptable answers based on two possible scenarios. The question prompt did not specify, thus it was ambiguous.
+
+\begin{itemize}
+\item[*] If $p+1 \ll n$, \textbf{ignorance error}. The $\x_{\cdot j}$'s are all random noise and thus they absolutely will not be good proxies for the true proximal causal drivers and hence your error will be mostly from ignorance. Since the features don't matter, $\beta_j = 0$ for all features except the intercept. Since $n$ is large relative to the number of features, there will be very low estimation error in the $b_j$'s.
+\item[*] If $p+1 \approx n$, \textbf{estimation error}. Here, the OLS coefficients for the features $b_j$ will diverge significant from the zeroes desired. When predicting in the future, these nonzero $b_j$ will definitely lead to all sorts of wild prediction mistakes.
+\end{itemize}
 }
 
 Circle the following bullet circles which are true:
