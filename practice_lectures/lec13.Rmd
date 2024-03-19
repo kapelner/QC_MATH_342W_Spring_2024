@@ -687,7 +687,7 @@ ggplot(Galton, aes(x = parent, y = child)) +
   stat_function(fun = plot_function_degree_13, args = list(b = b_poly_13), col = "orange", xlim = c(xymin, xymax))
 ```
 
-Polynomial models have *TERRIBLE* extrapolation risk - totally unpredictable. Please do not use them if you think you'll ever extrapolate!!!
+Besides being bad at the edges of the input space, polynomial models have *TERRIBLE* performance when you leave input space. The extrapolation risk is totally unpredictable due to Runge's phenomenon. Please do not use them if you think you'll ever extrapolate!!!
 
 # Overfitting with Polynomials
 
