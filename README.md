@@ -6,6 +6,9 @@ This is the course homepage for Math 342W (and Masters level 642 and RM 742) at 
 
 My theory lectures are following my previous class notes (see [here](https://github.com/kapelner/QC_Math_342W_Spring_2022)) unless specified otherwise.
 
+* Practice Lecture 13 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec13.Rmd)
+* Practice Lecture 12 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec12.Rmd)
+* Practice Lecture 11 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec11.Rmd)
 * Practice Lecture 10 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec10.Rmd)
 * Practice Lecture 9 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec09.Rmd)
 * Practice Lecture 8 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec08.Rmd)
@@ -20,11 +23,11 @@ My theory lectures are following my previous class notes (see [here](https://git
 ## Labs
 
 <!--
-* [(Lab 10, *not* due)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab10.Rmd)
-* [(Lab 9, due 5/12)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab09.Rmd)
-* [(Lab 8, due 5/3)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab08.Rmd)
-* [(Lab 7, due 4/24)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab07.Rmd)
-* [(Lab 6, due 4/10)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab06.Rmd) -->
+* [Lab 10, ](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab10.Rmd)
+* [Lab 9, due 5/12](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab09.Rmd)
+* [Lab 8, due 5/3](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab08.Rmd)
+* [Lab 7, due 4/24](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab07.Rmd) -->
+* [Lab 6, due 3/24)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab06.Rmd)
 * [Lab 5, due 3/12](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab05.Rmd)
 * [Lab 4, due 3/3](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab04.Rmd) 
 * [Lab 3, due 2/18](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab03.Rmd)

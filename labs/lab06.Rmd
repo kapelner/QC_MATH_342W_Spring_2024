@@ -81,6 +81,144 @@ Using facets, examine the relationship between `vocab` and `ageGroup`. You can d
 ```
 
 
+#Logistic Regression
+
+Let's consider the Pima Indians Diabetes dataset from 1988:
+
+```{r}
+?MASS::Pima.tr2
+skimr::skim(MASS::Pima.tr2)
+y = ifelse(MASS::Pima.tr2$type == "Yes", 1, 0)
+X = cbind(1, MASS::Pima.tr2[, 1 : 7])
+```
+
+Note the missing data. We will learn about how to handle missing data towards the end of the course. For now, replace, the missing data in the design matrix X with the average of the feature x_dot,j. You can check that this worked with the table commands at the end of the chunk:
+
+```{r}
+#TO-DO
+
+table(X$bp, useNA = "always")
+table(X$skin, useNA = "always")
+table(X$bmi, useNA = "always")
+```
+
+Now let's fit a log-odds linear model of y=1 (type is "diabetic") on just the `glu` variable. Use `optim` to fit the model.
+
+```{r}
+#TO-DO
+```
+
+Masters students: write a `fit_logistic_regression` function which takes in X, y and returns b which uses the optimization routine.
+
+```{r}
+fit_logistic_regression = function(X, y){
+  b = #TO-DO
+  b
+}
+```
+
+Run a logistic regression of y=1 (type is "diabetic") on just the `glu` variable using R's built-in function and report b_0, b_1.
+
+```{r}
+#TO-DO
+```
+
+Comment on how close the results from R's built-in function was and your optimization call.
+
+#TO-DO
+
+Interpret the value of b_1 from R's built-in function.
+
+#TO-DO
+
+Interpret the value of b_0 from R's built-in function.
+
+#TO-DO
+
+Plot the probability of y=1 from the minimum value of `glu` to the maximum value of `glu`.
+
+```{r}
+#TO-DO
+```
+
+Run a logistic regression of y=1 (type is "diabetic") on all variables using R's built-in function and report the b vector.
+
+```{r}
+#TO-DO
+```
+
+Plot the in-sample log-odds predictions (y-axis) versus the real response values (x-axis).
+
+```{r}
+#TO-DO
+```
+
+Plot the in-sample probability predictions (y-axis) versus the real response values (x-axis).
+
+```{r}
+#TO-DO
+```
+
+Comment on how well you think the logistic regression performed in-sample.
+
+#TO-DO
+
+Calculate the in-sample Brier score.
+
+```{r}
+#TO-DO
+```
+
+Calculate the in-sample log-scoring rule.
+
+```{r}
+#TO-DO
+```
+
+
+Run a probit regression of y=1 (type is "diabetic") on all variables using R's built-in function and report the b vector.
+
+
+```{r}
+#TO-DO
+```
+
+Does the weight estimates here in the probit fit have different signs than the weight estimates in the logistic fit? What does that mean?
+
+#TO-DO
+
+Plot the in-sample probability predictions (y-axis) versus the real response values (x-axis).
+
+```{r}
+#TO-DO
+```
+
+Calculate the in-sample Brier score.
+
+```{r}
+#TO-DO
+```
+
+Calculate the in-sample log-scoring rule.
+
+```{r}
+#TO-DO
+```
+
+Which model did better in-sample?
+
+#TO-DO
+
+Compare both model oos using the Brier score and a test set with 1/3 of the data.
+
+```{r}
+#TO-DO
+```
+
+Which model did better oos?
+
+#TO-DO
+
 
 #Polynomial Regression and Interaction Regression
 

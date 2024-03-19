@@ -569,7 +569,7 @@ Xmm[, 2] %*% Xmm[, 3]
 Xmm[, 3] %*% Xmm[, 3]
 ```
 
-Are thse orthogonal polynomials? How is the `poly` function without `raw = TRUE` working to generate a model matrix?
+Are these orthogonal polynomials? How is the `poly` function without `raw = TRUE` working to generate a model matrix?
 
 ```{r}
 degree_2_orthog_poly_mod = lm(y ~ poly(x, 2))
