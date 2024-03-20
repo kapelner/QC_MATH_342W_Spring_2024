@@ -6,6 +6,7 @@ This is the course homepage for Math 342W (and Masters level 642 and RM 742) at 
 
 My theory lectures are following my previous class notes (see [here](https://github.com/kapelner/QC_Math_342W_Spring_2022)) unless specified otherwise.
 
+* Practice Lecture 14 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec14.Rmd)
 * Practice Lecture 13 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec13.Rmd)
 * Practice Lecture 12 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec12.Rmd)
 * Practice Lecture 11 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec11.Rmd)
