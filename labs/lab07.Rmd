@@ -12,9 +12,9 @@ We will work with the diamonds dataset again. Here we load up the dataset and co
 ```{r}
 pacman::p_load(ggplot2) #this loads the diamonds data set too
 ?diamonds
-diamonds$cut =      factor(diamonds$cut, ordered = FALSE)
-diamonds$color =    factor(diamonds$color, ordered = FALSE)
-diamonds$clarity =  factor(diamonds$clarity, ordered = FALSE)
+diamonds$cut =      factor(diamonds$cut, ordered = FALSE)      #convert to nominal
+diamonds$color =    factor(diamonds$color, ordered = FALSE)    #convert to nominal
+diamonds$clarity =  factor(diamonds$clarity, ordered = FALSE)  #convert to nominal
 skimr::skim(diamonds)
 ```
 
@@ -233,17 +233,14 @@ You computed oos metrics only on n_* = 200 diamonds. What problem(s) do you expe
 
 #TO-DO
 
-To do the K-fold cross validation we need to get the splits right and crossing is hard. I've developed code for this already. Run this code.
+To do the K-fold cross validation we need to get the splits right and crossing is hard. We've developed code for this already in a previous lab.
 
 ```{r}
 temp = rnorm(n)
 folds_vec = cut(temp, breaks = quantile(temp, seq(0, 1, length.out = K + 1)), include.lowest = TRUE, labels = FALSE)
+rm(temp)
 head(folds_vec, 200)
 ```
-
-Comment on what it does and how to use it to do a K-fold CV:
-
-#TO-DO
 
 Do the K-fold cross validation for model F and compute the overall s_e and s_s_e. 
 

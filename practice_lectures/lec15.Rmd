@@ -1,0 +1,1093 @@
+---
+title: "Practice Lecture 15 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+---
+
+
+# Log transformations
+
+We will be examining the diamonds dataset. Let's take a moment to read about our data. In real life, you will take more than just a moment to learn about the data. And more than just a moment to clean the data and do sanity checks. As these steps are more of the grunt work of data science (and are learned on the fly), I won't really cover them formally.
+
+```{r}
+pacman::p_load(ggplot2) #this loads the diamonds data set too
+?diamonds
+diamonds$cut =      factor(diamonds$cut, ordered = FALSE)      #convert to nominal
+diamonds$color =    factor(diamonds$color, ordered = FALSE)    #convert to nominal
+diamonds$clarity =  factor(diamonds$clarity, ordered = FALSE)  #convert to nominal
+diamonds = diamonds[sample(1 : nrow(diamonds)), ] #shuffle for better visualizations
+dim(diamonds)
+```
+
+That's a huge $n$. So, let's expect things to take a bit longer when processing.
+
+A natural increasing relationship will likely be found between weight and price. Let's see it visually:
+
+```{r}
+ggplot(diamonds, aes(x = carat, y = price)) + 
+  geom_point()
+```
+
+
+How good does a best guess linear relationship do?
+
+```{r}
+mod = lm(price ~ carat, diamonds)
+b = coef(mod)
+b
+summary(mod)$r.squared
+summary(mod)$sigma
+```
+
+What does the intercept say about extrapolation?
+
+Let's see the best fit line $g(x)$ visually:
+
+```{r}
+ggplot(diamonds, aes(x = carat, y = price)) + geom_point() + 
+  geom_abline(intercept = b[1], slope = b[2], col = "green") +ylim(0, 50000)
+```
+
+Maybe the relationship between weight and price is not linear - but exponential? E.g. if the weight of a diamond doubles, maybe the price quadruples? Or linear increases in weight yield percentage increases in price. This seems plausible. 
+
+Besides the plausibility of the functional form, there is an agnostic reason to employ log y as the predictive target. Let's first examine the univariate data!
+
+
+```{r}
+skimr::skim(diamonds$price)
+```
+
+Very large standard error and very long tail which can be seed more clearly here:
+
+```{r}
+ggplot(diamonds) + geom_histogram(aes(price), binwidth = 200)
+```
+
+Let's take a look at the distribution after logging:
+
+```{r}
+ggplot(diamonds) + geom_histogram(aes(x = log(price)), binwidth = 0.01)
+```
+
+Some strange artifacts appear. Why the gap? Why is it "cut" sharply at a maximum? These are questions to ask the one who collected the data. But let's get back to the log story...
+
+Popular wisdom says logging this type of highly skewed-right distribution would possibly make the model "more linear in x". Put another way, it would be easier to "catch" (predict) the long tail since it won't be a long tail anymore after you log-transform. It would also prevent observations with large y's becoming "leverage points" i.e. points that unduly influence the model and thereby warp its ability to predict the average observation. In 343, you'll learn more reasons for why you should use log the response, but those reasons are relevant for inference so we won't discuss them here.
+
+Let's give the model with ln(y) a whirl. Maybe we'll even learn something about diamonds. The way to create such a model is to simply fit an OLS model to log y. This is called a log-linear model. Since this is a pretty standard thing to do so R's formula notation has it built-in as follows:
+
+```{r}
+log_linear_mod = lm(log(price) ~ carat, diamonds)
+b = coef(log_linear_mod)
+b
+```
+
+Let's see what this looks like.
+
+```{r}
+ggplot(diamonds, aes(x = carat, y = log(price))) + 
+  geom_point() + 
+  geom_abline(intercept = b[1], slope = b[2], col = "green") + ylim(6, 12)
+```
+
+It looks very bad if carat is large. That means our little theory about carats getting larger yielding multiples of price doesn't correspond to reality.
+
+How did we do?
+
+```{r}
+summary(log_linear_mod)$r.squared
+summary(log_linear_mod)$sigma
+```
+
+Look at that RMSE! That dropped like a rock! Is that real?
+
+No. RMSE before is in the units of y. And now y is now in ln($). So this RMSE and the previous RMSE are *not* comparable.
+
+The $R^2$ are *not* comparable either. Even though they're on a [0, 1] scale in both models, the SST's are different so you're measuring the proportion of a different variance.
+
+Let's attempt to compare apples-apples.
+
+```{r}
+log_y_hat = log_linear_mod$fitted.values
+y_hat = exp(log_y_hat)
+e = diamonds$price - y_hat
+SSE = sum(e^2)
+SST = sum((diamonds$price - mean(diamonds$price))^2)
+Rsq = 1 - sum(e^2) / SST
+Rsq
+RMSE = sqrt(SSE / (nrow(diamonds) - 2))
+RMSE
+```
+
+What does this mean? It means this was a bad idea. Those residuals for large carats are insanely large. They're wrong on a log scale! Which means they're off by orders of magnitude. Working with logged y is dangerous business if you're wrong! Before you were off by a few thousand dollars; now you're off by millions. For example. Let's look at a large diamond:
+
+```{r}
+xstar = diamonds[diamonds$carat > 5, ][1, ]
+xstar$price
+predict(mod, xstar)
+exp(predict(log_linear_mod, xstar))
+```
+
+That's a pretty bad residual!
+
+How about log-log model? 
+
+```{r}
+log_log_linear_mod = lm(log(price) ~ log(carat), diamonds)
+b = coef(log_log_linear_mod)
+b
+```
+
+Let's see what it looks like:
+
+```{r}
+ggplot(diamonds, aes(x = log(carat), y = log(price))) + 
+  geom_point() + 
+  geom_abline(intercept = b[1], slope = b[2], col = "green")
+```
+
+Well look at that! That's a nice looking model. (Note that the slope coefficients in log-log models, i.e. b_2 here, are called "elasticity" in Econ 382 as it measures how the relative change in x affects the relative change in y).
+
+How are our metrics?
+
+```{r}
+summary(log_log_linear_mod)$r.squared
+summary(log_log_linear_mod)$sigma
+```
+
+Let's see apples-to-apples to the natural y model.
+
+```{r}
+log_y_hat = log_log_linear_mod$fitted.values
+y_hat = exp(log_y_hat)
+e = diamonds$price - y_hat
+SSE = sum(e^2)
+Rsq = 1 - sum(e^2) / SST
+Rsq
+RMSE = sqrt(SSE / (nrow(diamonds) - 2))
+RMSE
+```
+
+This is on-par with the vanilla OLS model, but still doesn't "beat it". There was no guarantee that we would be "beat it" even though we used procedures that are reasonable and popular!
+
+Let's repeat this entire exercise using the length of the diamond. The length of the diamond feature is confusingly named "x" in the dataset. It is an "x" but it's also the diamond's "x"!!!
+
+```{r}
+ggplot(diamonds, aes(x = x, y = price)) + 
+  geom_point()
+```
+
+Besides the non-linear relationship, what else do you see? Mistakes in the dataset! Can a real diamond have zero length?? Yes. This is the real world. There are mistakes all the time.
+
+Let's kill it! How many are we dealing with here?
+
+```{r}
+nrow(diamonds[diamonds$x == 0, ])
+```
+
+
+```{r}
+diamonds = diamonds[diamonds$x != 0, ]
+```
+
+What's the deal with the x variable now?
+
+```{r}
+skimr::skim(diamonds$x)
+```
+
+How good does a best guess linear relationship do?
+
+```{r}
+mod = lm(price ~ x, diamonds)
+b = coef(mod)
+b
+summary(mod)$r.squared
+summary(mod)$sigma
+```
+
+Let's see the best fit line $g(x)$ visually:
+
+```{r}
+ggplot(diamonds, aes(x = x, y = price)) + geom_point() + 
+  geom_abline(intercept = b[1], slope = b[2], col = "green")
+```
+
+Again we got some bad extrapolation going on which we can't fix using a purely linear modeling strategy.
+
+Let's log-linearize it and see how we do.
+
+```{r}
+log_linear_mod = lm(log(price) ~ x, diamonds)
+b = coef(log_linear_mod)
+ggplot(diamonds, aes(x = x, y = log(price))) + 
+  geom_point() + 
+  geom_abline(intercept = b[1], slope = b[2], col = "green")
+```
+
+How did we do? Ensure it's apples-apples.
+
+```{r}
+log_y_hat = log_linear_mod$fitted.values
+y_hat = exp(log_y_hat)
+e = diamonds$price - y_hat
+SSE = sum(e^2)
+SST = sum((diamonds$price - mean(diamonds$price))^2)
+Rsq = 1 - sum(e^2) / SST
+Rsq
+RMSE = sqrt(SSE / (nrow(diamonds) - 2))
+RMSE
+```
+
+Still not better. Log-log?
+
+```{r}
+log_log_linear_mod = lm(log(price) ~ log(x), diamonds)
+b = coef(log_log_linear_mod)
+ggplot(diamonds, aes(x = log(x), y = log(price))) + 
+  geom_point() + 
+  geom_abline(intercept = b[1], slope = b[2], col = "green")
+```
+
+How did we do? 
+
+```{r}
+log_y_hat = log_log_linear_mod$fitted.values
+y_hat = exp(log_y_hat)
+e = diamonds$price - y_hat
+SSE = sum(e^2)
+SST = sum((diamonds$price - mean(diamonds$price))^2)
+Rsq = 1 - sum(e^2) / SST
+Rsq
+RMSE = sqrt(SSE / (nrow(diamonds) - 2))
+RMSE
+```
+
+We did it. We found a log transformation that seems to give higher predictive power than the vanilla linear model on the raw response and raw feature.
+
+This brings up the whole idea of "model selection". We went hunting for models until we found one that's better. We will do model selection as the next big topic!
+
+Transforming y is a big decision as it changes the response metric! The rule of thumb is it is easier to model a response metric that has less extreme values (especially when using linear models) as the extreme values have a big impact on slope coefficients and can distort the best fit line due to the least squares minimization (hence the popularity of logging the response).
+
+Let's see if we get anywhere with this using all the features in this model.
+
+```{r}
+lm_y = lm(price ~ ., diamonds)
+lm_ln_y = lm(log(price) ~ ., diamonds)
+summary(lm_y)$r.squared
+summary(lm_y)$sigma
+
+#now for the log-linea model
+y_hat = exp(lm_ln_y$fitted.values)
+e = diamonds$price - y_hat
+SSE = sum(e^2)
+SST = sum((diamonds$price - mean(diamonds$price))^2)
+Rsq = 1 - sum(e^2) / SST
+Rsq
+RMSE = sqrt(SSE / (nrow(diamonds) - 2))
+RMSE
+``` 
+
+This is pretty convincing evidence that this transformation does a better job (at least in our linear modeling context).
+
+Let's look at one prediction:
+
+```{r}
+predict(lm_y, diamonds[12345, ])
+exp(predict(lm_ln_y, diamonds[12345, ]))
+diamonds$price[12345]
+```
+
+Again, we should be careful when you use $g$ after logging, you will have to exponentiate the result (middle line above). 
+
+Small point: this exponentiation is known to create bias because $E[Y]$ is different from $exp(E[ln(y)])$ (for those who took 368 - remember Jensen's inequality?) For the purposes of this class, this can be ignored since we are evaluating g on its own merits and we're doing so honestly.
+
+If you like this stuff, there are a whole bunch of transformations out there that are even cooler than the natural log. 
+
+# Linear Models with Feature Interactions
+
+Let's go back to modeling price with weight. Let us add a third variable to this plot, color, a metric about the "yellowness" of the diamond. This is an ordinal categorical variable ranging from D (most clear i.e. best) to J (most yellow in this dataset i.e. worst).
+
+
+```{r}
+pacman::p_load(ggplot2)
+base = ggplot(diamonds, aes(x = carat, y = price)) 
+base +
+  geom_point(aes(col = color)) + 
+  scale_color_brewer(type = "div")
+```
+
+We can split the data on color to see it more clearly:
+
+```{r}
+base +
+  geom_point() +
+  facet_wrap(~ color, ncol = 3) + 
+  aes(color = color) + scale_color_brewer(type = "div")
+```
+
+
+What do we see here? It looks like the slope of the price vs. carat linear model is slightly affected by color. For instance, the "D" color diamonds' price increases much faster as weight increases than the "E" color diamonds' price increases in weight, etc. Why do you think this is?
+
+We can picture two of these linear models below by fitting two submodels, one for D and one for J:
+
+```{r}
+mod_D = lm(price ~ carat, diamonds[diamonds$color == "D", ])
+b_D = coef(mod_D)
+mod_J = lm(price ~ carat, diamonds[diamonds$color == "J", ])
+b_J = coef(mod_J)
+b_D
+b_J
+```
+
+Let's see it on the plot:
+
+```{r}
+base +
+  geom_point(aes(col = color)) + scale_color_brewer(type = "div") +
+  geom_abline(intercept = b_D[1], slope = b_D[2], col = "blue", lwd = 2) +
+  geom_abline(intercept = b_J[1], slope = b_J[2], col = "red", lwd = 2)
+```
+
+This indicates a separate intercept and carat-slope for each color. How is this done? Interacting carat and slope. The formula notation has the `*` operator for this. It is a type of abstract multiplication after all!
+
+```{r}
+mod = lm(price ~ color, diamonds)
+coef(mod)
+mod = lm(price ~ carat * color, diamonds)
+coef(mod)
+```
+
+The reference category is color D. This means every other color should start lower and have a lower slope. This is approximately what we see above.
+
+How much of a better model is this than a straight linear model?
+
+```{r}
+mod_vanilla = lm(price ~ carat + color, diamonds)
+summary(mod_vanilla)$r.squared
+summary(mod_vanilla)$sigma
+summary(mod_vanilla)$df[1]
+summary(mod)$r.squared
+summary(mod)$sigma
+summary(mod)$df[1]
+```
+
+You can get more predictive accuracy out of this. We added degrees of freedom? 
+
+Is this gain real? Yes. With six more df's and $n = 54,000$ there is no chance this gain came from overfitting noise. Add 10,000 garbage features, that's a different story.
+
+Let's take a look at carat with another variable, depth, a continuous predictor. High depth indicates diamonds are skinny and tall; low depth indicates diamonds are flat like a pancake.
+
+```{r}
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point(aes(col = depth), lwd = 1, alpha = 0.5) + scale_colour_gradientn(colours = rainbow(5))
+```
+
+It seems people like flatter diamonds and are willing to pay more per carat. Let's see this in the regression:
+
+```{r}
+mod = lm(price ~ carat + depth, diamonds)
+coef(mod)
+summary(mod)$r.squared
+summary(mod)$sigma
+mod = lm(price ~ carat * depth, diamonds)
+coef(mod)
+summary(mod)$r.squared
+summary(mod)$sigma
+```
+
+Also a real performance boost.
+
+How about cut?
+
+
+```{r}
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point(aes(col = cut), lwd = 0.5) + scale_color_brewer(type = "div")
+```
+
+Looks like ideal diamonds increase more steeply with size vs lower cut diamonds. Let's see this in action:
+
+```{r}
+mod = lm(price ~ carat, diamonds)
+coef(mod)
+summary(mod)$r.squared
+summary(mod)$sigma
+mod = lm(price ~ carat + cut, diamonds)
+summary(mod)$r.squared
+summary(mod)$sigma
+mod = lm(price ~ carat * cut, diamonds)
+coef(mod)
+summary(mod)$r.squared
+summary(mod)$sigma
+```
+
+Yes.
+
+Can we include all these interactions?
+
+```{r}
+mod = lm(price ~ carat + color + depth + cut, diamonds)
+summary(mod)$r.squared
+summary(mod)$sigma
+mod = lm(price ~ carat * (color + depth + cut), diamonds)
+summary(mod)$r.squared
+summary(mod)$sigma
+coef(mod)
+```
+
+A decent gain for all three.
+
+What does the design matrix look like there? What is $p$?
+
+```{r}
+Xmm = model.matrix(price ~ carat * (color + depth + cut), diamonds)
+head(Xmm)
+```
+
+
+Can we take a look at interactions of two categorical variables?
+
+
+```{r}
+plot1 = ggplot(diamonds, aes(x = cut, y = color)) +
+  geom_jitter(aes(col = price), lwd = 0.5) + scale_colour_gradientn(colours = rainbow(5))
+plot1
+```
+
+Cool animation possible. May not work because it needs a ton of packages...
+
+```{r}
+pacman:::p_load_gh("dgrtwo/gganimate")
+plot1 + transition_time(price)
+```
+
+Not so clear what's going on here. Let's see what the regressions say:
+
+
+```{r}
+mod = lm(price ~ color + cut, diamonds)
+summary(mod)$r.squared
+summary(mod)$sigma
+mod = lm(price ~ color * cut, diamonds)
+coef(mod)
+summary(mod)$r.squared
+summary(mod)$sigma
+```
+
+Not too much gain. Likely not real (overfitting)!
+
+
+
+# More advanced modeling
+
+
+```{r}
+rm(list = ls())
+pacman::p_load(ggplot2)
+diamonds$cut =      factor(diamonds$cut, ordered = FALSE)
+diamonds$color =    factor(diamonds$color, ordered = FALSE)
+diamonds$clarity =  factor(diamonds$clarity, ordered = FALSE)
+#drop some obviously nonsense observations
+diamonds = diamonds[diamonds$carat <= 2 & diamonds$x != 0 & diamonds$y != 0 & diamonds$z != 0 & diamonds$depth != 0 & diamonds$table != 0,]
+diamonds$ln_price = log(diamonds$price)
+diamonds$ln_carat = log(diamonds$carat)
+diamonds$ln_x = log(diamonds$x)
+diamonds$ln_y = log(diamonds$y)
+diamonds$ln_z = log(diamonds$z)
+diamonds$ln_depth = log(diamonds$depth)
+diamonds$ln_table = log(diamonds$table)
+n = nrow(diamonds)
+set.seed(1984)
+diamonds = diamonds[sample(1 : n), ]
+```
+
+
+Note: I will now model price, not ln_price as ln_price yields residuals that are orders of magnitude. Fitting a good ln_price model will take more time.
+
+```{r}
+#All model formulas for reuse later
+model_formulas = list(
+  A = price ~ ln_carat,
+  B = price ~ ln_carat * clarity,
+  C = price ~ ln_carat * (clarity + cut + color),
+  D = price ~ (ln_carat + ln_x + ln_y + ln_z + ln_depth + ln_table) * (clarity + cut + color),
+  E = price ~ (ln_carat + ln_x + ln_y + ln_z + ln_depth + ln_table + carat + x + y + z + depth + table) * (clarity + cut + color)
+)
+#Model A
+mod = lm(model_formulas[["A"]], diamonds)
+summary(mod)$sigma
+mod$rank #i.e. degrees of freedom  = # vectors in colsp[X] to project onto
+#Model B
+mod = lm(model_formulas[["B"]], diamonds)
+summary(mod)$sigma
+mod$rank #i.e. degrees of freedom  = # vectors in colsp[X] to project onto
+#Model C
+mod = lm(model_formulas[["C"]], diamonds)
+summary(mod)$sigma
+mod$rank #i.e. degrees of freedom  = # vectors in colsp[X] to project onto
+#Model D
+mod = lm(model_formulas[["D"]], diamonds)
+summary(mod)$sigma
+mod$rank #i.e. degrees of freedom  = # vectors in colsp[X] to project onto
+#Model E 
+mod = lm(model_formulas[["E"]], diamonds)
+summary(mod)$sigma
+mod$rank #i.e. degrees of freedom  = # vectors in colsp[X] to project onto
+```
+
+Big win on E... the reason I think is that now we have a flexible curve for each continuous feature and that curve changes with all the categorical features.
+
+Create model (F) which is the same as before except also include also third degree polynomials of the continuous features interacted with the categorical features and gauge performance against (E). By this time you're getting good with R's formula syntax!
+
+
+```{r}
+#Model F
+model_formulas[["F"]] = price ~ 
+        (ln_carat + ln_x + ln_y + ln_z + ln_depth + ln_table + poly(carat, 3) + poly(x, 3) + poly(y, 3) + poly(z, 3) + poly(depth, 3) + poly(table, 3)) * (cut + color + clarity)
+mod = lm(model_formulas[["F"]], diamonds)
+summary(mod)$sigma
+mod$rank
+```
+
+Even better (seemingly).
+
+Can you think of any other way to expand the candidate set curlyH? Discuss.
+
+We now have a very flexible curve for each continuous feature and that curve is fit individually for each level of all categories. We could indeed go further by allowing the levels among cut, color and clarity to interact and further allowing the continous features to interact. 
+
+There is another strategy to increase the complexity of H without using function transforms of the features and interactions... we will have to see after winter break...
+
+We should probably assess oos performance now. Sample 4,000 diamonds and use these to create a training set of 3,600 random diamonds and a test set of 400 random diamonds. Define K and do this splitting:
+
+```{r}
+K = 10
+n_sub = 4000
+set.seed(1984)
+n_test = 1 / K * n_sub
+n_train = n_sub - n_test
+test_indicies = sample(1 : n, n_test)
+train_indicies = sample(setdiff(1 : n, test_indicies), n_train)
+all_other_indicies = setdiff(1 : n, c(test_indicies, train_indicies))
+```
+
+Compute in and out of sample performance for models A-F. Use s_e as the metric (standard error of the residuals). Create a list with keys A, B, ..., F to store these metrics. Remember the performances here will be worse than before since before you're using nearly 52,000 diamonds to build a model and now it's only 3600.
+
+```{r}
+oos_se = list()
+all_models_train = list()
+for (model_idx in LETTERS[1 : 6]){
+  all_models_train[[model_idx]] = lm(model_formulas[[model_idx]], diamonds[train_indicies, ])
+  summary(all_models_train[[model_idx]])$sigma
+  oos_se[[model_idx]] = sd(diamonds$price[test_indicies] - predict(all_models_train[[model_idx]], diamonds[test_indicies, ]))
+}
+oos_se
+```
+
+You computed oos metrics only on n_* = 400 diamonds. What problem(s) do you expect in these oos metrics?
+
+They are variable. And something is wrong with F! Possibly Runge's phenomenon?
+
+Let's get a more stable estimate via K-fold cross validation:
+
+```{r}
+set.seed(1984)
+temp = rnorm(n_sub)
+folds_vec = cut(temp, breaks = quantile(temp, seq(0, 1, length.out = K + 1)), include.lowest = TRUE, labels = FALSE)
+rm(temp)
+head(folds_vec, 100)
+```
+
+Do the K-fold cross validation for all models and compute the overall s_e and s_s_e. 
+
+```{r}
+oos_se = list()
+oos_s_se = list()
+for (model_idx in LETTERS[1 : 6]){
+  e_vec_k = list() #for each one
+  for (k in 1 : K){
+    test_indicies_k = which(folds_vec == k)
+    train_indicies_k = which(folds_vec != k)
+    mod = lm(model_formulas[[model_idx]], diamonds[train_indicies_k, ])
+    e_vec_k[[k]] = sd(diamonds$price[test_indicies_k] - predict(mod, diamonds[test_indicies_k, ]))
+  }
+  oos_se[[model_idx]] = mean(unlist(e_vec_k)) #note: not exactly the overall sd, but close enough
+  oos_s_se[[model_idx]] = sd(unlist(e_vec_k))
+}
+res = rbind(unlist(oos_se), unlist(oos_s_se))
+rownames(res) = c("avg", "sd")
+res
+```
+
+Model F seems more variable than all of them. Why? Possibly Runge's phenomenon?
+
+Imagine using the entire rest of the dataset besides the 4,000 training observations divvied up into slices of 400. Measure the oos error for each slice and also plot it.
+
+```{r}
+n_step = 1 / K * n_sub
+oos_se = list()
+ses = list()
+starting_ks = seq(from = 1, to = (length(all_other_indicies) - n_step), by = n_step)
+for (model_idx in LETTERS[1 : 6]){
+  se_k = list() #for each one
+  for (k in 1 : length(starting_ks)){
+    diamonds_k = diamonds[all_other_indicies[starting_ks[k] : (starting_ks[k] + n_step - 1)], ]
+    se_k[[k]] = sd(diamonds_k$price - predict(all_models_train[[model_idx]], diamonds_k))
+  }
+  ses[[model_idx]] = se_k
+  oos_se[[model_idx]] = unlist(se_k)
+}
+
+pacman::p_load(reshape2)
+ggplot(reshape2::melt(oos_se)) + geom_boxplot(aes(x = L1, y = value)) + xlab("model")
+ggplot(reshape2::melt(oos_se)) + geom_boxplot(aes(x = L1, y = value)) + xlab("model") + ylim(0, 5000)
+```
+
+What do we learn from this? Model F is very risky. What exactly is going wrong? Part of the agony of data science is the "debugging" just like when debugging software. But here the errors can be in the modeling too! 
+
+```{r}
+max(unlist(ses[["F"]]))
+k_BAD = which.max(unlist(ses[["F"]]))
+
+diamonds_BAD = diamonds[all_other_indicies[starting_ks[k_BAD] : (starting_ks[k_BAD] + n_step - 1)], ]
+diamonds_BAD
+
+e_BAD = diamonds_BAD$price - predict(all_models_train[[model_idx]], diamonds_BAD)
+tail(sort(abs(e_BAD)))
+diamonds_BAD[which.max(abs(e_BAD)), ]
+
+summary(diamonds[train_indicies, ])
+```
+
+Is it extrapolation? Yes... y = 58.9 and in a cubic function, that would be astronomical. The real mistake is that y = 58.9 is impossible. The data wasn't cleaned! 
+
+**** Cleaning data essentially means visualizing each feature and the response (histograms for numeric and barplots for categorical) and ensuring there's no mistakes.
+
+But this happens all the time and you don't want to be using polynomial functions for this reason since the new data may extrapolate very poorly.
+
+
+
+# C++ and R
+
+R goes back to 1995 when it was adapted from S (written in 1976 by John Chambers at Bell Labs) with minor modifications. The core of base R is written in C and Fortran. These two languages are the fastest known languages (how to measure "fastest" is a huge debate). Thus, base R is very fast. For instance the `sort` function is as fast as C/Fortran since it immediately calls compiled C/Fortran routines.
+
+However, R code itself that you write is "interpreted" which means it is not compiled until you run it. And it has to compile on-the-fly, making it very slow. Prior to v3.4 (April, 2017) it was even slower since the code wasn't JIT compiled. All this "real CS" stuff you can learn in another class..
+
+One notable place to observe this slowness relative to other languages is in looping. For example:
+
+```{r}
+SIZE = 1e6
+v = 1 : SIZE
+```
+
+Take for example a simple function that computes square roots on each element
+
+```{r}
+sqrt_vector = function(v){
+  v_new = array(NA, length(v))
+  for (i in 1 : length(v)){
+    v_new[i] = sqrt(v[i])
+  }
+  v_new
+}
+```
+
+How fast does this run? Let's use a cool package called `microbenchmark` that allows us to do an operation many times and see how long it takes each time to get an average:
+
+```{r}
+pacman::p_load(microbenchmark)
+microbenchmark(
+  sqrt_vector(v), 
+  times = 10
+)
+```
+
+Does the apply function help?
+
+```{r}
+microbenchmark(
+  apply(v, 1, FUN = sqrt), 
+  times = 10
+)
+```
+
+Strange that this takes so long? So it doesn't help... it hurts A LOT. Unsure why... Be careful with apply! 
+
+How much faster in C++ should this be?
+
+Enter the `Rcpp` package - a way to compile little bits (or lotta bits) of C++ on the fly.
+
+```{r}
+pacman::p_load(Rcpp)
+```
+
+
+Let's write this for loop function to sqrt-ize in C++. We then  compile it and then save it into our namespace to be called like a regular function. Note that we use C++ classes that are not part of standard C++ e.g. "NumericVector". Rcpp comes build in with classes that are interoperable with R. It's not hard to learn, just takes a small dive into the documentation.
+
+```{r}
+cppFunction('
+  NumericVector sqrt_vector_cpp(NumericVector v) {
+    int n = v.size();
+    NumericVector v_new(n);
+    for (int i = 0; i < n; i++) { //indices from 0...n-1 not 1...n!
+      v_new[i] = sqrt(v[i]);
+    }
+    return v_new;
+  }
+')
+```
+
+What do these two functions look like?
+
+```{r}
+sqrt_vector
+sqrt_vector_cpp
+```
+
+The first one shows the R code and then says it is bytecode-compiled which means there are speedups used in R (go to an advanced CS class) but we will see these speedups aren't so speedy! The other just says we `.Call` some C++ function in a certain address (pointer) and the argument to be inputted.
+
+What is the gain in runtime?
+
+```{r}
+microbenchmark(
+  sqrt_vector_cpp(v), 
+  times = 10
+)
+```
+
+WOW. 10x!!! Can't beat that with a stick...
+
+Let's do a not-so-contrived example...
+
+Matrix distance... Let's compute the distances of all pairs of rows in a dataset. I will try to code the R as efficiently as possible by using vector subtraction so there is only two for loops. The C++ function will have an additional loop to iterate over the features in the observations.
+
+```{r}
+#a subset of the diamonds data
+SIZE = 1000
+X_diamonds = as.matrix(ggplot2::diamonds[1 : SIZE, c("carat", "depth", "table", "x", "y", "z")])
+
+compute_distance_matrix = function(X){
+  n = nrow(X)
+  D = matrix(NA, n, n)
+  for (i_1 in 1 : (n - 1)){
+    for (i_2 in (i_1 + 1) : n){
+      D[i_1, i_2] = sqrt(sum((X[i_1, ] - X[i_2, ])^2))
+    }
+  }
+  D
+}
+
+cppFunction('
+  NumericMatrix compute_distance_matrix_cpp(NumericMatrix X) {
+    int n = X.nrow();
+    int p = X.ncol();
+    NumericMatrix D(n, n);
+    std::fill(D.begin(), D.end(), NA_REAL);
+
+    for (int i_1 = 0; i_1 < (n - 1); i_1++){
+      //Rcout << "computing for row #: " << (i_1 + 1) << "\\n";
+      for (int i_2 = i_1 + 1; i_2 < n; i_2++){
+        double sqd_diff = 0;
+        for (int j = 0; j < p; j++){
+          sqd_diff += pow(X(i_1, j) - X(i_2, j), 2); //by default the cmath library in std is loaded
+        }
+        D(i_1, i_2) = sqrt(sqd_diff); //by default the cmath library in std is loaded
+      }
+    }
+    return D;
+  }
+')
+```
+
+```{r}
+microbenchmark(
+  {D = compute_distance_matrix(X_diamonds)},
+  times = 10
+)
+
+round(D[1 : 5, 1 : 5], 2)
+```
+
+Slow...
+
+```{r}
+microbenchmark(
+  {D = compute_distance_matrix_cpp(X_diamonds)},
+  times = 10
+)
+round(D[1 : 5, 1 : 5], 2)
+```
+
+Absolutely lightning... ~200x faster on my laptop than R's runtime.
+
+Writing functions as strings that compile is annoying. It is better to have separate files. For instance...
+
+```{r}
+sourceCpp("distance_matrix.cpp")
+```
+
+Here are a list of the data structures in Rcpp: https://teuder.github.io/rcpp4everyone_en/070_data_types.html#vector-and-matrix
+
+Another place where C++ pays the rent is recursion. Here is a quicksort implementation in R taken from somewhere on the internet.
+
+```{r}
+quicksort_R <- function(arr) {
+  # Pick a number at random.
+  mid <- sample(arr, 1)
+
+  # Place-holders for left and right values.
+  left <- c()
+  right <- c()
+  
+  # Move all the smaller values to the left, bigger values to the right.
+  lapply(arr[arr != mid], function(d) {
+    if (d < mid) {
+      left <<- c(left, d)
+    }
+    else {
+      right <<- c(right, d)
+    }
+  })
+  
+  if (length(left) > 1) {
+    left <- quicksort_R(left)
+  }
+  
+  if (length(right) > 1) {
+    right <- quicksort_R(right)
+  }
+  
+  # Finally, return the sorted values.
+  c(left, mid, right)
+}
+```
+
+Let's create a random array to test these sorts on:
+
+```{r}
+n = 10000
+x = rnorm(n)
+```
+
+
+Let's profile the pure R sort function:
+
+```{r}
+microbenchmark(
+  x_sorted_pure_R = quicksort_R(x),
+  times = 10
+)
+```
+
+Let's profile R's `sort` function.
+
+```{r}
+microbenchmark(
+  x_sorted_base_R = sort(x),
+  times = 10
+)
+```
+
+Let's just ensure our method worked...
+
+```{r}
+x_sorted_pure_R = quicksort_R(x)
+x_sorted_base_R = sort(x)
+pacman::p_load(testthat)
+expect_equal(x_sorted_pure_R, x_sorted_base_R)
+```
+
+Basically infinitely faster. Let's make our own C++ implementation.
+
+```{r}
+sourceCpp("quicksort.cpp")
+```
+
+and profile it:
+
+```{r}
+microbenchmark(
+  x_sorted_cpp = quicksort_cpp(x),
+  times = 10
+)
+```
+
+Let's just ensure this method worked...
+
+```{r}
+pacman::p_load(testthat)
+expect_equal(x_sorted_cpp, x_sorted_base_R)
+```
+
+Why is our C++ slower than `sort`. Because `sort` is also in C++ or Fortran and it's been likely optimized and reoptimized up to wazoo for decades. Also, Rcpp's data structures may be slower than base R's data structures. There may be some speed lost to translating to `NumericVector` from `double[]` or something like that.
+
+Can you call R from Rcpp? You bet:
+
+```{r}
+cppFunction('
+  NumericVector rnorm_cpp_R(int n, double mean, double sd){
+      // get a pointer to R\'s rnorm() function
+      Function f("rnorm");   
+  
+      // Next code is interpreted as rnorm(n, mean, sd)
+      return f(n, Named("sd")=sd, _["mean"]=mean);
+  }
+')
+
+rnorm_cpp_R(5, 1, .01)
+```
+
+A few math functions are implemented for you already:
+
+```{r}
+evalCpp('R::qnorm(0.5, 0, 1, 1, 0)')
+evalCpp('R::qnorm(0.5, 0, 1)') #BOOM
+```
+
+Further, there are many common functions that are already wrapped for you via "Rcpp-sugar" which was the Rcpp's author's attempt to make Rcpp a whole lot easier, see [here](http://dirk.eddelbuettel.com/code/rcpp/Rcpp-sugar.pdf).
+
+```{r}
+evalCpp('rnorm(10, 100, 3)')
+```
+
+If you want blazing fast linear algebra, check out package `RcppArmadillo` which is a wrapper around Apache's Armadillo (namespace is "arma" in the code), an optimized linear algebra package in C++. Here is an example taken from [here](https://scholar.princeton.edu/sites/default/files/q-aps/files/slides_day4_am.pdf). It involves solving for b-vec in a standard OLS.
+
+```{r}
+pacman::p_load(RcppArmadillo)
+
+cppFunction('
+  arma::mat ols_cpp(arma::mat X, arma::mat y){
+    arma::mat Xt = X.t();
+    return solve(Xt * X, Xt * y);
+  }
+', depends = "RcppArmadillo")
+
+n = 500
+Xy = data.frame(int = rep(1, n), x1 = rnorm(n), x2 = rnorm(n), x3 = rnorm(n), y = rnorm(n))
+X = as.matrix(Xy[, 1 : 4])
+y = as.matrix(Xy[, 5])
+
+#does the function work?
+expect_equal(as.numeric(ols_cpp(X, y)), as.numeric(solve(t(X) %*% X) %*% t(X) %*% y))
+```
+
+Now how fast is it?
+
+```{r}
+microbenchmark(
+  R_via_lm = lm(y ~ 0 + ., data = Xy),
+  R_matrix_multiplication = solve(t(X) %*% X) %*% t(X) %*% y,
+  cpp_with_armadillo = ols_cpp(X, y),
+    times = 100
+)
+```
+
+About 4x faster than R's optimized linear algebra routines. Supposedly it can go even faster if you enable parallelization within Armadillo. I couldn't get that demo to work...
+
+Note lm is slow because it does all sorts of other stuff besides computing b-vec e.g. builds the model matrix, computes Rsq, computes residuals, does statistical testing, etc...
+
+Here are the places where Rcpp is recommended to be used (from https://teuder.github.io/rcpp4everyone_en/010_Rcpp_merit.html)
+
+* Loop operations in which later iterations depend on previous iterations.
+* Accessing each element of a vector/matrix.
+* Recurrent function calls within loops.
+* Changing the size of vectors dynamically.
+* Operations that need advanced data structures and algorithms (we don't do this in this class).
+
+# Java and R
+
+We just did C++ with R. Is there a bridge to Java? Yes (and there's bridges to many other languages too). Java and R can speak to each other through proper configuration of the `rJava` package. You need to have a full JDK of Java installed on your computer and have its binary executables in the proper path. This demo will be in Java JDK 8 (released in 2014 and not officially supported after 2020) since I haven't tested on the more modern Java JDK's yet. We first install `rJava` if necessary:
+
+```{r}
+if (!pacman::p_isinstalled(rJava)){
+  pacman::p_load(pkgbuild)
+  if (pkgbuild::check_build_tools()){
+    install.packages("rJava", type = "source")
+  }
+  install.packages("rJava")
+}
+```
+
+Now we load the package. Before we do, we set the JVM to have 8GB of RAM. After we load it, we initialize te JVM. This should print out nothing or "0" to indicate success.
+
+```{r}
+options(java.parameters = "-Xmx8g")
+pacman::p_load(rJava)
+.jinit() #this initializes the JVM in the background and if this runs with no issues nor output, you probably have rJava installed and connected to the JDK properly.
+```
+
+Just like the whole `Rcpp` demo, we can do a whole demo with `rJava`, but we won't. Here's just an example of creating a Java object and running a method on it:
+
+```{r}
+java_double = .jnew("java/lang/Double", 3.1415)
+java_double
+class(java_double)
+.jclass(java_double)
+#call an instance method 
+.jcall(java_double, "I", "intValue") #java_double.intValue();
+#call a static method
+J("java/lang/String", "valueOf", java_double)
+```
+
+A note on rJava vs Rcpp. 
+
+* If you're doing quick and dirty fast functions for loops and recursion, do it in Rcpp since there is lower overhead of programming. 
+* If you are programming more full-featured software, go with rJava. 
+* Also, if you need full-featured parallelized execution and threading control e.g. thread pooling and the ease of debugging, my personal opinion is that rJava is easier to get working with less dependencies. Rcpp threading is trickier and so is the openMP directives within Rcpp.
+* Further, the JVM is fully asynchronous which means it runs completely independently of R. What this means is that you can execute something in Java, Java can "thread it off" and return you to the R prompt with a pointer to the object that houses its execution. You can then query the object. We will see demos of this.
+
+
+# Python and R
+
+No demo would be complete without this.
+
+```{r}
+pacman::p_load(reticulate)
+py_available()
+py_numpy_available()
+
+# import numpy and specify no automatic Python to R conversion
+np = import("numpy", convert = FALSE)
+
+# do some array manipulations with NumPy
+python_arr = np$array(1 : 4)
+cumsum_python = python_arr$cumsum()
+class(cumsum_python)
+cumsum_python
+
+# convert to R explicitly at the end
+cumsum_R = py_to_r(cumsum_python)
+cumsum_R
+
+# now do the opposite, start with R and convert to Python
+r_to_py(cumsum_R)
+r_to_py(as.integer(cumsum_R))
+```
+
+Let's look at an example of Python Data Analysis Library (pandas). Let's install if not already installed:
+
+```{r}
+import("pandas", convert = FALSE)
+# py_install("pandas")
+```
+
+And python even works in Rstudio's markdown files e.g.
+
+```{python}
+#this is python code!!!
+import pandas as pd
+flights = pd.read_csv("https://raw.githubusercontent.com/PacktPublishing/Pandas-Cookbook/master/data/flights.csv")
+flights = flights.dropna()
+flights.columns
+flights[flights['DEST_AIR'] == "JFK"]
+```
+
+And then switch back to R and have access to the object we instantiated in python via the `py` object:
+
+```{r}
+#this is R code!!!
+ggplot(py$flights) + 
+  aes(x = AIRLINE, y = ARR_DELAY) +
+  geom_boxplot()
+
+lm(ARR_DELAY ~ AIRLINE, py$flights)
+```
+
