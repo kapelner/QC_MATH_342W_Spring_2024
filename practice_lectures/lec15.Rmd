@@ -831,28 +831,28 @@ Another place where C++ pays the rent is recursion. Here is a quicksort implemen
 ```{r}
 quicksort_R <- function(arr) {
   # Pick a number at random.
-  mid <- sample(arr, 1)
+  mid = sample(arr, 1)
 
   # Place-holders for left and right values.
-  left <- c()
-  right <- c()
+  left = c()
+  right = c()
   
   # Move all the smaller values to the left, bigger values to the right.
   lapply(arr[arr != mid], function(d) {
     if (d < mid) {
-      left <<- c(left, d)
+      left <<- c(left, d) #needs to assign to the global variable here to jump out of the scope of the apply function
     }
     else {
-      right <<- c(right, d)
+      right <<- c(right, d) #needs to assign to the global variable here to jump out of the scope of the apply function
     }
   })
   
   if (length(left) > 1) {
-    left <- quicksort_R(left)
+    left = quicksort_R(left)
   }
   
   if (length(right) > 1) {
-    right <- quicksort_R(right)
+    right = quicksort_R(right)
   }
   
   # Finally, return the sorted values.
