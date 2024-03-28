@@ -46,8 +46,6 @@ Let's also concentrate only on diamonds with <= 2 carats to avoid the issue we s
 
 ```{r}
 #TO-DO
-ggplot(diamonds, aes(x = carat, y = price)) + 
-  geom_point()
 ```
 
 Create a linear model of price ~ carat and gauge its in-sample performance using s_e.
@@ -70,8 +68,6 @@ Create a new transformed feature ln_carat and plot it vs price.
 
 ```{r}
 #TO-DO
-ggplot(diamonds, aes(x = ln_carat, y = price)) + 
-  geom_point()
 ```
 
 Would price ~ ln_carat be a better fitting model than price ~ carat? Why or why not?
@@ -117,8 +113,7 @@ We just compared in-sample statistics to draw a conclusion on which model has be
 Plot ln_price vs ln_carat.
 
 ```{r}
-ggplot(diamonds, aes(x = ln_carat, y = ln_price)) + 
-  geom_point()
+#TO-DO
 ```
 
 Would ln_price ~ ln_carat be the best fitting model than the previous three we considered? Why or why not?

@@ -1,0 +1,811 @@
+---
+title: "Practice Lecture 16 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+---
+
+
+## Model Selection and Three Data Splits
+
+This unit is split into three use cases (1) Selection among M explicit models (2) Hyperparameter Selection within one algorithm (3) Stepwise Model Construction
+
+# Use Case (I) Selecting one of M Explicit Models
+
+We have now covered non-linearities (e.g. polynomial terms) and interactions. A new complication now clearly emerges. If I have $p$ predictors, there are many linear least squares models I can build (considering non-linear least squares models makes the space of models even larger!!)
+
+For instance, here are a bunch of models and their in-sample performance:
+
+```{r}
+pacman::p_load(ggplot2)
+all_model_formulas = list( #note: need these as strings for later...
+  "price ~ carat + depth",
+  "price ~ carat + depth + color + x + y + z",
+  "price ~ .",
+  "price ~ . * ."
+)
+mods = lapply(all_model_formulas, lm, diamonds)
+lapply(mods, function(mod){summary(mod)$sigma})
+```
+
+Obviously the in-sample RMSE's are increasing due to the complexity, but which model is "best"?
+
+This is one of the most fundamental problems in statistics, and possibly all of science! 
+
+In class, we discussed validation via dividing $\mathbb{D}$ into (a) a training set and a (b) testing set. Now, we will further divide the training set into (a) a sub-training set and a (b) selection set and we still have the (c) test set. 
+
+The total training set together will fit a model and testing will estimate future performance. But within the total training set, we'll use an elaborate algorithim: we'll fit many models and take the best one. That's the "master algorithm".
+
+We'll make the selection set and the test set the same size but we don't have to. First split up the data:
+
+```{r}
+n = nrow(diamonds)
+K = 5
+set.seed(1984)
+test_indices = sample(1 : n, size = n * 1 / K)
+master_train_indices = setdiff(1 : n, test_indices)
+select_indices = sample(master_train_indices, size = n * 1 / K)
+train_indices = setdiff(master_train_indices, select_indices)
+rm(master_train_indices)
+
+#make sure we did this right:
+pacman::p_load(testthat)
+expect_equal(1 : n, sort(c(train_indices, select_indices, test_indices)))
+
+diamonds_train = diamonds[train_indices, ]
+diamonds_select = diamonds[select_indices, ]
+diamonds_test = diamonds[test_indices, ]
+
+rm(test_indices, select_indices, train_indices)
+```
+
+Now, fit all models and select the best one:
+
+```{r}
+mods = lapply(all_model_formulas, lm, diamonds_train)
+```
+
+Now predict on the selection set and look at the oos $s_e$, and select the "best" model
+
+```{r}
+yhat_selects = lapply(mods, function(mod){predict(mod, diamonds_select)})
+y_select = diamonds_select$price #the true prices
+
+s_e_s = lapply(yhat_selects, function(yhat_select){sd(yhat_select - y_select)})
+s_e_s
+#find the minimum
+which.min(s_e_s)
+```
+
+Which are overfit? Which are underfit? Were these models "poor choices"?
+
+Can we go back and fit some more models? 
+
+Yes - as long as we don't open the "lockbox" of the test set. Let's look at one more model. An expansion of the best of the previous 4 models now with a couple interactions we are convinced are real plus a couple of non-linear terms:
+
+```{r}
+all_model_formulas[[5]] = "price ~ . + carat * color + carat * depth + I(carat^2) + I(depth^2)"
+mods[[5]] = lm(all_model_formulas[[5]], diamonds_train) 
+
+yhat_selects[[5]] = predict(mods[[5]], diamonds_select)
+
+s_e_s[[5]] = sd(yhat_selects[[5]] - y_select)
+s_e_s
+#find the minimum
+which.min(s_e_s)
+```
+
+We can go further and fit more and more models but we should always be careful that we don't fit too many as we may optimize to the selection set. Here, we are lucky since the selection set is large (~11,000 observations) so this is not too much of a fear.
+
+But you can see the problem - how can we build a good model??
+
+The answer to this is non-parametric regression / machine learning. But first, we will cover two other important topics before we get there.
+
+Let us return and complete the exercise by now declaring we are done modeling and we are going to ship model 5. Let us get a conservative estimate of its performance:
+
+```{r}
+mod5_for_test = lm(all_model_formulas[[5]], rbind(diamonds_train, diamonds_select))
+yhat_test_mod5 = predict(mod5_for_test, diamonds_test)
+y_test = diamonds_test$price #the true prices
+sd(yhat_test_mod5 - y_test)
+```
+
+About the same as the selection estimate --- we did not overfit too much to the selection set.
+
+At this point the lockbox is open and we can never return (if we are honest, of course - many people in this business are not but it's never worth it).
+
+Now we can build production model 4 with all data to ship:
+
+```{r}
+mod_final = lm(all_model_formulas[[5]], diamonds)
+```
+
+No evaluation is done on the final model. It is only used to predict future diamonds' prices.
+
+We can make two improvements using CV to the above model selection procedure:
+
+* To reduce variance in the selection process, you make a CV of the selection set. 
+* To reduce variance in the testing process, you make an outer CV of the test set so that the first CV is a nested resampling. 
+
+This is a lot more coding! But we're in luck because it's done for us already. I will eventually demo the `mlr3` package which makes this easy because it's too difficult to code from scratch without bugs.
+
+
+# Use Case (II) Hyperparameter Selection
+
+Remember the `lambda` from the Vapnik Objective Function which we minimized to compute an SVM for non-linearly separable data? We now have a way to automatically select its value. Each lambda value implies a different model. Hence we need to do "model selection" to select a hyperparameter which selects our model with the best performance.
+
+Let's demo this on the `adult` dataset. Due to computational concerns only, let's limit the dataset to be size n = 3000 with 1/3-1/3-1/3 training-select-test sets.
+
+```{r}
+pacman::p_load_gh("coatless/ucidata") #load from github
+data(adult)
+adult = na.omit(adult)
+n = 3000
+adult = adult[sample(1 : nrow(adult), n), ]
+adult_train =  adult[1 : (n / 3), ]
+adult_select = adult[(n / 3 + 1) : (2 * n / 3), ]
+adult_test =   adult[(2 * n / 3 + 1) : n, ]
+```
+
+We now load the SVM package. Recall how to use the SVM: you specify a "cost" argument. That cost is related to the lambda value.
+
+```{r}
+pacman::p_load(e1071)
+#e.g. 
+#svm(income ~ ., adult_train, kernel = "linear", cost = 0.1)
+```
+
+So now we need to pick a bunch of cost values to search over. This is called a "grid search". It's still a decision! How many values in the grid? Step size? Minimum? Maximum? 
+
+Let's search over 50 models. And we can specify cost values on the log10 scale. Let minimum be 1e-6 and maximum be 100. 
+
+```{r}
+M = 50
+cost_grid = 10^seq(from = -6, to = 2, length.out = M)
+cost_grid
+```
+
+Let's do our search and collect errors on the select set:
+
+```{r}
+select_set_misclassification_errors_by_m = array(NA, M)
+for (m in 1 : M){
+  #train on train set
+  svm_mod = svm(income ~ ., adult_train, kernel = "linear", cost = cost_grid[m])
+  #predict on select set
+  y_hat = predict(svm_mod, adult_select)
+  #measure error from the select set
+  select_set_misclassification_errors_by_m[m] = mean(adult_select$income != y_hat)
+}
+```
+
+Let's plot these oos misclassification error rates:
+
+```{r}
+ggplot(data.frame(cost = cost_grid, miscl_err = select_set_misclassification_errors_by_m)) + 
+  aes(x = cost, y = miscl_err) +
+  geom_line(color = "grey") + 
+  geom_point(lwd = 3) + 
+  scale_x_log10()
+```
+
+Looks like the grid gave us a natural minimum. We can find the best value of the cost hyperparameter and its associated misclassification error:
+
+```{r}
+min(select_set_misclassification_errors_by_m)
+optimal_cost_hyperparam = cost_grid[which.min(select_set_misclassification_errors_by_m)]
+optimal_cost_hyperparam
+```
+
+Assume we will use this model and not test any more values of cost, we can get an honest performance metric for this optimally-tuned hyperparameter svm for the future on the test set:
+
+```{r}
+svm_mod = svm(income ~ ., adult_train, kernel = "linear", cost = optimal_cost_hyperparam)
+y_hat = predict(svm_mod, adult_test)
+mean(adult_test$income != y_hat)
+```
+
+This is about the same as we found on the select set. Thus, we didn't overfit the select set too much.
+
+To ship the final model, use all the data.
+
+```{r}
+g_final = svm(income ~ ., adult, kernel = "linear", cost = optimal_cost_hyperparam)
+```
+
+
+# Use Case (III) Forward Stepwise Model Construction
+
+There are many types of such stepwise models. Here we will look at Forward Stepwise Linear models. "Forward" meaning we start with a low complexity model and end with a high complexity model, "Stepwise" meaning we do so iteratively which each step consisting of one additional degree of freedom i.e. one incremental increase in complexity and "Linear" meaning that the model is linear. By default we use OLS.
+
+We will be using the diamonds data again as an example. Let's make sure we have unordered factors to avoid issues later:
+
+```{r}
+rm(list = ls())
+diamonds = ggplot2::diamonds
+diamonds$cut = factor(diamonds$cut, ordered = FALSE)
+diamonds$color = factor(diamonds$color, ordered = FALSE)
+diamonds$clarity = factor(diamonds$clarity, ordered = FALSE)
+```
+
+What we're doing will be highly computational, so let's take a random sample of the diamonds in $\mathbb{D}$ for training, selecting and testing:
+
+```{r}
+Nsamp = 1300
+set.seed(1984)
+subindices = sample(1 : nrow(diamonds), Nsamp * 3)
+diamonds_train = diamonds[subindices[1 : Nsamp], ]
+diamonds_select = diamonds[subindices[(Nsamp + 1) : (2 * Nsamp)], ]
+diamonds_test = diamonds[subindices[(2 * Nsamp + 1) : (3 * Nsamp)], ]
+rm(subindices)
+```
+
+Let's built a model with all second-order interactions e.g. all things that look like depth x table x clarity or depth^2 x color or depth^3.
+
+```{r}
+mod = lm(price ~ . * . * ., diamonds_train)
+```
+
+How many variables is this? And what does it look like?
+
+```{r}
+length(coef(mod))
+```
+
+Here's what some of the feature names look like:
+
+```{r}
+sample(names(coef(mod)), 100)
+```
+
+For features that are non-binary, the total will be p_non_binary^3 features. Binary features are more complicated because its each level in feature A times each level in feature B. There are no squared or cube terms for binary features (since they're all the same i.e. ${0,1}^d = {0,1}$).
+
+Remember we likely overfit just using first order interactions? We'll certainly overfit using first-order interactions AND second order interactions.
+
+```{r}
+summary(mod)$r.squared
+sd(summary(mod)$residuals)
+```
+
+Is that believable? Well... let's try predicting using this insano model on another Nsamp we didn't see...
+
+```{r}
+y_hat_test = predict(mod, diamonds_test)
+y_test = diamonds_test$price
+e_test = y_test - y_hat_test
+1 - sum((e_test)^2) / sum((y_test - mean(y_test))^2)
+sd(e_test)
+```
+
+VERY negative oos $R^2$ and awful RMSE --- why? We overfit big time!
+
+```{r}
+sd(y_test)
+sd(e_test) / sd(y_test)
+```
+
+This is not only "overfitting"; it is an absolute trainwreck! This means you can do ~60x better using the null model (average of y) instead of this model.
+
+So let us employ stepwise to get a "good" model. We need our basis predictors to start with. How about the linear components of `. * . * .` --- there's nothing intrinsically wrong with that - it's probably a good basis for $f(x)$. Let's create the model matrix for both train and test:
+
+```{r}
+Xmm_train = model.matrix(price ~ . * . * ., diamonds_train)
+y_train = diamonds_train$price
+p_plus_one = ncol(Xmm_train)
+Xmm_select = model.matrix(price ~ . * . * ., diamonds_select)
+y_select = diamonds_select$price
+```
+
+Now let's go through one by one and add the best one based on $s_e$ gain i.e. the best new dimension to add to project the most of the vector $y$ as possible onto the column space.
+
+```{r}
+included_features_by_iter = c() #keep a growing list of predictors by iteration
+in_sample_ses_by_iteration = c() #keep a growing list of se's by iteration
+oos_ses_by_iteration = c() #keep a growing list of se's by iteration
+i = 1
+
+repeat {
+
+  #get all predictors left to try
+  all_ses = array(NA, p_plus_one) #record all possibilities
+  for (j_try in 1 : p_plus_one){
+    if (j_try %in% included_features_by_iter){
+      next 
+    }
+    Xmm_sub = Xmm_train[, c(included_features_by_iter, j_try), drop = FALSE]
+    all_ses[j_try] = sd(lm.fit(Xmm_sub, y_train)$residuals) #lm.fit so much faster than lm! 
+  }
+  j_star = which.min(all_ses)
+  included_features_by_iter = c(included_features_by_iter, j_star)
+  in_sample_ses_by_iteration = c(in_sample_ses_by_iteration, all_ses[j_star])
+  
+  #now let's look at oos
+  Xmm_sub = Xmm_train[, included_features_by_iter, drop = FALSE]
+  mod = lm.fit(Xmm_sub, y_train)
+  y_hat_select = Xmm_select[, included_features_by_iter, drop = FALSE] %*% mod$coefficients
+  oos_se = sd(y_select - y_hat_select)
+  oos_ses_by_iteration = c(oos_ses_by_iteration, oos_se)
+  
+  cat("i =", i, "in sample: se = ", round(all_ses[j_star], 1), "oos_se", round(oos_se, 1), "added:", colnames(Xmm_train)[j_star], "\n")
+  
+  i = i + 1
+  
+  if (i > Nsamp || i > p_plus_one){
+    break #why??
+  }
+}
+```
+
+Now let's look at our complexity curve:
+
+```{r}
+simulation_results = data.frame(
+  iteration = 1 : length(in_sample_ses_by_iteration),
+  in_sample_ses_by_iteration = in_sample_ses_by_iteration,
+  oos_ses_by_iteration = oos_ses_by_iteration
+)
+
+pacman::p_load(latex2exp)
+ggplot(simulation_results) + 
+  geom_line(aes(x = iteration, y = in_sample_ses_by_iteration), col = "red") +
+  geom_line(aes(x = iteration, y = oos_ses_by_iteration), col = "blue") + 
+  ylim(0, max(c(simulation_results$in_sample_ses_by_iteration, simulation_results$oos_ses_by_iteration)))
+  ylab(TeX("$s_e$"))
+```
+
+
+We can kind of see what the optimal model is above. There is a whole zone of flat models. Better to be simple. So let's pick it from the graph visually. You can also obviously do CV within each iterations to stabilize this further.
+
+What's the optimal number of features? And its associated oos s_e?
+
+```{r}
+p_opt = 40 #change this based on plot above
+oos_ses_by_iteration[p_opt]
+```
+
+What are those features?
+
+```{r}
+sort(colnames(Xmm_train)[included_features_by_iter[1 : p_opt]])
+```
+
+Lots of carat-color-clarity interactions which makes sense. Other features don't matter so much as their information is probably duplicated within carat, color and clarity.
+
+What is the "true optimal model"? It's impossible to find as we'd have to search all subsets (of which there are exponential number of them 2^1000 = 10^31). Here we used a greedy search so hopefully we get somewhere in the ballpark of optimal. 
+
+We now get a conservative estimate of its future performance:
+
+```{r}
+Xmm_test = model.matrix(price ~ . * . * ., diamonds_test)
+optimal_mod = lm(diamonds_test$price ~ 0 + Xmm_test[, included_features_by_iter[1 : p_opt]])
+summary(optimal_mod)$sigma
+```
+
+Looks even better than we found during the stepwise iterations on the select set. This is random variation. It would be better to use CV within the stepwise and CV outside to then stabilize this final estimate.
+
+The final step is to fit g_final on all data using those selected features.
+
+# C++ and R
+
+R goes back to 1995 when it was adapted from S (written in 1976 by John Chambers at Bell Labs) with minor modifications. The core of base R is written in C and Fortran. These two languages are the fastest known languages (how to measure "fastest" is a huge debate). Thus, base R is very fast. For instance the `sort` function is as fast as C/Fortran since it immediately calls compiled C/Fortran routines.
+
+However, R code itself that you write is "interpreted" which means it is not compiled until you run it. And it has to compile on-the-fly, making it very slow. Prior to v3.4 (April, 2017) it was even slower since the code wasn't JIT compiled. All this "real CS" stuff you can learn in another class..
+
+One notable place to observe this slowness relative to other languages is in looping. For example:
+
+```{r}
+SIZE = 1e6
+v = 1 : SIZE
+```
+
+Take for example a simple function that computes square roots on each element
+
+```{r}
+sqrt_vector = function(v){
+  v_new = array(NA, length(v))
+  for (i in 1 : length(v)){
+    v_new[i] = sqrt(v[i])
+  }
+  v_new
+}
+```
+
+How fast does this run? Let's use a cool package called `microbenchmark` that allows us to do an operation many times and see how long it takes each time to get an average:
+
+```{r}
+pacman::p_load(microbenchmark)
+microbenchmark(
+  sqrt_vector(v), 
+  times = 10
+)
+```
+
+Does the apply function help?
+
+```{r}
+microbenchmark(
+  apply(v, 1, FUN = sqrt), 
+  times = 10
+)
+```
+
+Strange that this takes so long? So it doesn't help... it hurts A LOT. Unsure why... Be careful with apply! 
+
+How much faster in C++ should this be?
+
+Enter the `Rcpp` package - a way to compile little bits (or lotta bits) of C++ on the fly.
+
+```{r}
+pacman::p_load(Rcpp)
+```
+
+
+Let's write this for loop function to sqrt-ize in C++. We then  compile it and then save it into our namespace to be called like a regular function. Note that we use C++ classes that are not part of standard C++ e.g. "NumericVector". Rcpp comes build in with classes that are interoperable with R. It's not hard to learn, just takes a small dive into the documentation.
+
+```{r}
+cppFunction('
+  NumericVector sqrt_vector_cpp(NumericVector v) {
+    int n = v.size();
+    NumericVector v_new(n);
+    for (int i = 0; i < n; i++) { //indices from 0...n-1 not 1...n!
+      v_new[i] = sqrt(v[i]);
+    }
+    return v_new;
+  }
+')
+```
+
+What do these two functions look like?
+
+```{r}
+sqrt_vector
+sqrt_vector_cpp
+```
+
+The first one shows the R code and then says it is bytecode-compiled which means there are speedups used in R (go to an advanced CS class) but we will see these speedups aren't so speedy! The other just says we `.Call` some C++ function in a certain address (pointer) and the argument to be inputted.
+
+What is the gain in runtime?
+
+```{r}
+microbenchmark(
+  sqrt_vector_cpp(v), 
+  times = 10
+)
+```
+
+WOW. 10x!!! Can't beat that with a stick...
+
+Let's do a not-so-contrived example...
+
+Matrix distance... Let's compute the distances of all pairs of rows in a dataset. I will try to code the R as efficiently as possible by using vector subtraction so there is only two for loops. The C++ function will have an additional loop to iterate over the features in the observations.
+
+```{r}
+#a subset of the diamonds data
+SIZE = 1000
+X_diamonds = as.matrix(ggplot2::diamonds[1 : SIZE, c("carat", "depth", "table", "x", "y", "z")])
+
+compute_distance_matrix = function(X){
+  n = nrow(X)
+  D = matrix(NA, n, n)
+  for (i_1 in 1 : (n - 1)){
+    for (i_2 in (i_1 + 1) : n){
+      D[i_1, i_2] = sqrt(sum((X[i_1, ] - X[i_2, ])^2))
+    }
+  }
+  D
+}
+
+cppFunction('
+  NumericMatrix compute_distance_matrix_cpp(NumericMatrix X) {
+    int n = X.nrow();
+    int p = X.ncol();
+    NumericMatrix D(n, n);
+    std::fill(D.begin(), D.end(), NA_REAL);
+
+    for (int i_1 = 0; i_1 < (n - 1); i_1++){
+      //Rcout << "computing for row #: " << (i_1 + 1) << "\\n";
+      for (int i_2 = i_1 + 1; i_2 < n; i_2++){
+        double sqd_diff = 0;
+        for (int j = 0; j < p; j++){
+          sqd_diff += pow(X(i_1, j) - X(i_2, j), 2); //by default the cmath library in std is loaded
+        }
+        D(i_1, i_2) = sqrt(sqd_diff); //by default the cmath library in std is loaded
+      }
+    }
+    return D;
+  }
+')
+```
+
+```{r}
+microbenchmark(
+  {D = compute_distance_matrix(X_diamonds)},
+  times = 10
+)
+
+round(D[1 : 5, 1 : 5], 2)
+```
+
+Slow...
+
+```{r}
+microbenchmark(
+  {D = compute_distance_matrix_cpp(X_diamonds)},
+  times = 10
+)
+round(D[1 : 5, 1 : 5], 2)
+```
+
+Absolutely lightning... ~200x faster on my laptop than R's runtime.
+
+Writing functions as strings that compile is annoying. It is better to have separate files. For instance...
+
+```{r}
+sourceCpp("distance_matrix.cpp")
+```
+
+Here are a list of the data structures in Rcpp: https://teuder.github.io/rcpp4everyone_en/070_data_types.html#vector-and-matrix
+
+Another place where C++ pays the rent is recursion. Here is a quicksort implementation in R taken from somewhere on the internet.
+
+```{r}
+quicksort_R <- function(arr) {
+  # Pick a number at random.
+  mid = sample(arr, 1)
+
+  # Place-holders for left and right values.
+  left = c()
+  right = c()
+  
+  # Move all the smaller values to the left, bigger values to the right.
+  lapply(arr[arr != mid], function(d) {
+    if (d < mid) {
+      left <<- c(left, d) #needs to assign to the global variable here to jump out of the scope of the apply function
+    }
+    else {
+      right <<- c(right, d) #needs to assign to the global variable here to jump out of the scope of the apply function
+    }
+  })
+  
+  if (length(left) > 1) {
+    left = quicksort_R(left)
+  }
+  
+  if (length(right) > 1) {
+    right = quicksort_R(right)
+  }
+  
+  # Finally, return the sorted values.
+  c(left, mid, right)
+}
+```
+
+Let's create a random array to test these sorts on:
+
+```{r}
+n = 10000
+x = rnorm(n)
+```
+
+
+Let's profile the pure R sort function:
+
+```{r}
+microbenchmark(
+  x_sorted_pure_R = quicksort_R(x),
+  times = 10
+)
+```
+
+Let's profile R's `sort` function.
+
+```{r}
+microbenchmark(
+  x_sorted_base_R = sort(x),
+  times = 10
+)
+```
+
+Let's just ensure our method worked...
+
+```{r}
+x_sorted_pure_R = quicksort_R(x)
+x_sorted_base_R = sort(x)
+pacman::p_load(testthat)
+expect_equal(x_sorted_pure_R, x_sorted_base_R)
+```
+
+Basically infinitely faster. Let's make our own C++ implementation.
+
+```{r}
+sourceCpp("quicksort.cpp")
+```
+
+and profile it:
+
+```{r}
+microbenchmark(
+  x_sorted_cpp = quicksort_cpp(x),
+  times = 10
+)
+```
+
+Let's just ensure this method worked...
+
+```{r}
+pacman::p_load(testthat)
+expect_equal(x_sorted_cpp, x_sorted_base_R)
+```
+
+Why is our C++ slower than `sort`. Because `sort` is also in C++ or Fortran and it's been likely optimized and reoptimized up to wazoo for decades. Also, Rcpp's data structures may be slower than base R's data structures. There may be some speed lost to translating to `NumericVector` from `double[]` or something like that.
+
+Can you call R from Rcpp? You bet:
+
+```{r}
+cppFunction('
+  NumericVector rnorm_cpp_R(int n, double mean, double sd){
+      // get a pointer to R\'s rnorm() function
+      Function f("rnorm");   
+  
+      // Next code is interpreted as rnorm(n, mean, sd)
+      return f(n, Named("sd")=sd, _["mean"]=mean);
+  }
+')
+
+rnorm_cpp_R(5, 1, .01)
+```
+
+A few math functions are implemented for you already:
+
+```{r}
+evalCpp('R::qnorm(0.5, 0, 1, 1, 0)')
+evalCpp('R::qnorm(0.5, 0, 1)') #BOOM
+```
+
+Further, there are many common functions that are already wrapped for you via "Rcpp-sugar" which was the Rcpp's author's attempt to make Rcpp a whole lot easier, see [here](http://dirk.eddelbuettel.com/code/rcpp/Rcpp-sugar.pdf).
+
+```{r}
+evalCpp('rnorm(10, 100, 3)')
+```
+
+If you want blazing fast linear algebra, check out package `RcppArmadillo` which is a wrapper around Apache's Armadillo (namespace is "arma" in the code), an optimized linear algebra package in C++. Here is an example taken from [here](https://scholar.princeton.edu/sites/default/files/q-aps/files/slides_day4_am.pdf). It involves solving for b-vec in a standard OLS.
+
+```{r}
+pacman::p_load(RcppArmadillo)
+
+cppFunction('
+  arma::mat ols_cpp(arma::mat X, arma::mat y){
+    arma::mat Xt = X.t();
+    return solve(Xt * X, Xt * y);
+  }
+', depends = "RcppArmadillo")
+
+n = 500
+Xy = data.frame(int = rep(1, n), x1 = rnorm(n), x2 = rnorm(n), x3 = rnorm(n), y = rnorm(n))
+X = as.matrix(Xy[, 1 : 4])
+y = as.matrix(Xy[, 5])
+
+#does the function work?
+expect_equal(as.numeric(ols_cpp(X, y)), as.numeric(solve(t(X) %*% X) %*% t(X) %*% y))
+```
+
+Now how fast is it?
+
+```{r}
+microbenchmark(
+  R_via_lm = lm(y ~ 0 + ., data = Xy),
+  R_matrix_multiplication = solve(t(X) %*% X) %*% t(X) %*% y,
+  cpp_with_armadillo = ols_cpp(X, y),
+    times = 100
+)
+```
+
+About 4x faster than R's optimized linear algebra routines. Supposedly it can go even faster if you enable parallelization within Armadillo. I couldn't get that demo to work...
+
+Note lm is slow because it does all sorts of other stuff besides computing b-vec e.g. builds the model matrix, computes Rsq, computes residuals, does statistical testing, etc...
+
+Here are the places where Rcpp is recommended to be used (from https://teuder.github.io/rcpp4everyone_en/010_Rcpp_merit.html)
+
+* Loop operations in which later iterations depend on previous iterations.
+* Accessing each element of a vector/matrix.
+* Recurrent function calls within loops.
+* Changing the size of vectors dynamically.
+* Operations that need advanced data structures and algorithms (we don't do this in this class).
+
+# Java and R
+
+We just did C++ with R. Is there a bridge to Java? Yes (and there's bridges to many other languages too). Java and R can speak to each other through proper configuration of the `rJava` package. You need to have a full JDK of Java installed on your computer and have its binary executables in the proper path. This demo will be in Java JDK 8 (released in 2014 and not officially supported after 2020) since I haven't tested on the more modern Java JDK's yet. We first install `rJava` if necessary:
+
+```{r}
+if (!pacman::p_isinstalled(rJava)){
+  pacman::p_load(pkgbuild)
+  if (pkgbuild::check_build_tools()){
+    install.packages("rJava", type = "source")
+  }
+  install.packages("rJava")
+}
+```
+
+Now we load the package. Before we do, we set the JVM to have 8GB of RAM. After we load it, we initialize te JVM. This should print out nothing or "0" to indicate success.
+
+```{r}
+options(java.parameters = "-Xmx8g")
+pacman::p_load(rJava)
+.jinit() #this initializes the JVM in the background and if this runs with no issues nor output, you probably have rJava installed and connected to the JDK properly.
+```
+
+Just like the whole `Rcpp` demo, we can do a whole demo with `rJava`, but we won't. Here's just an example of creating a Java object and running a method on it:
+
+```{r}
+java_double = .jnew("java/lang/Double", 3.1415)
+java_double
+class(java_double)
+.jclass(java_double)
+#call an instance method 
+.jcall(java_double, "I", "intValue") #java_double.intValue();
+#call a static method
+J("java/lang/String", "valueOf", java_double)
+```
+
+A note on rJava vs Rcpp. 
+
+* If you're doing quick and dirty fast functions for loops and recursion, do it in Rcpp since there is lower overhead of programming. 
+* If you are programming more full-featured software, go with rJava. 
+* Also, if you need full-featured parallelized execution and threading control e.g. thread pooling and the ease of debugging, my personal opinion is that rJava is easier to get working with less dependencies. Rcpp threading is trickier and so is the openMP directives within Rcpp.
+* Further, the JVM is fully asynchronous which means it runs completely independently of R. What this means is that you can execute something in Java, Java can "thread it off" and return you to the R prompt with a pointer to the object that houses its execution. You can then query the object. We will see demos of this.
+
+
+# Python and R
+
+No demo would be complete without this.
+
+```{r}
+pacman::p_load(reticulate)
+py_available()
+py_numpy_available()
+
+# import numpy and specify no automatic Python to R conversion
+np = import("numpy", convert = FALSE)
+
+# do some array manipulations with NumPy
+python_arr = np$array(1 : 4)
+cumsum_python = python_arr$cumsum()
+class(cumsum_python)
+cumsum_python
+
+# convert to R explicitly at the end
+cumsum_R = py_to_r(cumsum_python)
+cumsum_R
+
+# now do the opposite, start with R and convert to Python
+r_to_py(cumsum_R)
+r_to_py(as.integer(cumsum_R))
+```
+
+Let's look at an example of Python Data Analysis Library (pandas). Let's install if not already installed:
+
+```{r}
+import("pandas", convert = FALSE)
+# py_install("pandas")
+```
+
+And python even works in Rstudio's markdown files e.g.
+
+```{python}
+#this is python code!!!
+import pandas as pd
+flights = pd.read_csv("https://raw.githubusercontent.com/PacktPublishing/Pandas-Cookbook/master/data/flights.csv")
+flights = flights.dropna()
+flights.columns
+flights[flights['DEST_AIR'] == "JFK"]
+```
+
+And then switch back to R and have access to the object we instantiated in python via the `py` object:
+
+```{r}
+#this is R code!!!
+ggplot(py$flights) + 
+  aes(x = AIRLINE, y = ARR_DELAY) +
+  geom_boxplot()
+
+lm(ARR_DELAY ~ AIRLINE, py$flights)
+```
+
