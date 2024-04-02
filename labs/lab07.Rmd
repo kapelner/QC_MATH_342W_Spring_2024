@@ -11,6 +11,7 @@ We will work with the diamonds dataset again. Here we load up the dataset and co
 
 ```{r}
 pacman::p_load(ggplot2) #this loads the diamonds data set too
+diamonds = ggplot2::diamonds
 ?diamonds
 diamonds$cut =      factor(diamonds$cut, ordered = FALSE)      #convert to nominal
 diamonds$color =    factor(diamonds$color, ordered = FALSE)    #convert to nominal
