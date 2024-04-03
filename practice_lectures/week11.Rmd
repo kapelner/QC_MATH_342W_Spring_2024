@@ -1,8 +1,0 @@
----
-title: "Practice Lectures Week 11 MATH 342W Queens College"
-author: "Professor Adam Kapelner"
-date: "Apr 25, 2022"
----
-
-
-

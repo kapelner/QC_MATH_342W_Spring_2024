@@ -1,0 +1,1087 @@
+---
+title: "Practice Lecture 18 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+---
+
+## The K tradeoff
+
+K determines how large the training set is relative to the test set when you're doing honest validation for an algorithm. For now, let's not use K-fold CV, but only examine one split at a time. Consider this simulated dataset with 50 observations:
+
+```{r}
+n = 50
+xmin = 0
+xmax = 4
+sigma_e_ignorance = 0.8
+# set.seed(1)
+set.seed(1984)
+x = runif(n, xmin, xmax)
+y = 2 + 3 * x^2 + rnorm(n, 0, sigma_e_ignorance) #f(x)  + delta
+
+pacman::p_load(ggplot2)
+data_plot = ggplot(data.frame(x = x, y = y)) + 
+  aes(x = x, y = y) + 
+  geom_point()
+data_plot
+```
+
+Note how $f(x)$ is quadratic and there is random noise which is "ignorance error". The random noise will be part of generalization error and can never go away.
+
+If we use OLS with no derived features, then we can at most get $h*(x)$. Let's see what $h^*(x) = \beta_0 + \beta_1 x$ truly is. To do this, we imagine we see an absolute ton of data and run OLS on it.
+
+```{r}
+n_hidden = 1e6
+x_hidden = seq(from = xmin, to = xmax, length.out = n_hidden)
+y_hidden = 2 + 3 * x_hidden^2 + rnorm(n_hidden, 0, sigma_e_ignorance)
+h_star_mod = lm(y_hidden ~ x_hidden)
+coef(h_star_mod)
+```
+
+The fact that $\beta = [-6~12]^\top$ can actually be solved with calculus: $\int_0^4 ((2 + 3x^2) - (b_0 + b_1 x))^2 dx$ and solve for $b0$ and $b1$ explicitly by minimizing.
+
+Plotting that over $\mathbb{D}$ we obtain
+
+```{r}
+data_plot +
+  geom_abline(intercept = coef(h_star_mod)[1], slope = coef(h_star_mod)[2], color = "green")
+```
+
+That is the best we're going to get. However, $g_{final}$ falls far short of it due to estimation error since n is only 50:
+
+```{r}
+g_final_mod = lm(y ~ x)
+coef(g_final_mod)
+data_plot +
+  geom_abline(intercept = coef(h_star_mod)[1], slope = coef(h_star_mod)[2], color = "green") +
+  geom_abline(intercept = coef(g_final_mod)[1], slope = coef(g_final_mod)[2], color = "red")
+```
+
+
+
+The model $g$ can vary quite a bit as we subsample $\mathbb{D}$ which is what happens when you do train-test splits. It varies a lot because there is large misspecification error. If the model was correctly specified, the results of everything that follows will be less impressive. 
+
+But in the real world - is your model ever correctly specified? is $f \in \mathcal{H}$?? NO. So this is more realistic.
+
+Now let's let K be small. Let K = 2 meaning even 50-50 split of test and train.
+
+```{r}
+K = 2
+prop_train = (K - 1) / K
+n_train = round(prop_train * n)
+set.seed(1)
+index_train = sample(1 : n, n_train, replace = FALSE)
+index_test = setdiff(1 : n, index_train)
+
+x_train = x[index_train]
+y_train = y[index_train]
+x_test = x[index_test]
+y_test = y[index_test]
+
+mod = lm(y_train ~ ., data.frame(x = x_train))
+y_hat_test = predict(mod, data.frame(x = x_test))
+g_s_e_K_2 = sqrt(mean((y_test - y_hat_test)^2)) #RMSE
+g_s_e_K_2
+```
+
+That's the estimate of generalization error. It should be biased downwards i.e. the real error is less. 
+
+How about if K is large? Let's say $K = n / 2$ meaning n_train = 48 and n_test = 2.
+
+```{r}
+K = n / 2
+prop_train = (K - 1) / K
+n_train = round(prop_train * n)
+set.seed(1)
+index_train = sample(1 : n, n_train, replace = FALSE)
+index_test = setdiff(1 : n, index_train)
+
+x_train = x[index_train]
+y_train = y[index_train]
+x_test = x[index_test]
+y_test = y[index_test]
+
+mod = lm(y_train ~ ., data.frame(x = x_train))
+y_hat_test = predict(mod, data.frame(x = x_test))
+g_s_e_K_n_over_2 = sqrt(mean((y_test - y_hat_test)^2)) #RMSE
+g_s_e_K_2
+g_s_e_K_n_over_2
+```
+
+I set the seed for illustration purposes. More data to train on = less error which is why this estimate at K=25 is lower than when K=2.
+
+In reality, there is massive variance over specific splits! Let's run the simulation many times.
+
+While we're at it, let's do all possible K's! Well, what are all the valid K's? If you want to keep the sizes the same, any factorization of n except the trivial 1 since n = 1 * n. A K = 1 would mean there's no split!!! How to find divisors? Of course a package for this.
+
+```{r}
+pacman::p_load(numbers)
+setdiff(divisors(n), 1)
+```
+
+But should we also include the trivial n? Yes K = n is indeed a valid divisor. And this type of CV is called the "leave one out cross validation" (LOOCV). Now we compute the errors over K:
+
+This simulation takes a long time. So I pre-saved its results.
+
+```{r}
+Nsim_per_K = 2000
+Kuniqs = setdiff(divisors(n), 1)
+num_Kuniqs = length(Kuniqs)
+Ks = rep(Kuniqs, Nsim_per_K)
+results = data.frame(s_e = rep(NA, Nsim_per_K * num_Kuniqs), K = rep(NA, Nsim_per_K * num_Kuniqs))
+for (nsim in 1 : length(Ks)){
+  K = Ks[nsim]
+  prop_train = (K - 1) / K
+  n_train = round(prop_train * n)
+  index_train = sample(1 : n, n_train, replace = FALSE)
+  index_test = setdiff(1 : n, index_train)
+  
+  x_train = x[index_train]
+  y_train = y[index_train]
+  x_test = x[index_test]
+  y_test = y[index_test]
+  
+  mod = lm(y_train ~ ., data.frame(x = x_train))
+  y_hat_test = predict(mod, data.frame(x = x_test))
+  results[nsim, ] = c(
+    sqrt(mean((y_test - y_hat_test)^2)), #RMSE
+    K
+  )
+}
+```
+
+Let's take the average error over each simulated split and also its variability:
+
+```{r}
+pacman::p_load(dplyr)
+results_summary = results %>%
+  group_by(K) %>%
+  summarize(avg_s_e = mean(s_e), s_s_e = sd(s_e), sim_err = sd(s_e) / sqrt(Nsim_per_K)) %>%
+  mutate(ci_a = avg_s_e - 2 * s_s_e / sqrt(K)) %>%
+  mutate(ci_b = avg_s_e + 2 * s_s_e / sqrt(K))
+results_summary
+```
+
+
+
+
+
+Now let's see what the distributions look like to visualize the means and variances.
+
+```{r}
+sim_plot = ggplot(results) + 
+  aes(x = s_e) +
+  geom_density(aes(fill = factor(K)), alpha = 0.3) + 
+  xlim(0, NA) + 
+  geom_vline(data = results_summary, aes(xintercept = avg_s_e, color = factor(K)))
+sim_plot
+```
+
+
+
+The main takeaways are
+
+(1) the std err of generalization error estimate is much lower for low K than high K
+
+With high K, the test set is small meaning the estimate has high variance; with low K, the test set is large meaning you can measure it with low variance.
+
+(2) the average of generalization error estimate is lower for high K than low K
+
+With high K, the training set is large meaning $g$ is closer to g_final and thus has higher expected accuracy; with low K, the training set is small meaning $g$ is further from g_final and thus has lower expected accuracy.
+
+Thus, the tradeoff is bias vs. variance. There are many similar tradeoffs in statistics. We will see one later when we do machine learning.
+
+Is the estimates' accuracy for what we really care about? 
+
+The actual error of g_final can be estimated by imagining tons of future observations:
+
+```{r}
+y_hat_g_final = predict(g_final_mod, data.frame(x = x_hidden))
+gen_error_true = sqrt(mean((y_hidden - y_hat_g_final)^2))
+gen_error_true
+```
+
+The generalization error of g_final is pictured below:
+
+```{r}
+sim_plot + 
+  geom_vline(xintercept = gen_error_true, col = "black", size = 2)
+```
+
+Remember, g_final's error should be lower than both averages since it uses all the data. But we see above it's higher!
+
+So what happened? Simple... we are mixing apples and oranges. We calculated the real generalization error by looking at one million future observations. We calculated the colored distributions by looking at our data only which is a random realization of many such datasets! Thus, our generalization errors are biased based on the specific n observations in D we received. We will see that K-fold helps a bit with this. But there is nothing we can do about it beyond that (besides collect more observations). If you get a weird sample, you get a weird sample! Note that the CI's which were [s_e +/- 2 * s_s_e / sqrt(K)] contained the real value (except LOOCV).
+
+How would we be able to generate the picture we really want to see? We would run this simulation over many datasets and average. That would be a giant simulation. To show that this is the case, go back and change the seed in the first chunk and rerun. You'll see a different white bar.
+
+What is the main takeaway? K matters because it induces a tradeoff. It shouldn't be too large or too small. And, generalization error estimation is very variable in low n. To see this, go back and increase n.
+
+
+Let's do the demo again. This time, we generate all samples from the data generating process.
+
+```{r}
+rm(list = ls())
+pacman::p_load(numbers, testthat, ggplot2)
+
+n = 50
+xmin = 0
+xmax = 4
+sigma_e_ignorance = 0.8
+set.seed(1984)
+Ntest = 1e6
+Kuniqs = setdiff(divisors(n), 1)
+
+Nsim = 5e6
+```
+
+The simulation below take a long time. So I saved it.
+
+```{r}
+results = data.frame(s_e = numeric(), K = character())
+
+for (nsim in 1 : Nsim){
+  x = runif(n, xmin, xmax)
+  y = 2 + 3 * x^2 + rnorm(n, 0, sigma_e_ignorance) #f(x)  + delta
+  
+  #do all the oos validation
+  for (i in 1 : length(Kuniqs)){
+    K = Kuniqs[i]
+    prop_train = (K - 1) / K
+    n_train = round(prop_train * n)
+    index_train = sample(1 : n, n_train, replace = FALSE)
+    index_test = setdiff(1 : n, index_train)
+    expect_equal(sort(c(index_test, index_train)), 1:n)
+    
+    x_train = x[index_train]
+    y_train = y[index_train]
+    Xytrain = data.frame(x = x_train, y = y_train)
+    x_test = x[index_test]
+    y_test = y[index_test]
+    
+    g_mod = lm(y ~ ., Xytrain)
+    y_hat_g = predict(g_mod, data.frame(x = x_test))
+    g_s_e = sum(abs(y_test - y_hat_g)) / length(y_test)
+    results = rbind(results, data.frame(s_e = g_s_e, K = K))
+  }
+  
+  #now estimate generalization error on g_final
+  g_final_mod = lm(y ~ x)
+  x_star = seq(from = xmin, to = xmax, length.out = Ntest)
+  y_star = 2 + 3 * x_star^2 + rnorm(Ntest, 0, sigma_e_ignorance)
+  y_hat_g_final_star = predict(g_final_mod, data.frame(x = x_star))
+  gen_error_true = sum(abs(y_star - y_hat_g_final_star)) / Ntest
+  results = rbind(results, data.frame(s_e = gen_error_true, K = "true"))
+  save(results, file = "K_dgp_results.RData")
+}
+```
+
+Let's take the average error over each simulated split and also its variability:
+
+```{r}
+load("K_dgp_results.RData")
+pacman::p_load(dplyr)
+results_summary = results %>%
+  group_by(K) %>%
+  summarize(avg_s_e = mean(s_e), s_s_e = sd(s_e), sim_err = sd(s_e) / sqrt(Nsim)) %>%
+  arrange(as.numeric(K))
+results_summary
+```
+
+
+Now let's see what the distributions look like to visualize the means and variances.
+
+```{r}
+s_e_true = results %>% filter(K == "true") %>% pull(s_e) %>% mean
+sim_plot = ggplot(results %>% filter(K != "true")) + 
+  aes(x = s_e) +
+  geom_density(aes(fill = K), alpha = 0.3) + 
+  xlim(0, NA) + 
+  geom_vline(data = results_summary, aes(xintercept = avg_s_e, color = K), size = 1) + 
+  xlim(0, 8) + 
+  geom_vline(xintercept = s_e_true, color = "black")
+sim_plot
+```
+
+
+#K-fold CV variance reduction
+
+Let's run this same demo again except K-fold within the runs.
+
+This simulation takes a long time, so I saved it.
+
+
+```{r}
+rm(list = ls())
+pacman::p_load(numbers, testthat, ggplot2)
+
+n = 50
+xmin = 0
+xmax = 4
+sigma_e_ignorance = 0.8
+set.seed(1984)
+Ntest = 1e6
+Kuniqs = setdiff(divisors(n), 1)
+
+Nsim = 3e6
+
+#we will add to the previous experiment's results
+load("K_dgp_results.RData")
+
+
+for (nsim in 1 : Nsim){
+  x = runif(n, xmin, xmax)
+  y = 2 + 3 * x^2 + rnorm(n, 0, sigma_e_ignorance) #f(x)  + delta
+  
+  #do all the oos validation
+  for (i in 1 : length(Kuniqs)){
+    K = Kuniqs[i]
+    temp = rnorm(n)
+    k_fold_idx = cut(temp, breaks = quantile(temp, seq(0, 1, length.out = K + 1)), include.lowest = TRUE, labels = FALSE)
+    
+    oos_residuals = array(NA, n)
+    for (k in 1 : K){
+      index_test = which(k_fold_idx == k)
+      index_train = setdiff(1 : n, index_test)
+      
+      x_train = x[index_train]
+      y_train = y[index_train]
+      Xytrain = data.frame(x = x_train, y = y_train)
+      x_test = x[index_test]
+      y_test = y[index_test]
+      
+      g_mod = lm(y ~ ., Xytrain)
+      y_hat_g = predict(g_mod, data.frame(x = x_test))
+      oos_residuals[index_test] = y_test - y_hat_g
+    }
+    g_k_fold_cv_s_e = sum(abs(oos_residuals)) / n
+    results = rbind(results, data.frame(s_e = g_k_fold_cv_s_e, K = paste0(K, "_cv")))
+  }
+  
+  #now estimate generalization error on g_final
+  g_final_mod = lm(y ~ x)
+  x_star = seq(from = xmin, to = xmax, length.out = Ntest)
+  y_star = 2 + 3 * x_star^2 + rnorm(Ntest, 0, sigma_e_ignorance)
+  y_hat_g_final_star = predict(g_final_mod, data.frame(x = x_star))
+  gen_error_true = sum(abs(y_star - y_hat_g_final_star)) / Ntest
+  results = rbind(results, data.frame(s_e = gen_error_true, K = "true"))
+}
+save(results, file = "K_dgp_results_K_fold.RData")
+```
+
+Let's take the average error over each simulated split and also its variability:
+
+```{r}
+load("K_dgp_results_K_fold.RData")
+pacman::p_load(dplyr)
+results_summary = results %>%
+  group_by(K) %>%
+  summarize(avg_s_e = mean(s_e), s_s_e = sd(s_e), s_avg_s_e = sd(s_e) / sqrt(Nsim)) %>%
+  arrange(as.numeric(K))
+results_summary[c(1:5, 8,10,6,7,9), ]
+```
+
+Exactly what's expected for average s_e. But the s_s_e's are much smaller than not doing CV! And stable!
+
+Now let's see what the distributions look like for the cross validations:
+
+```{r}
+pacman::p_load(tidyverse)
+sim_plot = ggplot(results %>% filter(str_detect(K, "_cv"))) + 
+  aes(x = s_e) +
+  geom_density(aes(fill = factor(K)), alpha = 0.3) + 
+  xlim(0, NA) + 
+  geom_vline(data = results_summary, aes(xintercept = avg_s_e, color = factor(K)), size = 1) + 
+  geom_vline(xintercept = s_e_true, color = "black") +
+  xlim(1.5, 5)
+sim_plot
+```
+
+With CV, you can use much higher K's seemingly without paying for it. Still the recommended value is usually 10.
+
+
+## mlr2/mlr3 package for K-fold CV and nested resampling
+
+"Machine Learning in R" (the `mlr3` package) is a very popular R library that makes it very simple to build models, do K-fold validation, etc.
+
+```{r}
+pacman::p_load(ggplot2, mlr3verse)
+```
+
+It splits the modeling task into conceptual pieces. The most basic pieces are:
+
+* Instantiate a "task". This consists of supplying a dataframe, identifying a variable that is the output and the type of predictions to be made.
+* Instantiate a "learner". This consists of $\mathcal{A}$ and $\mathcal{H}$. For example: OLS with all raw features.
+* Instantiate a type of validation. For example: 5-fold CV resampling.
+* Execute
+
+Here's what this process would look like for using OLS on the diamonds dataset:
+
+```{r}
+diamonds = ggplot2::diamonds
+#specify the modeling task: here it's regression on the diamonds dataset where the response is price
+modeling_task = TaskRegr$new(id = "diamonds", backend = diamonds, target = "price")
+#specify the algorithm and implicitly, the candidate set: here it's OLS
+algorithm = lrn("regr.lm") 
+#specify the type of validation: here we choose 5-fold CV
+validation = rsmp("cv", folds = 5)
+#then we execute the task:
+res = resample(modeling_task, algorithm, validation)
+```
+
+It's squabbling about something insignificant but at least it tells me exactly what I need to do to fix! Let's correct this error and do it again:
+
+```{r}
+diamonds$cut = factor(diamonds$cut, ordered = FALSE)
+diamonds$color = factor(diamonds$color, ordered = FALSE)
+diamonds$clarity = factor(diamonds$clarity, ordered = FALSE)
+#then recreate the modeling task with the updated dataset
+modeling_task = TaskRegr$new(id = "diamonds", backend = diamonds, target = "price")
+#then we execute the task again hopefully this time without error
+res = resample(modeling_task, algorithm, validation)
+```
+
+Note how it shows us the five folds were done.
+
+Now we want to assess our performance by looking at the rotated test set. To do so, 
+we need to provide an error metric of which there are lots:
+
+```{r}
+msrs()
+#see https://mlr3.mlr-org.com/reference/mlr_measures_regr.rmse.html
+#note how they define it without the p in the denominator... more confusion!
+```
+
+Let's choose RMSE. Here are the results:
+
+```{r}
+res$score(msr("regr.rmse"))$regr.rmse #looking at RMSE for each e-vector for each of the 5 folds
+res$aggregate(msr("regr.rmse")) #aggregating all e_i's together
+sd(res$score(msr("regr.rmse"))$regr.rmse) #computing s_s_e
+```
+
+### Using the MLR package for Model selection
+
+Can we use MLR for Linear Model Selection?
+
+Yes, but it is not as nice as I would've liked but it sure beats doing it yourself. I've figured it out by creating my own custom code. Warning: this is the old version of mlr (v2) as I couldn't figure it out in the new version of mlr... sorry...
+
+```{r}
+pacman::p_unload(mlr3verse)
+pacman::p_load(mlr)
+```
+
+First we define the formulas that index the models we are interested in examining. Here are a few from the lab:
+
+```{r}
+model_formulas = c(
+  "carat",
+  "carat + cut",
+  "carat + cut + color",
+  "carat + cut + color + clarity",
+  "carat + cut + color + clarity + x + y + z",
+  "carat + cut + color + clarity + x + y + z + depth",
+  "carat + cut + color + clarity + x + y + z + depth + table",
+  "carat * (cut + color + clarity) + x + y + z + depth + table",
+  "(carat + x + y + z) * (cut + color + clarity) + depth + table",
+  "(carat + x + y + z + depth + table) * (cut + color + clarity)",
+  "(poly(carat, 2) + x + y + z + depth + table) * (cut + color + clarity)"
+)
+model_formulas = paste0("price ~ ", model_formulas)
+```
+Then we create the task and learner
+
+```{r}
+modeling_task = makeRegrTask(data = diamonds, target = "price") #instantiate the task
+```
+
+Now we create a new learner which is a wrapper for the linear model with a custom formula. We need to specify learning parameters, a training function (build g) and a predict function. Then we need to add theese functions to the namespace in a way mlr understands.
+
+
+```{r}
+makeRLearner.regr.custom_ols = function() {
+  makeRLearnerRegr(
+    cl = "regr.custom_ols",
+    package = "base",
+    par.set = makeParamSet(
+      makeDiscreteLearnerParam(id = "formula", default = model_formulas[[1]], values = model_formulas)
+    ),
+    properties = c("numerics", "factors", "ordered"),
+    name = "Custom OLS with a Formula",
+    short.name = "custom_ols"
+  )
+}
+
+trainLearner.regr.custom_ols = function(.learner, .task, .subset, .weights = NULL, ...){
+  lm(list(...)$formula, data = getTaskData(.task, .subset))
+}
+
+predictLearner.regr.custom_ols = function (.learner, .model, .newdata, ...){
+    predict(.model$learner.model, newdata = .newdata, ...)
+}
+
+registerS3method("makeRLearner", "regr.custom_ols", makeRLearner.regr.custom_ols)
+registerS3method("trainLearner", "regr.custom_ols", trainLearner.regr.custom_ols)
+registerS3method("predictLearner", "regr.custom_ols", predictLearner.regr.custom_ols)
+```
+
+Now we create the "inner loop". Here, we cross validate over the different models. We do this by specifying a "tune wrapper" since technically each formula is considered a tuning paramter / hyperparameter the linear model on this task.
+
+```{r}
+Kinner = 3
+all_model_param_set = makeParamSet(
+  makeDiscreteParam(id = "formula", default = model_formulas[[1]], values = model_formulas)
+)
+inner_loop = makeResampleDesc("CV", iters = Kinner)
+lrn = makeTuneWrapper("regr.custom_ols", #instantiate the OLS learner algorithm
+        resampling = inner_loop, 
+        par.set = all_model_param_set, 
+        control = makeTuneControlGrid(), 
+        measures = list(rmse))
+```
+
+We now create the outer loop and execute:
+
+```{r}
+Kouter = 5
+outer_loop = makeResampleDesc("CV", iters = Kouter)
+r = resample(lrn, modeling_task, resampling = outer_loop, extract = getTuneResult, measures = list(rmse))
+```
+
+Now we look at the results a bunch of different ways:
+
+```{r}
+print(getNestedTuneResultsOptPathDf(r)) #results of each inner validation over all outer iterations
+r$extract #"winning" model for each outer iteration
+r #overall estimate of oos error of the whole procedure if it were used on all of $\mathbb{D}$
+```
+
+Is there a final winning model? No... we've tested how this meta-algorithm is going to perform in the real world. The meta algorithm is choose among those models using train-select sets and select the best model.
+
+## Use Case (III) Hyperparameter Selection
+
+Now we use `mlr3`, the latest version (sorry about before!)
+
+```{r}
+pacman::p_unload(mlr)
+pacman::p_load(mlr3verse)
+```
+
+We load the breast cancer dataset from earlier in the class.
+
+```{r}
+pacman::p_load(dplyr)
+cancer = MASS::biopsy %>%
+  select(-ID) %>% #drop the useless ID column
+  na.omit #drop all rows that are missing
+task = TaskClassif$new(id = "cancer", backend = cancer, target = "class")
+```
+
+We now create the learner. By default, SVM is not included, so we need to load an extension package. We ensure the SVM is linear like the one we studied in class (we don't have time to do nonlinear SVM's but it is basically an attempt to make the candidate space richer).
+
+```{r}
+pacman::p_load(mlr3learners, e1071)
+learner = lrn("classif.svm")
+learner$param_set$values = list(kernel = "linear")
+learner$param_set$values$type = "C-classification" #unsure why I need this...
+```
+
+Now we create the inner loop where we try many different values of the hyperparameter via a grid search. This grid search functionality has been further decomped in the new mlr3 package into a subpackage called `mlr3tuning`. 
+
+```{r}
+resampling = rsmp("holdout")
+search_space = ps(cost = p_dbl(lower = 0.0001, upper = 1))
+M = 30
+
+Kinner = 5
+terminator = trm("evals", n_evals = Kinner)
+tuner = tnr("grid_search", resolution = M)
+measure = msr("classif.ce") #misclassification error
+svm_hyperparameter_tuned = AutoTuner$new(tuner, learner, resampling, measure, terminator, search_space)
+```
+
+Now we create the outer loop and execute
+
+```{r}
+Kouter = 3
+resampling_outer = rsmp("cv", folds = Kouter)
+rr = resample(task = task, learner = svm_hyperparameter_tuned, resampling = resampling_outer)
+```
+
+Now we look at the results a bunch of different ways:
+
+```{r}
+rr$score()
+rr$aggregate()
+```
+
+That gives us the estimate of future performance. Now we create the model using just test-train split:
+
+
+```{r}
+svm_hyperparameter_tuned$train(task)
+svm_hyperparameter_tuned$tuning_result
+```
+This gives us the final hyperparameter value. Then the final model can be trained
+
+```{r}
+learner$param_set$values = c(learner$param_set$values, list(cost = at$tuning_result$cost))
+learner$train(task)
+g_final = learner$predict_newdata
+#this created g_final internally and you can predict on it for x-vec* via:
+g_final(cancer[1, ])
+```
+
+
+
+# Regression Trees
+
+Let's fit a regression tree. We will use the development package `YARF` which I've been hacking on now for a few years. The package internals are written in Java which we just installed above. Since `YARF` is not on CRAN, we install the package from my github including its dependency (if necessary) and then load it 
+
+```{r}
+if (!pacman::p_isinstalled(YARF)){
+  pacman::p_install_gh("kapelner/YARF/YARFJARs", ref = "dev")
+  pacman::p_install_gh("kapelner/YARF/YARF", ref = "dev", force = TRUE)
+}
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(YARF)
+```
+
+The data will be fitting with the regression tree is a sine curve plus noise:
+
+```{r}
+pacman::p_load(tidyverse, magrittr)
+n = 500
+x_max = 4 * pi
+x = runif(n, 0, x_max)
+sigma = 0.05
+y = ifelse(x < 2 * pi, 0.5 * sin(x), 0) + rnorm(n, 0, sigma)
+ggplot(data.frame(x = x, y = y), aes(x, y)) + geom_point(lwd = 0.6) 
+```
+
+Now we fit a regression tree to this model. Nevermind the `calculate_oob_error` argument for now. This will be clear why FALSE is NOT the default in a few classes.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, calculate_oob_error = FALSE)
+```
+
+How "big" is this tree model?
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+What are the "main" splits?
+
+```{r}
+illustrate_trees(tree_mod, max_depth = 4, open_file = TRUE)
+```
+
+What does $g(x)$ look like?
+
+```{r}
+Nres = 1000
+x_predict = data.frame(x = seq(0, x_max, length.out = Nres))
+g = predict(tree_mod, x_predict)
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x_predict, y = g), col = "blue")
+```
+
+Obviously overfit - but not that bad... let's try lowering the complexity by stopping the tree construction at a higher node size.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, nodesize = 50, calculate_oob_error = FALSE)
+yhat = predict(tree_mod, x_predict)
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x_predict, y = yhat), col = "blue")
+```
+
+Less overfitting now but now it's clearly underfit! We can play with the nodesize. Or we can use the model selection algorithm to pick the model (the nodesize). Let's ensure nodesize = 1 gives us perfect overfitting.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, nodesize = 1, calculate_oob_error = FALSE)
+yhat = predict(tree_mod, data.frame(x = x))
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x, y = yhat), col = "blue")
+mean((y - yhat)^2)
+```
+Are we sure we have a leaf node for each observation?
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+Let's ensure nodesize > n gives us perfect underfitting.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, nodesize = n + 1, calculate_oob_error = FALSE)
+yhat = predict(tree_mod, data.frame(x = x))
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x, y = yhat), col = "blue")
+unique(yhat)
+mean(y)
+```
+
+Are we sure we have one root node?
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+Yes.
+
+
+Let's try this using oos validation and trace out a performance curve to find the optimal hyperparameter.
+
+```{r}
+K = 4
+set.seed(1984)
+select_idx = sample(1 : n, round(1 / K * n))
+x_select = x[select_idx]
+y_select = y[select_idx]
+train_idx = setdiff(1 : n, select_idx)
+x_train = x[train_idx]
+y_train = y[train_idx]
+n_train = length(train_idx)
+
+max_nodesize_to_try = 70
+in_sample_errors = array(NA, max_nodesize_to_try)
+oos_errors = array(NA, max_nodesize_to_try)
+for (i in 1 : max_nodesize_to_try){
+  tree_mod = YARFCART(data.frame(x = x_train), y_train, nodesize = i, calculate_oob_error = FALSE)
+  yhat = predict(tree_mod, data.frame(x = x_train))
+  in_sample_errors[i] = sd(y_train - yhat)
+  yhat_select = predict(tree_mod, data.frame(x = x_select))
+  oos_errors[i] = sd(y_select - yhat_select)
+}
+
+ggplot(data.frame(nodesize = 1: max_nodesize_to_try, in_sample_errors = in_sample_errors, oos_errors = oos_errors)) + 
+  geom_point(aes(nodesize, in_sample_errors), col = "red") +
+  geom_point(aes(nodesize, oos_errors), col = "blue")
+```
+
+For some reason, we do not see serious overfitting.
+
+# Regression Trees with Real Data
+
+Now let's look at a regression tree model predicting medv in the Boston Housing data. We first load the data and do a training-test split:
+
+```{r}
+set.seed(1984)
+pacman::p_load(MASS)
+data(Boston)
+test_prop = 0.1
+train_indices = sample(1 : nrow(Boston), round((1 - test_prop) * nrow(Boston)))
+Boston_train = Boston[train_indices, ]
+y_train = Boston_train$medv
+X_train = Boston_train
+X_train$medv = NULL
+n_train = nrow(X_train)
+```
+
+And fit a tree model. The default hyperparameter, the node size is $N_0 = 5$.
+
+```{r}
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(YARF)
+tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE)
+```
+
+What does the in-sample fit look like?
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+e = y_train - y_hat_train
+sd(e)
+1 - sd(e) / sd(y_train)
+```
+
+Recall the linear model:
+
+```{r}
+linear_mod = lm(medv ~ ., Boston_train)
+sd(y_train - linear_mod$fitted.values)
+summary(linear_mod)$r.squared
+```
+
+The tree seems to win in-sample. Why? 
+
+Is this a "fair" comparison?
+
+Before we address this, let's illustrate the tree. 
+
+```{r}
+illustrate_trees(tree_mod, max_depth = 4, open_file = TRUE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+Let's make the comparison fair by seeing what happens oos.
+
+```{r}
+test_indices = setdiff(1 : nrow(Boston), train_indices)
+Boston_test = Boston[test_indices, ]
+y_test = Boston_test$medv
+X_test = Boston_test
+X_test$medv = NULL
+```
+
+For the tree:
+
+```{r}
+y_hat_test_tree = predict(tree_mod, X_test)
+e = y_test - y_hat_test_tree
+sd(e)
+1 - sd(e) / sd(y_test)
+```
+
+For the linear model:
+
+```{r}
+y_hat_test_linear = predict(linear_mod, Boston_test)
+e = y_test - y_hat_test_linear
+sd(e)
+1 - sd(e) / sd(y_test)
+```
+
+The take-home message here is that the tree beats the linear model in future predictive performance but the only way to be truly convinced of this is to do the split over and over to get a sense of the average over the massive variability (like the previous demo) or to do CV to reduce the error of the estimate. 
+
+Why does the regression tree beat the linear model? Let's see what's going on in the tree.
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+About how many observations are in each leaf?
+
+```{r}
+nrow(Boston_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+That's a very flexible model.
+
+Let's see overfitting in action. Let's set nodesize to be one.
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, nodesize = 1, calculate_oob_error = FALSE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+nrow(Boston_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+Why is it not exactly 1 on average? I think it's because...
+
+```{r}
+data.table::uniqueN(y_train)
+length(y_train)
+```
+
+Regardless of this point, this model is essentially giving each observation it's own y-hat, it's own personal guess which will be its own personal y. Just like linear modeling when $n = p + 1$ and nearest neighbors when $K = 1$. Let's see how bad the overfitting is:
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+e = y_train - y_hat_train
+sd(e)
+1 - sd(e) / sd(y_train)
+```
+
+This is the expected behavior in perfect fitting.
+
+```{r}
+y_hat_test_tree = predict(tree_mod, X_test)
+e = y_test - y_hat_test_tree
+sd(e)
+1 - sd(e) / sd(y_test)
+```
+
+It overfits but amazing it doesn't get clobbered completely! And its results are on-par with the non-overfit linear model probably because it made up for the overfitting by reducing misspecification error. 
+
+Trees are truly amazing!
+
+
+# Classification Trees
+
+Let's get the cancer biopsy data:
+
+```{r}
+rm(list = ls())
+pacman::p_load(YARF, tidyverse, magrittr)
+data(biopsy, package = "MASS")
+biopsy %<>% na.omit %>% dplyr::select(-ID) #for some reason the "select" function is scoping elsewhere without this explicit directive
+colnames(biopsy) = c(
+  "clump_thickness",
+  "cell_size_uniformity",
+  "cell_shape_uniformity",
+  "marginal_adhesion",
+  "epithelial_cell_size",
+  "bare_nuclei",
+  "bland_chromatin",
+  "normal_nucleoli",
+  "mitoses",
+  "class"
+)
+```
+
+Let's do a training-test split to keep things honest:
+
+```{r}
+test_prop = 0.1
+train_indices = sample(1 : nrow(biopsy), round((1 - test_prop) * nrow(biopsy)))
+biopsy_train = biopsy[train_indices, ]
+y_train = biopsy_train$class
+X_train = biopsy_train
+X_train$class = NULL
+n_train = nrow(X_train)
+test_indices = setdiff(1 : nrow(biopsy), train_indices)
+biopsy_test = biopsy[test_indices, ]
+y_test = biopsy_test$class
+X_test = biopsy_test
+X_test$class = NULL
+```
+
+Let's fit a tree:
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+nrow(biopsy_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+Why would the average observations per node be larger than the nodesize which is 1?
+
+```{r}
+illustrate_trees(tree_mod, max_depth = 5, length_in_px_per_half_split = 30, open_file = TRUE)
+```
+
+How are we doing in-sample?
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+mean(y_train != y_hat_train)
+```
+
+Why is this?
+
+```{r}
+?YARFCART
+```
+
+That's the default for classification tree algorithm. Don't be lazy: you probably should use a Dselect and optimize nodesize!!!
+
+Out of sample?
+
+```{r}
+y_hat_test = predict(tree_mod, X_test)
+mean(y_test != y_hat_test)
+```
+
+It appears we overfit. But this is still pretty good!
+
+Now let's take a look at the linear SVM model. Let's use default cost (we should really CV over the cost parameter if we weren't lazy).
+
+```{r}
+pacman::p_load(e1071)
+svm_model = svm(X_train, y_train, kernel = "linear")
+svm_model
+```
+
+A couple of points:
+
+* Reached max iterations to minimize the hinge loss. Seems like there are computational issues here.
+* Note that we are relying on the $\lambda$ hyperparameter value for the hinge loss. On the homework, you will answer the question we never answered: how should the value of the hyperparameter be chosen?
+
+Regardless, how did it do in-sample?
+
+```{r}
+y_hat_train = predict(svm_model, X_train)
+mean(y_train != y_hat_train)
+```
+
+Out of sample?
+
+```{r}
+y_hat_test = predict(svm_model, X_test)
+mean(y_test != y_hat_test)
+```
+
+Maybe the model truly was linearly separable? Meaning, you don't get any added benefit from the tree if there are no interactions or non-linearities. Let's try a harder dataset. First, get a bunch of datasets from the UCI repository:
+
+```{r}
+rm(list = ls())
+pacman::p_load_gh("coatless/ucidata")
+data(adult)
+adult = na.omit(adult) #kill any observations with missingness
+?adult
+```
+
+Let's use samples of 2,000 to run experiments:
+
+```{r}
+set.seed(1984)
+test_size = 2000
+train_indices = sample(1 : nrow(adult), test_size)
+adult_train = adult[train_indices, ]
+y_train = adult_train$income
+X_train = adult_train
+X_train$income = NULL
+n_train = nrow(X_train)
+test_indices = sample(setdiff(1 : nrow(adult), train_indices), test_size)
+adult_test = adult[test_indices, ]
+y_test = adult_test$income
+X_test = adult_test
+X_test$income = NULL
+```
+
+Make a tree:
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+nrow(adult_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+illustrate_trees(tree_mod, max_depth = 5, length_in_px_per_half_split = 30, open_file = TRUE)
+```
+
+In-sample?
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+mean(y_train != y_hat_train)
+```
+
+Out of sample?
+
+```{r}
+y_hat_test = predict(tree_mod, X_test)
+mean(y_test != y_hat_test)
+```
+
+The warning was legit this time. What's it saying?
+
+Looks like we overfit quite a bit! That's what nodesize of 1 does! Why is it the default? People found that even though it overfits, you still get good performance (as we've seen even with regression). I doubt people still use CART in production models that require best possible accuracy these days since this issue of overfitting was fixed with bagging (we will get to this soon) and Random Forests (we'll get to that too).
+
+Let's see how the linear SVM does. Warning: this takes a while to compute:
+
+```{r}
+svm_model = svm(model.matrix(~ ., X_train), y_train, kernel = "linear")
+```
+
+In-sample?
+
+```{r}
+y_hat_train = predict(svm_model, model.matrix(~ ., X_train))
+mean(y_train != y_hat_train)
+```
+
+Out of sample?
+
+```{r}
+y_hat_test = predict(svm_model, model.matrix(~ ., X_test))
+mean(y_test != y_hat_test)
+```
+
+It seems (at least when I ran it at home), the linear SVM does much worse. Likely there are a lot of interactions in this dataset that the linear SVM must ignore because it's $\mathcal{H}$ candidate set is so limited!
+
+Note: SVM train error is approximtely = SVM test error? Why? 
+
+That's a usual scenario during underfitting in high n situations. There is no estimation error - only misspecification error and error due to ignorance. And those are the same among the training and test set.
+
+
