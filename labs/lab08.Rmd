@@ -114,6 +114,7 @@ X = cbind(X, matrix(rnorm(n * p_garbage), nrow = n))
 X = apply(X, 2, function(x_dot_j){
                   (x_dot_j - mean(x_dot_j)) / sd(x_dot_j)
                 })
+X[, 1] = 1 #we standardized the intercept column which became zeroes - make it an intercept again
 dim(X)
 ```
 
@@ -477,13 +478,13 @@ Assess your level of success at this endeavor.
 pacman::p_load(tidyverse, magrittr, data.table)
 ```
 
-We will be using the `storms` dataset from the `dplyr` package. Filter this dataset on all storms that have no missing measurements for the two diameter variables, "ts_diameter" and "hu_diameter". Zeroes count as missing as well.
+We will be using the `storms` dataset from the `dplyr` package. Filter this dataset on all storms that have no missing measurements for the two diameter variables, "tropicalstorm_force_diameter" and "hurricane_force_diameter". Zeroes count as missing as well.
 
 ```{r}
 #TO-DO
 ```
 
-From this subset, create a data frame that only has storm name, observation period number for each storm (i.e., 1, 2, ..., T) and the "ts_diameter" and "hu_diameter" metrics.
+From this subset, create a data frame that only has storm name, observation period number for each storm (i.e., 1, 2, ..., T) and the "tropicalstorm_force_diameter" and "hurricane_force_diameter" metrics.
 
 ```{r}
 #TO-DO
@@ -495,50 +496,8 @@ Create a data frame in long format with columns "diameter" for the measurement a
 #TO-DO
 ```
 
-Using this long-formatted data frame, use a line plot to illustrate both "ts_diameter" and "hu_diameter" metrics by observation period for four random storms using a 2x2 faceting. The two diameters should appear in two different colors and there should be an appropriate legend.
+Using this long-formatted data frame, use a line plot to illustrate both "tropicalstorm_force_diameter" and "hurricane_force_diameter" metrics by observation period for four random storms using a 2x2 faceting. The two diameters should appear in two different colors and there should be an appropriate legend.
 
 ```{r}
 #TO-DO
 ```
-
-#Data Munging: a realistic exercise
-
-This lab may be the most important lab of the semester in terms of real-world experience and "putting it all together". We will be constructing a data frame which will then get passed on to the model-building. So this emulates the pre-steps necessary to get to the point where we assume we're at in this class.
-
-We will be joining three datasets in an effort to make a design matrix that predicts if a bill will be paid on time. Clean up and load up the three files. Then I'll rename a few features and then we can examine the data frames:
-
-```{r}
-rm(list = ls())
-pacman::p_load(tidyverse, magrittr, data.table, R.utils)
-bills = fread("bills_dataset/bills.csv.bz2")
-payments = fread("bills_dataset/payments.csv.bz2")
-discounts = fread("bills_dataset/discounts.csv.bz2")
-setnames(bills, "amount", "tot_amount")
-setnames(payments, "amount", "paid_amount")
-skimr::skim(bills)
-skimr::skim(payments)
-skimr::skim(discounts)
-```
-
-The unit we care about is the bill. The y metric we care about will be "paid in full" which is 1 if the company paid their total amount (we will generate this y metric later).
-
-Since this is the response, we would like to construct the very best design matrix in order to predict y.
-
-First, join the three datasets in an intelligent way. You will need to examine the datasets beforehand.
-
-```{r}
-#TO-DO
-```
-
-Now create the binary response metric `paid_in_full` as the last column and create the beginnings of a design matrix `bills_data`. Ensure the unit / observation is bill i.e. each row should be one bill! 
-
-```{r}
-#TO-DO
-```
-
-How should you add features from transformations (called "featurization")? What data type(s) should they be? Make some features below if you think of any useful ones. Name the columns appropriately so another data scientist can easily understand what information is in your variables. Make sure the response variable is there too in the final data frame.
-
-```{r}
-#TO-DO
-```
-

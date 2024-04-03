@@ -6,7 +6,7 @@ This is the course homepage for Math 342W (and Masters level 642 and RM 742) at 
 
 My theory lectures are following my previous class notes (see [here](https://github.com/kapelner/QC_Math_342W_Spring_2022)) unless specified otherwise.
 
-* Practice Lecture 16 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec17.Rmd)
+* Practice Lecture 17 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec17.Rmd)
 * Practice Lecture 16 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec16.Rmd)
 * Practice Lecture 15 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec15.Rmd)
 * Practice Lecture 14 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec14.Rmd)
@@ -41,16 +41,16 @@ My theory lectures are following my previous class notes (see [here](https://git
 
 ## Theory Homeworks
 
-<!-- -->
-* Homework 5 [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw05/hw05t.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw05/hw05t.pdf) (due 4/21)
-* Homework 4 [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw04/hw04t.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw04/hw04t.pdf) (due 4/7)
+<!-- 
+* Homework 5 [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw05/hw05t.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw05/hw05t.pdf) (due 4/21)-->
+* Homework 4 [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw04/hw04t.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw04/hw04t.pdf) (due 4/14)
 * Homework 3 [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw03/hw03t.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw03/hw03t.pdf) (due 3/17)
 * Homework 2 [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw02/hw02t.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw02/hw02t.pdf) (due 2/25)
 * Homework 1 [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw01/hw01t.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/homeworks/hw01/hw01t.pdf) (due 2/11)
 
 ## Writing Assignments
 
-* Modeling Essay [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_revised.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_revised.pdf) (draft due 3/31 by email, revision due 10d after draft is graded) [(example essay 1)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_example_1.pdf) [(example essay 2)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_example_2.pdf)
+* Modeling Essay [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_revised.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_revised.pdf) (draft due 3/31 by email, revision due 10d after draft is graded - this date is different for everyone) [(example essay 1)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_example_1.pdf) [(example essay 2)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/modeling_essay_example_2.pdf)
 * Final Project [(download)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/final_project.pdf?raw=true) [(view)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/writing_assignments/final_project.pdf) (due 5/24 by email)
 
 ## Exams

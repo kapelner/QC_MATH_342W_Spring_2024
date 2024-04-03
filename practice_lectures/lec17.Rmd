@@ -670,8 +670,8 @@ Let's first create a few variables that are of interest:
 storms %<>% 
   mutate(wind_pct_avg = wind / mean(wind, na.rm = TRUE) * 100) %>%
   mutate(pressure_pct_avg = pressure / mean(pressure, na.rm = TRUE) * 100) %>%
-  mutate(ts_diameter_pct_avg = ts_diameter / mean(ts_diameter, na.rm = TRUE) * 100) %>%
-  mutate(hu_diameter_pct_avg = hu_diameter / mean(hu_diameter, na.rm = TRUE) * 100)
+  mutate(tropicalstorm_force_diameter_pct_avg = tropicalstorm_force_diameter / mean(tropicalstorm_force_diameter, na.rm = TRUE) * 100) %>%
+  mutate(hurricane_force_diameter_pct_avg = hurricane_force_diameter / mean(hurricane_force_diameter, na.rm = TRUE) * 100)
 ggplot(storms) + 
   aes(wind_pct_avg) + 
   geom_histogram()
@@ -682,7 +682,7 @@ Now let's take a look at these four variables we created for a storm we all reme
 ```{r}
 sandy_wide_tbl = storms %>% 
   filter(name == "Sandy") %>%
-  select(wind_pct_avg, pressure_pct_avg, ts_diameter_pct_avg, hu_diameter_pct_avg) %>% #we only care about our variables
+  select(wind_pct_avg, pressure_pct_avg, tropicalstorm_force_diameter_pct_avg, hurricane_force_diameter_pct_avg) %>% #we only care about our variables
   mutate(period = 1 : n()) %>%
   select(period, everything()) #reorder
 sandy_wide_dt = data.table(sandy_wide_tbl)
@@ -698,8 +698,8 @@ ggplot(sandy_wide_tbl) +
   aes(x = period) + 
   geom_line(aes(y = wind_pct_avg), col = "red") + 
   geom_line(aes(y = pressure_pct_avg), col = "green") + 
-  geom_line(aes(y = ts_diameter_pct_avg), col = "blue") + 
-  geom_line(aes(y = hu_diameter_pct_avg), col = "grey") +
+  geom_line(aes(y = tropicalstorm_force_diameter_pct_avg), col = "blue") + 
+  geom_line(aes(y = hurricane_force_diameter_pct_avg), col = "grey") +
   #make legend code
   ylab("% over average")
 ```
@@ -730,7 +730,7 @@ sandy_long_tbl = pivot_longer(
 sandy_long_dt = melt(
   sandy_wide_dt,
   id.vars = "period",
-  measure.vars = c("wind_pct_avg", "pressure_pct_avg", "ts_diameter_pct_avg", "hu_diameter_pct_avg"),
+  measure.vars = c("wind_pct_avg", "pressure_pct_avg", "tropicalstorm_force_diameter_pct_avg", "hurricane_force_diameter_pct_avg"),
   variable.name = "metric",
   value.name = "val"
 )
@@ -780,7 +780,7 @@ microbenchmark(
   wide_to_long_dt = melt(
     sandy_wide_dt,
     id.vars = "period",
-    measure.vars = c("wind_pct_avg", "pressure_pct_avg", "ts_diameter_pct_avg", "hu_diameter_pct_avg"),
+    measure.vars = c("wind_pct_avg", "pressure_pct_avg", "tropicalstorm_force_diameter_pct_avg", "hurricane_force_diameter_pct_avg"),
     variable.name = "metric",
     value.name = "val"
   ),

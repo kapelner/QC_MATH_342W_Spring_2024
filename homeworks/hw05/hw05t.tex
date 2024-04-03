@@ -7,12 +7,12 @@
 
 
 
-\title{MATH 342W / 642 / RM 742 Spring \the\year~ HW \#5}
+\title{MATH 342W / 642 / RM 742 Spring \the\year~ HW \#5 INCOMPLETE}
 
 \author{Professor Adam Kapelner} %STUDENTS: write your name here
 
 \iftoggle{professormode}{
-\date{Due 11:59PM April 21 \\ \vspace{0.5cm} \small (this document last updated \currenttime~on \today)}
+\date{Due 11:59PM May 9 \\ \vspace{0.5cm} \small (this document last updated \currenttime~on \today)}
 }
 
 \renewcommand{\abstractname}{Instructions and Philosophy}
@@ -72,26 +72,6 @@ Once you get the answer you can see how this easily goes to $K > 3$ response cat
 \end{enumerate}
 
 
-\problem{These are some questions related to the CART algorithms.}
-
-\begin{enumerate}
-\easysubproblem{Write down the step-by-step $\mathcal{A}$ for regression trees.}\spc{7}
-
-\hardsubproblem{Describe $\mathcal{H}$ for regression trees. This is very difficult but doable. If you can't get it in mathematical form, describe it as best as you can in English.}\spc{7}
-
-\intermediatesubproblem{Think of another \qu{leaf assignment} rule besides the average of the responses in the node that makes sense.}\spc{3}
-
-\intermediatesubproblem{Assume the $y$ values are unique in $\mathbb{D}$. Imagine if $N_0 = 1$ so that each leaf gets one observation and its $\yhat = y_i$ (where $i$ denotes the number of the observation that lands in the leaf) and thus it's very overfit and needs to be \qu{regularized}. Write up an algorithm that finds the optimal tree by pruning one node at a time iteratively. \qu{Prune} means to identify an inner node whose daughter nodes are both leaves and deleting both daughter nodes and converting the inner node into a leaf whose $\yhat$ becomes the average of the responses in the observations that were in the deleted daughter nodes. This is an example of a \qu{backwards stepwise procedure} i.e. the iterations transition from more complex to less complex models.}\spc{5}
-
-
-\hardsubproblem{Provide an example of an $f(\x)$ relationship with medium noise $\delta$ where vanilla OLS would beat regression trees in oos predictive accuracy. Hint: this is a trick question.}\spc{1}
-
-\easysubproblem{Write down the step-by-step $\mathcal{A}$ for classification trees. This should be short because you can reference the steps you wrote for the regression trees in (a).}\spc{4}
-
-\hardsubproblem{Think of another objective function that makes sense besides the Gini that can be used to compare the \qu{quality} of splits within inner nodes of a classification tree.}\spc{6}
-
-
-\end{enumerate}
 
 \problem{These are some questions related to bias-variance decomposition. Assume the two assumptions from the notes about the random variable model that produces the $\delta$ values, the error due to ignorance.}
 

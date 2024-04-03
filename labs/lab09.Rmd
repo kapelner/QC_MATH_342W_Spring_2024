@@ -1,0 +1,77 @@
+---
+title: "Lab 9"
+author: "Your Name Here"
+output: pdf_document
+---
+
+#YARF
+
+For the next couple of labs, I want you to make some use of a package I wrote that offers convenient and flexible tree-building and random forest-building. Make sure you have a JDK installed first
+
+https://www.oracle.com/java/technologies/downloads/
+
+Then try to install rJava
+
+```{r}
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(rJava)
+.jinit()
+```
+
+If you have error, messages, try to google them. Everyone has trouble with rJava!
+
+If that worked, please try to run the following which will install YARF from my github:
+
+```{r}
+if (!pacman::p_isinstalled(YARF)){
+  pacman::p_install_gh("kapelner/YARF/YARFJARs", ref = "dev")
+  pacman::p_install_gh("kapelner/YARF/YARF", ref = "dev", force = TRUE)
+}
+pacman::p_load(YARF)
+```
+
+Please try to fix the error messages (if they exist) as best as you can. I can help on slack.
+
+#Data Munging: a realistic exercise
+
+This lab may be the most important lab of the semester in terms of real-world experience and "putting it all together". We will be constructing a data frame which will then get passed on to the model-building. So this emulates the pre-steps necessary to get to the point where we assume we're at in this class.
+
+We will be joining three datasets in an effort to make a design matrix that predicts if a bill will be paid on time. Clean up and load up the three files. Then I'll rename a few features and then we can examine the data frames.
+
+Make sure you set the directory of RStudio to the directory where this file lives and make sure you download the bills_dataset folder from github (you can do this via `git pull` and then copying that directory over).
+
+```{r}
+rm(list = ls())
+pacman::p_load(tidyverse, magrittr, data.table, R.utils)
+bills = fread("bills_dataset/bills.csv.bz2")
+payments = fread("bills_dataset/payments.csv.bz2")
+discounts = fread("bills_dataset/discounts.csv.bz2")
+setnames(bills, "amount", "tot_amount")
+setnames(payments, "amount", "paid_amount")
+skimr::skim(bills)
+skimr::skim(payments)
+skimr::skim(discounts)
+```
+
+The unit we care about is the bill. The y metric we care about will be "paid in full" which is 1 if the company paid their total amount (we will generate this y metric later).
+
+Since this is the response, we would like to construct the very best design matrix in order to predict y.
+
+First, join the three datasets in an intelligent way. You will need to examine the datasets beforehand.
+
+```{r}
+#TO-DO
+```
+
+Now create the binary response metric `paid_in_full` as the last column and create the beginnings of a design matrix `bills_data`. Ensure the unit / observation is bill i.e. each row should be ONE bill ONLY! 
+
+```{r}
+#TO-DO
+```
+
+How should you add features from transformations (called "featurization")? What data type(s) should they be? Make some features below if you think of any useful ones. Name the columns appropriately so another data scientist can easily understand what information is in your variables. Make sure missingness (if in a categorical variable) is treated as a legal level of that variable. Make sure the response variable is there too in the final data frame.
+
+```{r}
+#TO-DO
+```
+
