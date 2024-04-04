@@ -397,6 +397,150 @@ sim_plot
 With CV, you can use much higher K's seemingly without paying for it. Still the recommended value is usually 10.
 
 
+## Profiling with profvis
+
+Profiling code to see where it's slow and see where memory trouble may be is an important skill also in data science coding as the difference between "scripting" and "software engineer" is just a question of scale. The package for this is `profviz`:
+
+```{r}
+pacman::p_load(profvis)
+```
+
+Let's take a look at the K-fold code above inside the profiler. We do so by wrapping the code in a `profvis{...}` call:
+
+
+```{r}
+n = 50
+xmin = 0
+xmax = 4
+sigma_e_ignorance = 0.8
+# set.seed(1)
+set.seed(1984)
+x = runif(n, xmin, xmax)
+y = 2 + 3 * x^2 + rnorm(n, 0, sigma_e_ignorance) #f(x)  + delta
+
+Nsim_per_K = 1000
+Kuniqs = setdiff(divisors(n), 1)
+num_Kuniqs = length(Kuniqs)
+Ks = rep(Kuniqs, Nsim_per_K)
+results = data.frame(s_e = rep(NA, Nsim_per_K * num_Kuniqs), K = rep(NA, Nsim_per_K * num_Kuniqs))
+
+profvis({
+for (nsim in 1 : length(Ks)){
+  K = Ks[nsim]
+  prop_train = (K - 1) / K
+  n_train = round(prop_train * n)
+  index_train = sample(1 : n, n_train, replace = FALSE)
+  index_test = setdiff(1 : n, index_train)
+  
+  x_train = x[index_train]
+  y_train = y[index_train]
+  x_test = x[index_test]
+  y_test = y[index_test]
+  
+  mod = lm(y_train ~ ., data.frame(x = x_train))
+  y_hat_test = predict(mod, data.frame(x = x_test))
+  results[nsim, ] = c(
+    sqrt(mean((y_test - y_hat_test)^2)), #RMSE
+    K
+  )
+}
+})
+```
+We learned that calling `lm` and `predict` are killing us. There's probably overhead we don't need. Let's try to eliminate this:
+
+```{r}
+profvis({
+for (nsim in 1 : length(Ks)){
+  K = Ks[nsim]
+  prop_train = (K - 1) / K
+  n_train = round(prop_train * n)
+  index_train = sample(1 : n, n_train, replace = FALSE)
+  index_test = setdiff(1 : n, index_train)
+  
+  x_train = cbind(1, x[index_train])
+  y_train = y[index_train]
+  x_test = cbind(1, x[index_test])
+  y_test = y[index_test]
+  x_train_T = t(x_train)
+  b = solve(x_train_T %*% x_train) %*% x_train_T %*% y_train
+  y_hat_test = x_test %*% b
+  results[nsim, ] = c(
+    sqrt(mean((y_test - y_hat_test)^2)), #RMSE
+    K
+  )
+}
+})
+```
+Now we're being slowed at the assignment step and also at sampling. We can improve assignment by not using the concatenate and not using a dataframe. We can improve sampling with `sample.int`.
+
+```{r}
+results = matrix(NA, nrow = length(Ks), ncol = 2)
+colnames(results) = c("rmse", "K")
+
+profvis({
+for (nsim in 1 : length(Ks)){
+  K = Ks[nsim]
+  prop_train = (K - 1) / K
+  n_train = round(prop_train * n)
+  index_train = sample.int(n, n_train, replace = FALSE)
+  index_test = setdiff(1 : n, index_train)
+  
+  x_train = cbind(1, x[index_train])
+  y_train = y[index_train]
+  x_test = cbind(1, x[index_test])
+  y_test = y[index_test]
+  
+  x_train_T = t(x_train)
+  b = solve(x_train_T %*% x_train) %*% x_train_T %*% y_train
+  y_hat_test = x_test %*% b
+  results[nsim, 1] = sqrt(mean((y_test - y_hat_test)^2)) #RMSE
+  results[nsim, 2] = K
+}
+})
+```
+This is likely as lean as we can be. If we needed faster, we'd go to Rcpp. Here's speeding up `sample.int`:
+
+```{r}
+pacman::p_load(Rcpp)
+
+cppFunction("
+   std::vector<int> sample_int_rcpp(std::vector<int> x, int n)  {
+     std::vector<int> out;
+     std::sample(x.begin(), x.end(), std::back_inserter(out), n, std::mt19937{std::random_device{}()});
+     return out; 
+   }
+", plugins = "cpp17", includes = c("#include <random>", "#include <algorithm>", "#include <iterator>")
+)
+```
+
+```{r}
+results = matrix(NA, nrow = length(Ks), ncol = 2)
+colnames(results) = c("rmse", "K")
+one_to_n = 1: n
+
+profvis({
+for (nsim in 1 : length(Ks)){
+  K = Ks[nsim]
+  prop_train = (K - 1) / K
+  n_train = round(prop_train * n)
+  index_train = sample_int_rcpp(one_to_n, n_train)
+  index_test = setdiff(one_to_n, index_train)
+  
+  x_train = cbind(1, x[index_train])
+  y_train = y[index_train]
+  x_test = cbind(1, x[index_test])
+  y_test = y[index_test]
+  
+  x_train_T = t(x_train)
+  b = solve(x_train_T %*% x_train) %*% x_train_T %*% y_train
+  y_hat_test = x_test %*% b
+  results[nsim, 1] = sqrt(mean((y_test - y_hat_test)^2)) #RMSE
+  results[nsim, 2] = K
+}
+})
+```
+Unsure why this ran slower on my computer for `setdiff`.
+
 ## mlr2/mlr3 package for K-fold CV and nested resampling
 
 "Machine Learning in R" (the `mlr3` package) is a very popular R library that makes it very simple to build models, do K-fold validation, etc.
