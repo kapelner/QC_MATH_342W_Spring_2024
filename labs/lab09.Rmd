@@ -34,13 +34,14 @@ Please try to fix the error messages (if they exist) as best as you can. I can h
 
 #Data Munging: a realistic exercise
 
-This lab may be the most important lab of the semester in terms of real-world experience and "putting it all together". We will be constructing a data frame which will then get passed on to the model-building. So this emulates the pre-steps necessary to get to the point where we assume we're at in this class.
+This lab exercise may be the most important lab of the semester in terms of real-world experience and "putting it all together". We will be constructing a data frame which will then get passed on to the model-building. So this emulates the pre-steps necessary to get to the point where we assume we're at in this class.
 
 We will be joining three datasets in an effort to make a design matrix that predicts if a bill will be paid on time. Clean up and load up the three files. Then I'll rename a few features and then we can examine the data frames.
 
 Make sure you set the directory of RStudio to the directory where this file lives and make sure you download the bills_dataset folder from github (you can do this via `git pull` and then copying that directory over).
 
 ```{r}
+#setwd(...)
 rm(list = ls())
 pacman::p_load(tidyverse, magrittr, data.table, R.utils)
 bills = fread("bills_dataset/bills.csv.bz2")
@@ -74,4 +75,125 @@ How should you add features from transformations (called "featurization")? What 
 ```{r}
 #TO-DO
 ```
+
+
+# Regression Trees
+
+You can use the `YARF` package if it works, otherwise, use the `randomForest` package (the canonical R package for this algorithm).
+
+Let's take a look at a simulated sine curve. Below is the code for the data generating process:
+
+```{r}
+rm(list = ls())
+n_train = 500
+sigma = 0.3
+x_min = 0
+x_max = 10
+
+f_x = function(x){sin(x)}
+x_train = runif(n_train, x_min, x_max)
+y_train = f_x(x) + rnorm(n_train, 0, sigma)
+```
+
+Plot an example dataset of size 500:
+
+```{r}
+n_test = 500
+#TO-DO
+```
+
+Create a test set of size 500 from this data generating process:
+
+```{r}
+#TO-DO
+```
+
+Locate the optimal node size hyperparameter for the regression tree model. I believe you can use `randomForest` here by setting `ntree = 1`, `replace = FALSE`, `sampsize = n` (`mtry` is already set to be 1 because there is only one feature) and then you can set `nodesize`. Plot nodesize by out of sample s_e. Plot.
+
+```{r}
+#TO-DO
+```
+
+Plot the regression tree model g(x) with the optimal node size.
+
+```{r}
+#TO-DO
+```
+
+Find the oosRMSE of this optimal-node-size model.
+
+```{r}
+#TO-DO
+```
+
+Provide the bias-variance decomposition of this DGP fit with this model. It is a lot of code, but it is in the practice lectures. If your three numbers don't add up within two significant digits, increase your resolution.
+
+```{r}
+#TO-DO
+```
+
+# Classification Trees
+
+Let's get the letter recognition data from the `mlbench` package.
+
+```{r}
+rm(list = ls())
+pacman::p_load(mlbench)
+data(LetterRecognition, package = "mlbench")
+n = nrow(LetterRecognition)
+skimr::skim(LetterRecognition)
+```
+
+This dataset has 20,000 examples. Create a training-select-test split so that they each have 1,000 observations.
+
+```{r}
+train_idx = sample(1 : n, 1000)
+select_idx = sample(setdiff(1 : n, train_idx), 1000)
+test_idx = sample(setdiff(1 : n, c(train_idx, select_idx)), 1000)
+letters_train = LetterRecognition[train_idx, ]
+letters_select = LetterRecognition[select_idx, ]
+letters_test = LetterRecognition[test_idx, ]
+```
+
+Find the optimal classification tree by using the model selection algorithm to optimize the nodesize hyperparameter. Use misclassification error as the performance metric.
+
+```{r}
+nodesizes = seq(1, 200, by = 10)
+misclassification_errs = array(NA, length(nodesizes))
+#TO-DO
+```
+
+Plot the oos misclassification error by nodesize.
+
+```{r}
+ggplot(data.frame(nodesize = nodesizes, misclassification_error = misclassification_errs)) + 
+  aes(x = nodesize, misclassification_error = misclassification_error) +
+  geom_point() + 
+  geom_line()
+```
+
+Construct the optimal classification tree on train and select sets. Then estimate generalization error. Save `y_hat_test` as we'll need it later.
+
+```{r}
+tree_mod_opt = #TO-DO
+```
+
+Print out the top of the tree so we can have some level of interpretation to how the model g is predicting.
+
+```{r}
+illustrate_trees(tree_mod_opt, max_depth = 5, length_in_px_per_half_split = 30, open_file = TRUE)
+```
+
+Create a "confusion matrix". This means it shows every predicted level (which is a letter in our case) and every actual level. Here you'll see every type of error e.g. "P was predicted but the real letter is H", "M was predicted but the real letter is N" etc. This is really easy: one call to the `table` function is all you need.
+
+```{r}
+#TO-DO
+```
+
+Which errors are most prominent in this model?
+
+#TO-DO
+
+
+
 

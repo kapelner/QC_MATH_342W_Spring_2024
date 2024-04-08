@@ -1,0 +1,491 @@
+---
+title: "Practice Lecture 19 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+---
+
+# Regression Trees
+
+Let's fit a regression tree. We will use the development package `YARF` which I've been hacking on now for a few years. The package internals are written in Java which we just installed above. Since `YARF` is not on CRAN, we install the package from my github including its dependency (if necessary) and then load it 
+
+```{r}
+if (!pacman::p_isinstalled(YARF)){
+  pacman::p_install_gh("kapelner/YARF/YARFJARs", ref = "dev")
+  pacman::p_install_gh("kapelner/YARF/YARF", ref = "dev", force = TRUE)
+}
+options(java.parameters = "-Xmx4000m")
+pacman::p_load(YARF)
+```
+
+The data will be fitting with the regression tree is a sine curve plus noise:
+
+```{r}
+pacman::p_load(tidyverse, magrittr)
+n = 500
+x_max = 4 * pi
+x = runif(n, 0, x_max)
+sigma = 0.05
+y = ifelse(x < 2 * pi, 0.5 * sin(x), 0) + rnorm(n, 0, sigma)
+ggplot(data.frame(x = x, y = y), aes(x, y)) + geom_point(lwd = 0.6) 
+```
+
+Now we fit a regression tree to this model. Nevermind the `calculate_oob_error` argument for now. This will be clear why FALSE is NOT the default soon enough.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, calculate_oob_error = FALSE)
+```
+
+How "big" is this tree model? How many df? It's the number of leaf nodes (final nodes).
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+What are the "main" splits?
+
+```{r}
+illustrate_trees(tree_mod, max_depth = 4, open_file = TRUE)
+```
+
+What does $g(x)$ look like?
+
+```{r}
+Nres = 1000
+x_predict = data.frame(x = seq(0, x_max, length.out = Nres))
+g = predict(tree_mod, x_predict)
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x_predict, y = g), col = "blue")
+```
+
+Obviously overfit - but not that bad... let's try lowering the complexity by stopping the tree construction at a higher node size.
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, nodesize = 50, calculate_oob_error = FALSE)
+yhat = predict(tree_mod, x_predict)
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x_predict, y = yhat), col = "blue")
+```
+
+Less overfitting now but now it's clearly underfit! We can play with the nodesize. Or we can use the train-select-test split meta algorithm to pick the model (the nodesize). What if nodesize = 1?
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, nodesize = 1, calculate_oob_error = FALSE)
+yhat = predict(tree_mod, data.frame(x = x))
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x, y = yhat), col = "blue")
+```
+What's the error?
+
+```{r}
+sum((y - yhat)^2) #SSE
+```
+
+Are we sure we have a leaf node for each observation?
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+In contrast, what if nodesize > n?
+
+```{r}
+tree_mod = YARFCART(data.frame(x = x), y, nodesize = n + 1, calculate_oob_error = FALSE)
+yhat = predict(tree_mod, data.frame(x = x))
+ggplot(data.frame(x = x, y = y), aes(x, y)) + 
+  geom_point(lwd = 0.6) +
+  geom_point(aes(x, y), data.frame(x = x, y = yhat), col = "blue")
+unique(yhat)
+mean(y)
+```
+
+Then you never do any splits, so yhat = ybar, the null model.
+
+Are we sure we have one root node?
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+Let's try this using oos validation and trace out a performance curve to find the optimal hyperparameter.
+
+```{r}
+K = 4
+set.seed(1984)
+select_idx = sample(1 : n, round(1 / K * n))
+x_select = x[select_idx]
+y_select = y[select_idx]
+train_idx = setdiff(1 : n, select_idx)
+x_train = x[train_idx]
+y_train = y[train_idx]
+n_train = length(train_idx)
+
+max_nodesize_to_try = 70
+in_sample_errors = array(NA, max_nodesize_to_try)
+oos_errors = array(NA, max_nodesize_to_try)
+for (i in 1 : max_nodesize_to_try){
+  tree_mod = YARFCART(data.frame(x = x_train), y_train, nodesize = i, calculate_oob_error = FALSE)
+  yhat = predict(tree_mod, data.frame(x = x_train))
+  in_sample_errors[i] = sd(y_train - yhat)
+  yhat_select = predict(tree_mod, data.frame(x = x_select))
+  oos_errors[i] = sd(y_select - yhat_select)
+}
+
+ggplot(data.frame(nodesize = 1 : max_nodesize_to_try, in_sample_errors = in_sample_errors, oos_errors = oos_errors)) + 
+  geom_point(aes(nodesize, in_sample_errors), col = "red") +
+  geom_point(aes(nodesize, oos_errors), col = "blue")
+```
+
+Looks like optimal nodesize is about 10.
+
+```{r}
+which.min(oos_errors)
+```
+
+You're used to seeing complexity increase on the x-axis, so we can just invert the nodesize:
+
+```{r}
+ggplot(data.frame(inv_nodesize = (1 : max_nodesize_to_try)^-1, in_sample_errors = in_sample_errors, oos_errors = oos_errors)) + 
+  geom_point(aes(inv_nodesize, in_sample_errors), col = "red") +
+  geom_point(aes(inv_nodesize, oos_errors), col = "blue") + 
+  scale_x_log10()
+```
+
+For some reason, we do not see serious overfitting even at nodesize = 1. Why? It's because the way trees predict - they always stay within [y_min, y_max]. There is no Runge phenomenon or line extensions so it really limits how bad your errors can be at the edges especially.
+
+# Regression Trees with Real Data
+
+Now let's look at a regression tree model predicting medv in the Boston Housing data. We first load the data and do a training-test split:
+
+```{r}
+set.seed(1984)
+pacman::p_load(MASS)
+data(Boston)
+test_prop = 0.1
+train_indices = sample(1 : nrow(Boston), round((1 - test_prop) * nrow(Boston)))
+Boston_train = Boston[train_indices, ]
+y_train = Boston_train$medv
+X_train = Boston_train
+X_train$medv = NULL
+n_train = nrow(X_train)
+```
+
+And fit a tree model. The default hyperparameter, the node size is $N_0 = 5$.
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE)
+```
+
+What does the in-sample fit look like?
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+e = y_train - y_hat_train
+sd(e)
+1 - sd(e) / sd(y_train)
+```
+
+Recall the linear model:
+
+```{r}
+linear_mod = lm(medv ~ ., Boston_train)
+sd(y_train - linear_mod$fitted.values)
+summary(linear_mod)$r.squared
+```
+
+The tree seems to win in-sample. Why? 
+
+Is this a "fair" comparison?
+
+Before we address this, let's illustrate the tree. 
+
+```{r}
+illustrate_trees(tree_mod, max_depth = 4, open_file = TRUE)
+```
+
+Immediately we're finding the most important variables and then interacting them.
+
+Let's make the comparison fair by seeing what happens oos.
+
+```{r}
+test_indices = setdiff(1 : nrow(Boston), train_indices)
+Boston_test = Boston[test_indices, ]
+y_test = Boston_test$medv
+X_test = Boston_test
+X_test$medv = NULL
+```
+
+For the tree:
+
+```{r}
+y_hat_test_tree = predict(tree_mod, X_test)
+e = y_test - y_hat_test_tree
+sd(e)
+1 - sd(e) / sd(y_test)
+```
+
+For the linear model:
+
+```{r}
+y_hat_test_linear = predict(linear_mod, Boston_test)
+e = y_test - y_hat_test_linear
+sd(e)
+1 - sd(e) / sd(y_test)
+```
+
+The take-home message here is that the tree beats the linear model in future predictive performance but the only way to be truly convinced of this is to do the split over and over to get a sense of the average over the massive variability (like the previous demo) or to do CV to reduce the error of the estimate. 
+
+Why does the regression tree beat the linear model? Let's see what's going on in the tree.
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+We have 161 degrees of freedom - that's a lot of interactions and non-linearity flexibility.
+
+About how many observations are in each leaf on average?
+
+```{r}
+nrow(Boston_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+That's a very flexible model.
+
+Let's see overfitting in action. Let's set nodesize to be one.
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, nodesize = 1, calculate_oob_error = FALSE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+How many per leaf?
+
+```{r}
+nrow(Boston_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+Why is it not exactly 1 on average? I think it's because...
+
+```{r}
+data.table::uniqueN(y_train)
+length(y_train)
+```
+
+Regardless of this point, this model is essentially giving each observation it's own y-hat, it's own personal guess which will be its own personal y. Just like linear modeling when $n = p + 1$ and nearest neighbors when $K = 1$. Let's see how bad the overfitting is:
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+e = y_train - y_hat_train
+sd(e)
+1 - sd(e) / sd(y_train)
+```
+
+This is the expected behavior in perfect fitting.
+
+```{r}
+y_hat_test_tree = predict(tree_mod, X_test)
+e = y_test - y_hat_test_tree
+sd(e)
+1 - sd(e) / sd(y_test)
+```
+
+It overfits but amazing it doesn't get clobbered completely! And its results are on-par with the non-overfit linear model probably because it made up for the overfitting by reducing misspecification error. 
+
+Trees are truly amazing!
+
+
+# Classification Trees
+
+Let's get the cancer biopsy data:
+
+```{r}
+rm(list = ls())
+pacman::p_load(YARF, tidyverse, magrittr)
+data(biopsy, package = "MASS")
+biopsy %<>% na.omit %>% dplyr::select(-ID) #for some reason the "select" function is scoping elsewhere without this explicit directive
+colnames(biopsy) = c(
+  "clump_thickness",
+  "cell_size_uniformity",
+  "cell_shape_uniformity",
+  "marginal_adhesion",
+  "epithelial_cell_size",
+  "bare_nuclei",
+  "bland_chromatin",
+  "normal_nucleoli",
+  "mitoses",
+  "class"
+)
+```
+
+Let's do a training-test split to keep things honest:
+
+```{r}
+test_prop = 0.1
+train_indices = sample(1 : nrow(biopsy), round((1 - test_prop) * nrow(biopsy)))
+biopsy_train = biopsy[train_indices, ]
+y_train = biopsy_train$class
+X_train = biopsy_train
+X_train$class = NULL
+n_train = nrow(X_train)
+test_indices = setdiff(1 : nrow(biopsy), train_indices)
+biopsy_test = biopsy[test_indices, ]
+y_test = biopsy_test$class
+X_test = biopsy_test
+X_test$class = NULL
+```
+
+Let's fit a tree. The default nodesize for classification is 1!
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE)
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+```
+
+How many observations per leaf?
+
+```{r}
+nrow(biopsy_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+Why would the average observations per node be larger than the nodesize which is 1?
+
+```{r}
+illustrate_trees(tree_mod, max_depth = 5, length_in_px_per_half_split = 30, open_file = TRUE)
+```
+
+How are we doing in-sample?
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+mean(y_train != y_hat_train)
+```
+
+This is because the default nodesize is 1 which implies that all nodes are always "pure" meaning they only have the same class.
+
+That's the default for classification tree algorithm. Don't be lazy: you probably should use a train-select-test and optimize nodesize!!!
+
+Out of sample?
+
+```{r}
+y_hat_test = predict(tree_mod, X_test)
+mean(y_test != y_hat_test)
+```
+
+What's the null model performance?
+
+```{r}
+mean(y_test != "benign") #the modal response is "benign"
+```
+
+We do well out of the box. But we can do better if we select nodesize.
+
+Let's do another example with the adult data:
+
+
+```{r}
+rm(list = ls())
+pacman::p_load_gh("coatless/ucidata")
+data(adult)
+adult = na.omit(adult) #kill any observations with missingness
+?adult
+```
+
+Let's use samples of 2,000 to run experiments:
+
+```{r}
+set.seed(1984)
+test_size = 2000
+
+train_indices = sample(1 : nrow(adult), test_size)
+adult_train = adult[train_indices, ]
+y_train = adult_train$income
+X_train = adult_train
+X_train$income = NULL
+n_train = nrow(X_train)
+
+select_indices = sample(setdiff(1 : nrow(adult), train_indices), test_size)
+adult_select = adult[select_indices, ]
+y_select = adult_select$income
+X_select = adult_select
+X_select$income = NULL
+
+test_indices = sample(setdiff(1 : nrow(adult), c(train_indices, select_indices)), test_size)
+adult_test = adult[test_indices, ]
+y_test = adult_test$income
+X_test = adult_test
+X_test$income = NULL
+```
+
+Make a default tree (nodesize = 1 since this is classification) and look at the most important splits:
+
+```{r}
+tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE)
+illustrate_trees(tree_mod, max_depth = 5, length_in_px_per_half_split = 30, open_file = TRUE)
+```
+
+How complex is the model and how many observations per node?
+
+```{r}
+get_tree_num_nodes_leaves_max_depths(tree_mod)
+nrow(adult_train) / get_tree_num_nodes_leaves_max_depths(tree_mod)$num_leaves
+```
+
+In-sample performance?
+
+```{r}
+y_hat_train = predict(tree_mod, X_train)
+mean(y_train != y_hat_train)
+```
+
+This is to spec for nodesize = 1.
+
+Out of sample g_0 performance?
+
+```{r}
+mean(y_test != "<=50K")
+```
+
+Out of sample tree performance?
+
+```{r}
+y_hat_test = predict(tree_mod, X_test)
+mean(y_test != y_hat_test)
+```
+
+The warning was legit this time. What's it saying?
+
+Let's do better by using the selection set
+
+```{r}
+nodesizes = seq(1, 400, by = 10)
+misclassification_error_by_nodesize = array(NA, length(nodesizes))
+for (i in 1 : length(nodesizes)){
+  tree_mod = YARFCART(X_train, y_train, calculate_oob_error = FALSE, nodesize = nodesizes[i])  
+  y_hat_select = predict(tree_mod, X_select)
+  misclassification_error_by_nodesize[i] = mean(y_select != y_hat_select)
+}
+ggplot(data.frame(misc_err = misclassification_error_by_nodesize, nodesize = nodesizes)) + 
+  geom_point(aes(x = nodesize, y = misc_err))
+```
+
+The optimal nodesize is faaaar from 1. Best performance has nodesize of:
+
+```{r}
+nodesizes[which.min(misclassification_error_by_nodesize)]
+```
+
+How does it do on the test set?
+
+```{r}
+tree_mod = YARFCART(rbind(X_train, X_select), c(y_train, y_select), calculate_oob_error = FALSE, nodesize = nodesizes[which.min(misclassification_error_by_nodesize)])
+y_hat_test = predict(tree_mod, X_test)
+mean(y_test != y_hat_test)
+```
+
+This is actually decent performance (compared to what we've seen earlier in the semester).
+
+Note: these CART demos have been purely academic since I doubt people still use CART in production models that require best possible accuracy these days since this issue of nodesize selection was fixed with bagging (we will get to this soon) and Random Forests (we'll get to this soon as well) and these methods also allow us to get closer to f(x). So you can think of the CART algorithm as an intermediate step to get to the "real stuff".
+
+However, people do still use CART for interpretation because the base of the tree shows the important variables and interactions. So it gives an idea about how f(x) works. The whole topic of "interpretability" vs "predictive performance" is a very hot topic now but we just don't have time to delve into it more. Basically, the higher the predictive performance, the lower the interpretability.
+
