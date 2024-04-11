@@ -1,10 +1,7 @@
 ---
-title: "Practice Lectures Week 10 MATH 342W Queens College"
+title: "Practice Lecture 20 MATH 342W Queens College"
 author: "Professor Adam Kapelner"
-date: "Apr 11, 2022"
 ---
-
-
 
 # Bias-Variance Decomposition of Generalization Error
 
@@ -16,7 +13,7 @@ xmin = 0
 xmax = 5
 n_train = 20
 n_test = 1000
-sigma = 1 ###### this squared is the irreducible error component through all of the bias-variance decomp formulas
+sigma = 1 # sigma-squared is the irreducible error component through all of the bias-variance decomp formulas
 f = function(x){x^2}
 
 #the number of datasets generated (separate universes) and thus the number of models fitted in different universes
@@ -75,24 +72,30 @@ ggplot(f_x_df, aes(x, f)) +
 
 The blue dataset is one possible $\mathbb{D}$, the green dataset is another possible $\mathbb{D}$ and the red dataset is another possible $\mathbb{D}$. This illustrated "dataset-dataset variability".
 
-Take a look at the mse that's averaging over (1) all datasets D and (2) all xstars in the set [0,5]. This should be equal to the three terms: (a) irreducible error plus (b) bias-squared plus (c) variance.
+Each of the datasets yields slightly different linear models:
 
 ```{r}
-mse = mean(c(all_oos_residuals)^2)
-mse
+ggplot(f_x_df, aes(x, f)) + 
+  geom_line(col = "green") + 
+  geom_abline(intercept = training_gs[1, 1], slope = training_gs[1, 2], col = "blue") +
+  geom_abline(intercept = training_gs[2, 1], slope = training_gs[2, 2], col = "darkgreen") +
+  geom_abline(intercept = training_gs[3, 1], slope = training_gs[3, 2], col = "red") +
+  ylim(-3, 25)
 ```
 
-Let's visualize the bias
+
+
+Let's visualize the bias, the distance between the green line f(x) and the average model, E[g(x)]:
 
 ```{r}
 g_average = colMeans(training_gs)
 ggplot(f_x_df, aes(x, f)) + 
   geom_line(col = "green") + 
-  geom_abline(intercept = g_average[1], slope = g_average[2], col = "red") +
+  geom_abline(intercept = g_average[1], slope = g_average[2], color = "red") +
   ylim(-3, 25)
 ```
 
-What is the average bias of $g$?
+What is the average bias of $g$? That is, the average distance between E[g(x)] and f(x) where the average is taken over the distribution of x, which was uniform between xmin and xmax:
 
 ```{r}
 x = seq(xmin, xmax, length.out = resolution)
@@ -102,7 +105,7 @@ expe_bias_g_sq = mean(biases^2)
 expe_bias_g_sq
 ```
 
-What is the variance? Let's look at all lines:
+What is the variance? Let's look at 100 lines this time instead of three:
 
 ```{r}
 plot_obj = ggplot() + 
@@ -134,10 +137,16 @@ expe_var_g = mean(var_x_s)
 expe_var_g
 ```
 
+Take a look at the mse that's averaging over (1) all datasets D and (2) all xstars in the set [0,5]. This should be equal to the three terms: (a) irreducible error plus (b) bias-squared plus (c) variance.
+
+```{r}
+mse = mean(c(all_oos_residuals)^2)
+mse
+```
+
 Now check the equivalence
 
 ```{r}
-mse
 sigma^2
 expe_bias_g_sq
 expe_var_g
@@ -145,6 +154,8 @@ sigma^2 + expe_bias_g_sq + expe_var_g
 ```
 
 This is not exactly equal due to numerical error. If we increase resolution and Nsim, it will be equal.
+
+What's the conclusion: the linear model is a high bias / low variance model.
 
 Let's try the whole thing again using a quadratic regression!
 
@@ -215,6 +226,8 @@ plot_obj +
   stat_function(fun = function(x){g_average[1] + g_average[2] * x + g_average[3] * x^2}, col = "red", lwd = 2) #+
   #geom_line(data = f_x_df, aes(x, f), col = "green", size = 0.5) 
 ```
+
+Not so much variance.
 
 Now calculate this average variance:
 
@@ -319,7 +332,7 @@ plot_obj +
   geom_line(data = f_x_df, aes(x, f), col = "green", size = 0.5)
 ```
 
-It looks awful!!!
+Some of them looks awful! Welcome to Runge's and overfitting.
 
 Now actually compute the average variance numerically:
 
@@ -338,7 +351,7 @@ expe_var_g = mean(var_x_s)
 expe_var_g
 ```
 
-Any more complexity than you need allows for overfitting! Overfitted models induce variance-error from the perspective of multiple universes.
+Conclusion: any more complexity than you need allows for variance which comes from overfitting! Overfitted models induce variance-error from the perspective of multiple universes.
 
 Now check the equivalence:
 
@@ -371,7 +384,7 @@ options(java.parameters = "-Xmx4000m")
 pacman::p_load(YARF, tidyverse, magrittr)
 ```
 
-Now let's generate lots of different datasets and fit many tree models. Note there's a new argument `calculate_oob_error = FALSE`. This is here for speed only. Ignore this for now as we will go over what this means later in detail.
+Now let's generate lots of different datasets and fit many regression tree models.
 
 ```{r}
 training_gs = list() #storing entire objects - need a hash
@@ -455,7 +468,7 @@ expe_bias_g_sq
 
 This is small - why??
 
-It's because trees are so expressive and have such model complexity that they can nail almost any true $f$ function!
+It's because trees are so expressive and have such model complexity that they can nail almost any true $f$ function! The default tree at N_0 = 5 overfits. That overfitting gives us very little bias.
 
 That means the MSE save the irreducible noise is coming from the variance. Let's look at the variance vs f(x):
 
@@ -475,7 +488,7 @@ plot_obj +
   geom_line(aes(x, f(x)), col = "green", lwd = 1)
 ```
 
-It looks awful!!! Why?
+It looks awful!!! Why? Because they overfit.
 
 Now actually compute the average variance numerically:
 
@@ -519,7 +532,7 @@ ggplot(data.frame(x = x_train, y = y_train)) + geom_point(aes(x, y))
 
 Spend a moment to appreciate that this is all we're going to have. There is a lot of irreducible noise that is going to prevent us from finding the sine curve.
 
-Now we create many bootstrap samples to create similiar but different datasets and fit many tree models:
+Now we create 250 bootstrap samples to create similiar but different datasets and fit 250 tree models:
 
 ```{r}
 bootstrapped_gs = list() #storing entire objects - need a hash / list object
@@ -598,7 +611,9 @@ mse = mean(c(all_residuals)^2)
 mse
 ```
 
-Let's visualize the bias
+This is much lower than before.
+
+Let's visualize the bias:
 
 ```{r}
 resolution = 1000
@@ -632,7 +647,7 @@ expe_bias_g_sq
 
 Almost nothing.
 
-Now... variance?
+Now... variance? Here's where the juice to bagging is...
 
 ```{r}
 plot_obj = ggplot(data.frame(x = x)) + 
@@ -685,7 +700,9 @@ rho = expe_var_g_bagged / expe_var_g
 rho
 ```
 
-That's a gain of ~50% in the MSE component that we have control over! And... it's for FREE. Well, not exactly, you are giving up on the tree's explanation ability - the ultimate tradeoff in machine learning. This tradeoff is no joke! It is a huge area of research and a huge debate of civil importance. Let's watch some of Stephen Wolfram's testimony in the US Senate in Feb, 2021.
+That's a gain of ~50% in the MSE component that we have control over! And... it's for FREE; we didn't need additional data! 
+
+Well, not exactly, we are giving up something... the single tree's interpretability - the ultimate tradeoff in machine learning. This tradeoff is no joke! It is a huge area of research and a huge debate of civil importance. Let's watch some of Stephen Wolfram's testimony in the US Senate in Feb, 2021.
 
 https://www.youtube.com/watch?v=SuaP8izUPzQ&t=424s
 https://www.youtube.com/watch?v=SuaP8izUPzQ&t=588s
@@ -725,7 +742,7 @@ cat("oos standard error reduction:", (1 - oos_rmse_bag / oos_rmse_lin) * 100, "%
 ```
 
 
-Whole lot of room to improve! That extra 26% or so of unexplained variance is split between bias and irreducible error due to unknown information. The bagged trees can get rid of the bias and minimize variance while doing so. And it did a great job!
+Whole lot of room to improve! That RMSE improvement comes from effectively removing the bulk of the linear model's bias while still keeping variance reasonable (as opposed to crazy polynomial models and tons of interactions).
 
 Now the diamonds data:
 
@@ -759,13 +776,13 @@ oos_rmse_bag
 cat("oos standard error reduction:", (1 - oos_rmse_bag / oos_rmse_lin) * 100, "%\n")
 ```
 
-Shocking improvement... and it's even more shocking that...
+That's a pretty bg improvement... and it's even more shocking that...
 
 ```{r}
 summary(mod_lin)$r.squared
 ```
 
-There was seemingly not a whole lot of room to improve! But there is when you measure error in RMSE. That extra 8% of unexplained variance means (1) a whole lot of RMSE and (2) that whole lot of RMSE is split between bias and irreducible error due to unknown information. But it did the best it can. It is likely what's remaining is due to information we don't measure.
+There was seemingly not a whole lot of room to improve! But there is when you measure error in RMSE. That last 7% of unexplained variance means (1) a whole lot of RMSE and (2) that whole lot of RMSE is split between bias and irreducible error due to unknown information. But it did the best it can. It is likely what's remaining is due to information we don't measure.
 
 # Validation in Bagging?
 
@@ -857,7 +874,7 @@ What do we have now? We now have model selection done within training. And train
 
 # Random Forests
 
-But can it get any better? YES. As you saw, the variance terms can be shrunk further the more decorrelated the trees become. We do this now by introducing randomness into the splits by choosing only a subset of the features to split on randomly. The trees are then grown as normal. Then the we model average many trees via bagging. And that's random forests!
+Can we do any better? YES. As you saw, the variance terms can be shrunk further the more decorrelated the trees become. We do this now by introducing randomness into the splits by choosing only a subset of the features to split on randomly. The trees are then grown as normal. Then the we model average many trees via bagging. And that's random forests!
 
 Quick demo with the diamonds and oob validation:
 
@@ -979,4 +996,5 @@ cat("gain: ", (mod_bag$misclassification_error - mod_rf$misclassification_error)
 Very nice... and can likely be improved with optimizing mtry.
 
 There are very real gains for RF over bagging and these are most pronounced in classification models.
+
 
