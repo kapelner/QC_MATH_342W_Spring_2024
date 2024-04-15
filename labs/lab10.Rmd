@@ -13,7 +13,7 @@ https://www.oracle.com/java/technologies/downloads/
 Then try to install rJava
 
 ```{r}
-options(java.parameters = "-Xmx4000m")
+options(java.parameters = "-Xmx8000m")
 pacman::p_load(rJava)
 .jinit()
 ```
@@ -32,47 +32,186 @@ pacman::p_load(YARF)
 
 Please try to fix the error messages (if they exist) as best as you can. I can help on slack.
 
-#Bagged Trees and Random Forest
 
+# Missing Data
 
-Take a sample of n = 2000 observations from the diamonds data.
+Load up the Boston Housing Data and separate into matrix `X` for the features and vector `y` for the response. Randomize the rows
 
 ```{r}
+rm(list = ls())
+set.seed(1)
+boston = MASS::Boston
+boston_shuffled = boston[sample(1 : nrow(boston)), ]
+X = as.matrix(boston_shuffled[, 1 : 13])
+y = boston_shuffled$medv
+rm(boston, boston_shuffled)
+```
+
+
+
+Similar to lab 1, write a function that takes a matrix and punches holes (i.e. sets entries equal to `NA`) randomly with an argument `prob_missing`.
+
+```{r}
+punch_holes = function(mat, prob_missing){
+  n = nrow(mat) * ncol(mat)
+  is_missing = as.logical(rbinom(n, 1, prob_missing))
+  mat[is_missing] = NA
+  mat
+}
+```
+
+Create a matrix `Xmiss` which is `X` but has missingness with probability of 10% using the function you just wrote. 
+
+```{r}
+#TO-DO
+```
+
+What type of missing data mechanism created the missingness in `Xmiss`?
+
+#TO-DO
+
+Also, generate the M matrix and delete columns that have no missingness.
+
+```{r}
+M = apply(is.na(Xmiss), 2, as.numeric)
+colnames(M) = paste("is_missing_", colnames(X), sep = "")
+M = M[, colSums(M) > 0]
+```
+
+Split the first 400 observations were the training data and the remaining observations are the test set. For Xmiss, cbind on the M so the model has a chance to fit on "is missing" as we discussed in class.
+
+```{r}
+train_idx = 1 : 400
+test_idx = setdiff(1 : nrow(X), train_idx)
+X_train =     X[train_idx, ]
+Xmiss_train = cbind(Xmiss, M)[train_idx, ]
+y_train =     y[train_idx]
+X_test =      X[test_idx, ]
+Xmiss_test =  cbind(Xmiss, M)[test_idx, ]
+y_test =      y[test_idx]
+```
+
+Fit a random forest model of `y_train ~ X_train`, report oos s_e (not oob) on `X_test`. This ignores missingness
+
+```{r}
+#TO-DO
+sqrt(mean((y_hat_test - y_test)^2))
+```
+
+Impute the missingness in `Xmiss` using the feature averages to create a matrix `Ximp_naive_train` and `Ximp_naive_test`. 
+
+```{r}
+#TO-DO
+```
+
+Fit a random forest model of `y_train ~ Ximp_naive_train`, report oos s_e (not oob) on `Ximp_naive_test`.
+
+```{r}
+#TO-DO
+sqrt(mean((y_hat_test - y_test)^2))
+```
+
+How much predictive performance was lost due to missingness when naive imputation was used vs when there was no missingness?
+
+```{r}
+#TO-DO
+```
+
+Use `missForest` to impute the missing entries to create a matrix `Ximp_MF_train` and `Ximp_MF_test`.
+
+```{r}
+pacman::p_load(missForest)
+#TO-DO
+```
+
+Fit a random forest model of `y_train ~ Ximp_MF_train`, report oos s_e (not oob) on `Ximp_MF_test`.
+
+```{r}
+#TO-DO
+sqrt(mean((y_hat_test - y_test)^2))
+```
+
+How much predictive performance was lost due to missingness when `missForest` imputation was used?
+
+```{r}
+#TO-DO
+```
+
+Why did `missForest` imputation perform better than naive imputation?
+
+#TO-DO
+
+Reload the feature matrix:
+
+```{r}
+rm(list = ls())
+X = as.matrix(MASS::Boston[, 1 : 13])
+```
+
+Create missingness in the feature `lstat` that is due to a MAR missing data mechanism.
+
+```{r}
+#TO-DO
+```
+
+Create missingness in the feature `rm` that is a NMAR missing data mechanism.
+
+```{r}
+#TO-DO
+```
+
+
+#Bagged Trees and Random Forest
+
+Take a training sample of n = 2000 observations from the diamonds data.
+
+```{r}
+rm(list = ls())
+pacman::p_load(tidyverse)
+set.seed(1)
+diamonds_train = ggplot2::diamonds %>% 
+  sample_n(2000)
+```
+
+
+Using the diamonds data, find the oob s_e for a bagged-tree model using 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000 trees. If you are using the `randomForest` package, you can create the bagged tree model via setting an argument within the RF constructor function. Plot.
+
+```{r}
+num_trees_values = c(1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000)
+oob_se_bagged_trees_mod_by_num_trees = array(NA, length(num_trees_values))
 #TO-DO
 ```
 
 Find the bootstrap s_e for a RF model using 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000 trees. If you are using the `randomForest` package, you can calculate oob residuals via `e_oob = y_train - rf_mod$predicted`. Plot.
 
 ```{r}
+oob_se_rf_mod_by_num_trees = array(NA, length(num_trees_values))
 #TO-DO
 ```
 
-Using the diamonds data, find the oob s_e for a bagged-tree model using 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000 trees. If you are using the `randomForest` package, you can create the bagged tree model via setting an argument within the RF constructor function. Plot.
+What is the percentage gain / loss in performance of the RF model vs bagged trees model for each number of trees? Gains are negative (as in lower oos s_e).
 
 ```{r}
-#TO-DO
-```
-
-
-What is the percentage gain / loss in performance of the RF model vs bagged trees model?
-
-```{r}
-#TO-DO
+cbind(
+  num_trees_values,
+  (oob_se_rf_mod_by_num_trees - oob_se_bagged_trees_mod_by_num_trees) / oob_se_bagged_trees_mod_by_num_trees * 100
+)
 ```
 
 Why was this the result?
 
 #TODO
 
-Plot oob s_e by number of trees for both RF and bagged trees.
+Plot oob s_e by number of trees for both RF and bagged trees by creating a long data frame from the two results.
 
 ```{r}
 #TO-DO
 ```
 
-Build RF models for 500 trees using different `mtry` values: 1, 2, ... the maximum. That maximum will be the number of features assuming that we do not binarize categorical features if you are using `randomForest` or the number of features assuming binarization of the categorical features if you are using `YARF`. Calculate oob s_e for all mtry values. Plot.
+Build RF models for 500 trees using different `mtry` values: 1, 2, ... the maximum. That maximum will be the number of features assuming that we do not binarize categorical features if you are using `randomForest` or the number of features assuming binarization of the categorical features if you are using `YARF`. Calculate oob s_e for all mtry values.
 
 ```{r}
+oob_se_by_mtry = array(NA, ncol(diamonds_train))
 #TO-DO
 ```
 
@@ -82,49 +221,135 @@ Plot oob s_e by mtry.
 #TO-DO
 ```
 
+Take a sample of n = 2000 observations from the adult data and name it `adult_sample`. Then impute missing values using missForest.
+
 ```{r}
 rm(list = ls())
+set.seed(1)
+pacman::p_load_gh("coatless/ucidata")
+adult_train = adult %>% 
+  sample_n(2000)
+adult_train = missForest(adult_train)$ximp
 ```
 
 
-Take a sample of n = 2000 observations from the adult data.
+Using the adult_train data, find the bootstrap misclassification error for a bagged-tree model using 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000 trees. Plot.
 
 ```{r}
+num_trees_values = c(1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000)
+oob_se_bagged_trees_mod_by_num_trees = array(NA, length(num_trees_values))
 #TO-DO
 ```
 
-Using the adult data, find the bootstrap misclassification error for an RF model using 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000 trees.
+Using the adult_train data, find the bootstrap misclassification error for an RF model using 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000 trees.
 
 ```{r}
-#TO-DO
-```
-
-Using the adult data, find the bootstrap misclassification error for a bagged-tree model using 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 1000 trees. Plot.
-
-```{r}
+oob_se_rf_mod_by_num_trees = array(NA, length(num_trees_values))
 #TO-DO
 ```
 
 What is the percentage gain / loss in performance of the RF model vs bagged trees model?
 
 ```{r}
-#TO-DO
+cbind(
+  num_trees_values,
+  (oob_se_rf_mod_by_num_trees - oob_se_bagged_trees_mod_by_num_trees) / oob_se_bagged_trees_mod_by_num_trees * 100
+)
 ```
 
-Plot bootstrap misclassification error by number of trees for both RF and bagged trees.
+Build RF models on adult_train for 500 trees using different `mtry` values: 1, 2, ... the maximum (see above as maximum is defined by the specific RF algorithm implementation). 
 
 ```{r}
+oob_se_by_mtry = array(NA, ncol(adult_train))
 #TO-DO
 ```
 
-Build RF models for 500 trees using different `mtry` values: 1, 2, ... the maximum (see above as maximum is defined by the specific RF algorithm implementation). Plot.
-
-```{r}
-#TO-DO
-```
 
 Plot bootstrap misclassification error by `mtry`.
 
 ```{r}
 #TO-DO
 ```
+
+Is `mtry` an important hyperparameter to optimize when using the RF algorithm? Explain
+
+#TO-DO
+
+Identify the best model among all values of `mtry`. Fit this RF model. Then report the following oob error metrics: misclassification error, precision, recall, F1, FDR, FOR and compute a confusion matrix.
+
+```{r}
+#TO-DO
+```
+
+Is this a good model? (yes/no and explain).
+
+#TO-DO
+
+There are probability asymmetric costs to the two types of errors. Assign two costs below and calculate oob total cost.
+
+```{r}
+fp_cost = 
+fn_cost = 
+#TO-DO
+```
+
+# Asymmetric Cost Modeling, ROC and DET curves
+
+Fit a logistic regression model to the adult_train missingness-imputed data.
+
+```{r}
+rm(list = setdiff(ls(), "adult_train"))
+#TO-DO
+```
+
+Use the function from class to calculate all the error metrics (misclassification error, precision, recall, F1, FDR, FOR) for the values of the probability threshold being 0.001, 0.002, ..., 0.999 in a tibble (dplyr data frame).
+
+```{r}
+pacman::p_load(tidyverse)
+asymmetric_predictions_results = tibble(
+  p_hat_threshold = seq(from = 0.001, to = 0.999, by = 0.001),
+  misclassification_error = NA, 
+  precision = NA, 
+  recall = NA, 
+  F1 = NA, 
+  FDR = NA, 
+  FOR = NA
+)
+#TO-DO
+```
+
+Calculate the column `total_cost` and append it to this data frame via `mutate`.
+
+```{r}
+#TO-DO
+```
+
+Which is the lowest total cost? What is the "winning" probability threshold value providing that minimum total cost?
+
+```{r}
+#TO-DO
+```
+
+Plot an ROC curve and interpret.
+
+```{r}
+#TO-DO
+```
+
+#TO-DO interpretation
+
+Calculate AUC and interpret.
+
+```{r}
+#TO-DO
+```
+
+#TO-DO interpretation
+
+Plot a DET curve and interpret.
+
+```{r}
+#TO-DO
+```
+
+#TO-DO interpretation

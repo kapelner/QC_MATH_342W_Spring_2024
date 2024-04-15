@@ -6,6 +6,8 @@ This is the course homepage for Math 342W (and Masters level 642 and RM 742) at 
 
 My theory lectures are following my previous class notes (see [here](https://github.com/kapelner/QC_Math_342W_Spring_2022)) unless specified otherwise.
 
+* Practice Lecture 22 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec22.Rmd)
+* Practice Lecture 21 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec21.Rmd)
 * Practice Lecture 20 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec20.Rmd)
 * Practice Lecture 19 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec19.Rmd)
 * Practice Lecture 18 [(markdown)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/practice_lectures/lec18.Rmd)
@@ -30,8 +32,8 @@ My theory lectures are following my previous class notes (see [here](https://git
 ## Labs
 
 <!--
-* [Lab 11, due 5/12](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab11.Rmd)
-* [Lab 10, due 5/12](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab10.Rmd)-->
+* [Lab 11, due 5/12](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab11.Rmd)-->
+* [Lab 10, due 4/21](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab10.Rmd)
 * [Lab 9, due 4/15](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab09.Rmd)
 * [Lab 8, due 4/8](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab08.Rmd)
 * [Lab 7, due 4/1](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/labs/lab07.Rmd) 
