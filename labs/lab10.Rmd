@@ -66,10 +66,6 @@ Create a matrix `Xmiss` which is `X` but has missingness with probability of 10%
 #TO-DO
 ```
 
-What type of missing data mechanism created the missingness in `Xmiss`?
-
-#TO-DO
-
 Also, generate the M matrix and delete columns that have no missingness.
 
 ```{r}
@@ -147,19 +143,6 @@ Reload the feature matrix:
 rm(list = ls())
 X = as.matrix(MASS::Boston[, 1 : 13])
 ```
-
-Create missingness in the feature `lstat` that is due to a MAR missing data mechanism.
-
-```{r}
-#TO-DO
-```
-
-Create missingness in the feature `rm` that is a NMAR missing data mechanism.
-
-```{r}
-#TO-DO
-```
-
 
 #Bagged Trees and Random Forest
 
