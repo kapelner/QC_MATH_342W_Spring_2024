@@ -17,6 +17,18 @@ sample_mode = function(data){
 
 ## The Perceptron
 
+Interesting history. Goes back to 1943:
+
+https://scholar.google.com/scholar?hl=en&as_sdt=7%2C39&q=A+Logical+Calculus+of+Ideas+Immanent+in+Nervous+Activity&btnG=
+
+First demonstrated in a vacuum-tube computer in 1957:
+
+https://scholar.google.com/scholar?hl=en&as_sdt=7%2C39&q=The+Perceptron%E2%80%94a+perceiving+and+recognizing+automaton&btnG=
+
+And popularized in 1958:
+
+https://scholar.google.com/scholar?hl=en&as_sdt=7%2C39&q=Rosenblatt%2C+F.+%281958%29.+%22The+perceptron%3A+A+probabilistic+model+for+information+storage+and+organization+in+the+brain&btnG=
+
 Time for some new data first... we are bored of the fabricated creditworthiness data.
 
 ```{r}
@@ -141,6 +153,8 @@ For the purposes of the homework, you should use the method "BFGS". In real life
 
 
 ## Support Vector Machines (SVM)
+
+
 
 Here we use the `e1071` library.
 

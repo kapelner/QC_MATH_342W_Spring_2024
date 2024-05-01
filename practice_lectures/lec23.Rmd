@@ -1,0 +1,111 @@
+---
+title: "Practice Lecture 23 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+---
+
+
+# Boosting?
+
+Nice simple explanation: https://towardsdatascience.com/basic-ensemble-learning-random-forest-adaboost-gradient-boosting-step-by-step-explained-95d49d1e2725
+
+The first boosting algorithm was called adaboost:
+https://scholar.google.com/scholar?hl=en&as_sdt=7%2C39&q=A+decision-theoretic+generalization+of+on-line+learning+and+an+application+to+boosting&btnG=
+
+And then it was improved with gradient boosting
+
+And then finally with "extreme gradient boosting" which I believe is state of the art and known to beat random forest.
+
+https://scholar.google.com/scholar?hl=en&as_sdt=7%2C39&q=Xgboost%3A+A+scalable+tree+boosting+system&btnG=
+
+```{r}
+pacman::p_load(xgboost)
+```
+
+Look at performance on adult dataset.
+
+```{r}
+rm(list = ls())
+pacman::p_load_gh("coatless/ucidata")
+data(adult)
+adult = na.omit(adult) #kill any observations with missingness
+
+set.seed(1)
+train_size = 2000
+train_indices = sample(1 : nrow(adult), train_size)
+adult_train = adult[train_indices, ]
+y_train = adult_train$income
+X_train = adult_train
+X_train$income = NULL
+
+test_size = 28000
+test_indices = sample(setdiff(1 : nrow(adult), train_indices), test_size)
+adult_test = adult[test_indices, ]
+y_test = adult_test$income
+X_test = adult_test
+X_test$income = NULL
+
+
+xgboost_mod = xgboost(data = data.matrix(X_train), 
+ label = as.numeric(y_train == ">50K"), 
+ num_class = 2, #y = 0 or 1
+ eta = 0.3, #default
+ max_depth = 6, #default 
+ nrounds = 25, 
+ subsample = 1, #default 
+ colsample_bytree = 1,
+ eval_metric = "merror",
+ objective = "multi:softmax",
+ nthread = 3
+)
+
+y_hat_test = as.numeric(predict(xgboost_mod, data.matrix(X_test)))
+oos_confusion = table(y_test, ifelse(y_hat_test == 0, "<=50K", ">50K"))
+oos_confusion
+cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
+cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
+```
+
+Invert train and test splits and let it train on 28,000 observations.
+
+```{r}
+set.seed(1)
+train_size = 28000
+train_indices = sample(1 : nrow(adult), train_size)
+adult_train = adult[train_indices, ]
+y_train = adult_train$income
+X_train = adult_train
+X_train$income = NULL
+
+test_size = 2000
+test_indices = sample(setdiff(1 : nrow(adult), train_indices), test_size)
+adult_test = adult[test_indices, ]
+y_test = adult_test$income
+X_test = adult_test
+X_test$income = NULL
+
+xgboost_mod = xgboost(data = data.matrix(X_test), 
+ label = as.numeric(y_test == ">50K"), 
+ num_class = 2, #y = 0 or 1
+ eta = 0.5, #default
+ max_depth = 6, #default 
+ nrounds = 50, 
+ subsample = 1, #default 
+ colsample_bytree = 1,
+ eval_metric = "merror",
+ objective = "multi:softmax",
+ nthread = 3
+)
+
+y_hat_test = as.numeric(predict(xgboost_mod, data.matrix(X_train)))
+oos_confusion = table(y_train, ifelse(y_hat_test == 0, "<=50K", ">50K"))
+oos_confusion
+cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
+cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
+```
+
+Lightning fast on $n = 30000$!!! But only a bit more accurate. This leads me to think the error is mostly in delta.
+
+We can try playing with the hyperparams. A lot to CV over! You think this is a lot... wait until you see deep learning networks!
+
+
+
