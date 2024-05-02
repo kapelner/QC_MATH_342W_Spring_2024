@@ -1,0 +1,121 @@
+---
+title: "Lab 11"
+author: "Your Name Here"
+output: pdf_document
+---
+
+#Boosting
+
+We will make use of YARF so here' the boilerplate code.
+
+```{r}
+options(java.parameters = "-Xmx8000m")
+pacman::p_load(rJava)
+if (!pacman::p_isinstalled(YARF)){
+  pacman::p_install_gh("kapelner/YARF/YARFJARs", ref = "dev")
+  pacman::p_install_gh("kapelner/YARF/YARF", ref = "dev", force = TRUE)
+}
+pacman::p_load(YARF)
+```
+
+We will now write a gradient boosting algorithm from scratch. We will make it as general as possible for regression and classification.
+
+```{r}
+pacman::p_load(checkmate) #this is a package that enforces arguments are the correct form
+
+#' A general gradient boosting algorithm
+#'
+#' @param X                         A model matrix representing the features. It is of size n x p. No need for an intercept column.
+#' @param y                         A vector of length n. It either will be real numbers (for regression) or binary (for classification).
+#' @param g_base_learner_alg        A function with arguments X, y and ... and returns a function that takes X as an argument. The default is YARFCART
+#'                                  with nodesize 10% of the total length.
+#' @param grad_objective_function   The gradient of the function to be minimized. It takes arguments y, yhat that returns a scalar. The default is SSE for
+#'                                  regression and logistic loss for classification.
+#' @param M                         The number of base learners to be summed. Default is 500 for regression and 1000 for classification.
+#' @param eta                       The step size in the gradient descent. Default is 0.3
+#' @param ...                       Optional arguments to be passed into the g_base_learner_alg function.
+#'
+#' @return
+gradient_boost = function(X, y, g_base_learner_alg = NULL, objective_function = NULL, M = NULL, eta = 0.3, ...){
+  assert_matrix(X)
+  p = ncol(X)
+  n = nrow(X)
+  assert_numeric(y)
+  assert(length(y) == n)
+  assert_function(g_base_learner_alg, args = c("X", "y"), null.ok = TRUE)
+  assert_function(objective_function, args = c("y", "yhat"), null.ok = TRUE)
+  assert_count(M, positive = TRUE, null.ok = TRUE)
+  assert_numeric(eta, lower = .Machine$double.eps, null.ok = TRUE)
+  
+  if (identical(sort(names(table(y))), c("0", "1"))){
+    #classification
+    #TO-DO
+  } else {
+    #regression
+    #TO-DO
+  }
+  
+  #TO-DO
+}
+```
+
+
+Here is code to split up the diamonds dataset into three subsets:
+
+```{r}
+set.seed(1)
+diamonds = ggplot2::diamonds
+pacman::p_load(tidyverse)
+diamonds = diamonds %>% 
+  mutate(cut = factor(cut, ordered = FALSE)) %>%
+  mutate(color = factor(color, ordered = FALSE)) %>%
+  mutate(clarity = factor(clarity, ordered = FALSE))
+diamonds_mm = model.matrix(price ~ ., diamonds)
+train_size = 2000
+train_indices = sample(1 : nrow(diamonds), train_size)
+
+y_train = diamonds[train_indices, ]$price
+X_train_mm = diamonds_mm[train_indices, ]
+
+validation_size = 2000
+validation_indices = sample(setdiff(1 : nrow(diamonds), train_indices), validation_size)
+y_validation = diamonds[validation_indices, ]$price
+X_validation_mm = diamonds_mm[validation_indices, ]
+
+test_size = 2000
+test_indices = sample(setdiff(1 : nrow(diamonds), c(train_indices, validation_indices)), test_size)
+y_test = diamonds[test_indices, ]$price
+X_test_mm = diamonds_mm[test_indices, ]
+```
+
+Using your new gradient boosting function, optimize the number of base learners, M for the diamonds data using a grid search:
+
+```{r}
+#TO-DO
+```
+
+Now find the error in the test set and comment on its performance:
+
+```{r}
+#TO-DO
+```
+
+Repeat this exercise for the adult dataset. First create the splits:
+
+```{r}
+#TO-DO
+```
+
+Using your new gradient boosting function, optimize the number of base learners, M for the diamonds data using a grid search:
+
+```{r}
+#TO-DO
+```
+
+Now find the error in the test set and comment on its performance:
+
+```{r}
+#TO-DO
+```
+
+
