@@ -11,101 +11,306 @@ Nice simple explanation: https://towardsdatascience.com/basic-ensemble-learning-
 The first boosting algorithm was called adaboost:
 https://scholar.google.com/scholar?hl=en&as_sdt=7%2C39&q=A+decision-theoretic+generalization+of+on-line+learning+and+an+application+to+boosting&btnG=
 
-And then it was improved with gradient boosting
+And then it was improved with gradient boosting:
+https://scholar.google.com/scholar?q=gradient+boosting&hl=en&btnG=Search&as_sdt=1%2C39&as_sdtp=on
 
-And then finally with "extreme gradient boosting" which I believe is state of the art and known to beat random forest.
-
+And then finally with "extreme gradient boosting" which is just a better implementation of gradient boosting with more bells and whistles. I believe is state of the art at the time of this writing:
 https://scholar.google.com/scholar?hl=en&as_sdt=7%2C39&q=Xgboost%3A+A+scalable+tree+boosting+system&btnG=
 
 ```{r}
-pacman::p_load(xgboost)
+options(java.parameters = "-Xmx8000m")
+pacman::p_load(xgboost, YARF, tidyverse)
+boosting_hyperparams = list(
+ eta = 0.3, #default step size
+ max_depth = 6, #default 
+ nrounds = 1000, #M
+ subsample = 1, #default 
+ colsample_bytree = 1, #default
+ nthread = 11,
+ print_every_n = 100
+)
 ```
+
+Look at performance on the diamonds dataset.
+
+```{r}
+set.seed(1)
+diamonds = ggplot2::diamonds
+diamonds = diamonds %>% 
+  mutate(cut = factor(cut, ordered = FALSE)) %>%
+  mutate(color = factor(color, ordered = FALSE)) %>%
+  mutate(clarity = factor(clarity, ordered = FALSE))
+diamonds_mm = model.matrix(price ~ ., diamonds)
+train_size = 2000
+train_indices = sample(1 : nrow(diamonds), train_size)
+
+diamonds_train = diamonds[train_indices, ]
+y_train = diamonds_train$price
+X_train = diamonds_train
+X_train_mm = diamonds_mm[train_indices, ]
+X_train$price = NULL
+
+test_size = 3940
+test_indices = sample(setdiff(1 : nrow(diamonds), train_indices), test_size)
+diamonds_test = diamonds[test_indices, ]
+y_test = diamonds_test$price
+X_test = diamonds_test
+X_test_mm = diamonds_mm[test_indices, ]
+X_test$income = NULL
+
+xgboost_mod = xgboost(
+ data = X_train_mm, #X: we need to convert it do a design matrix
+ label = y_train, #y
+ objective = "reg:squarederror", #SSE
+ booster = "gbtree",
+ #######hyperparameters
+ eta = boosting_hyperparams$eta,
+ max_depth = boosting_hyperparams$max_depth,
+ nrounds = boosting_hyperparams$nrounds,
+ subsample = boosting_hyperparams$subsample,
+ colsample_bytree = boosting_hyperparams$colsample_bytree,
+ nthread = boosting_hyperparams$nthread,
+ print_every_n = boosting_hyperparams$print_every_n
+)
+
+y_hat_test = predict(xgboost_mod, X_test_mm)
+cat("default boosting")
+cat("RMSE:", sqrt(mean((y_test - y_hat_test)^2)))
+
+rf_mod = YARFBAG(X_train, y_train)
+
+y_hat_test = predict(rf_mod, X_test)
+cat("default RF")
+cat("RMSE:", sqrt(mean((y_test - y_hat_test)^2)))
+```
+
+That is an insanely small error... I'm not sure it's real... but I can't find my mistake!!
+
+But where xgboost really shines is it's lightning fast on large datasets. We can get a huge improvement by running on the large dataset but we need to use more M because it has a much larger dimensional space to search over.
+
+```{r}
+set.seed(1)
+diamonds = ggplot2::diamonds
+train_indices = setdiff(1 : nrow(diamonds), test_indices)
+#train_size = 50000
+
+diamonds_train = diamonds[train_indices, ]
+y_train = diamonds_train$price
+X_train = diamonds_train
+X_train$price = NULL
+X_train_mm = diamonds_mm[train_indices, ]
+
+xgboost_mod = xgboost(
+ data = X_train_mm, #X: we need to convert it do a design matrix
+ label = y_train, #y
+ objective = "reg:squarederror", #SSE
+ booster = "gbtree",
+ #######hyperparameters
+ eta = boosting_hyperparams$eta,
+ max_depth = boosting_hyperparams$max_depth,
+ nrounds = 12000,
+ subsample = boosting_hyperparams$subsample,
+ colsample_bytree = boosting_hyperparams$colsample_bytree,
+ nthread = boosting_hyperparams$nthread,
+ print_every_n = boosting_hyperparams$print_every_n
+)
+
+
+y_hat_test = predict(xgboost_mod, X_test_mm)
+cat("default boosting high n")
+cat("RMSE:", sqrt(sum((y_test - y_hat_test)^2)))
+```
+So I think we're overfitting in the first
 
 Look at performance on adult dataset.
 
 ```{r}
-rm(list = ls())
+rm(list = ls()) #reset R here
+
+options(java.parameters = "-Xmx8000m")
+pacman::p_load(xgboost, YARF, tidyverse)
+boosting_hyperparams = list(
+ eta = 0.3, #default step size
+ max_depth = 6, #default 
+ nrounds = 3000, #M, we raise it here for classification
+ subsample = 1, #default 
+ colsample_bytree = 1, #default
+ nthread = 11,
+ print_every_n = 100
+)
+
 pacman::p_load_gh("coatless/ucidata")
 data(adult)
 adult = na.omit(adult) #kill any observations with missingness
+adult_mm = model.matrix(income ~ ., adult)
 
 set.seed(1)
 train_size = 2000
 train_indices = sample(1 : nrow(adult), train_size)
 adult_train = adult[train_indices, ]
-y_train = adult_train$income
+y_train = as.numeric(adult_train$income == ">50K")
 X_train = adult_train
 X_train$income = NULL
-
-test_size = 28000
-test_indices = sample(setdiff(1 : nrow(adult), train_indices), test_size)
-adult_test = adult[test_indices, ]
-y_test = adult_test$income
-X_test = adult_test
-X_test$income = NULL
-
-
-xgboost_mod = xgboost(data = data.matrix(X_train), 
- label = as.numeric(y_train == ">50K"), 
- num_class = 2, #y = 0 or 1
- eta = 0.3, #default
- max_depth = 6, #default 
- nrounds = 25, 
- subsample = 1, #default 
- colsample_bytree = 1,
- eval_metric = "merror",
- objective = "multi:softmax",
- nthread = 3
-)
-
-y_hat_test = as.numeric(predict(xgboost_mod, data.matrix(X_test)))
-oos_confusion = table(y_test, ifelse(y_hat_test == 0, "<=50K", ">50K"))
-oos_confusion
-cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
-cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
-```
-
-Invert train and test splits and let it train on 28,000 observations.
-
-```{r}
-set.seed(1)
-train_size = 28000
-train_indices = sample(1 : nrow(adult), train_size)
-adult_train = adult[train_indices, ]
-y_train = adult_train$income
-X_train = adult_train
-X_train$income = NULL
+X_train_mm = adult_mm[train_indices, ]
 
 test_size = 2000
 test_indices = sample(setdiff(1 : nrow(adult), train_indices), test_size)
 adult_test = adult[test_indices, ]
-y_test = adult_test$income
+y_test = as.numeric(adult_test$income == ">50K")
 X_test = adult_test
 X_test$income = NULL
+X_test_mm = adult_mm[test_indices, ]
 
-xgboost_mod = xgboost(data = data.matrix(X_test), 
- label = as.numeric(y_test == ">50K"), 
- num_class = 2, #y = 0 or 1
- eta = 0.5, #default
- max_depth = 6, #default 
- nrounds = 50, 
- subsample = 1, #default 
- colsample_bytree = 1,
- eval_metric = "merror",
- objective = "multi:softmax",
- nthread = 3
+xgboost_mod = xgboost(
+ data = X_train_mm,
+ label = y_train,
+ objective = "binary:logistic",
+ #######hyperparameters
+ eta = boosting_hyperparams$eta,
+ max_depth = boosting_hyperparams$max_depth,
+ nrounds = boosting_hyperparams$nrounds,
+ subsample = boosting_hyperparams$subsample,
+ colsample_bytree = boosting_hyperparams$colsample_bytree,
+ nthread = boosting_hyperparams$nthread,
+ print_every_n = boosting_hyperparams$print_every_n
 )
 
-y_hat_test = as.numeric(predict(xgboost_mod, data.matrix(X_train)))
-oos_confusion = table(y_train, ifelse(y_hat_test == 0, "<=50K", ">50K"))
+y_hat_test = as.numeric(predict(xgboost_mod, X_test_mm) > 0.5) #default classification rule for probability regression
+oos_confusion = table(y_test, y_hat_test)
 oos_confusion
+cat("default boosting")
 cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
 cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
+cat("miscl err =", (oos_confusion[2, 1] + oos_confusion[1, 2]) / length(y_test), "\n")
+
+rf_mod = YARF(data.frame(X_train), as.factor(y_train))
+
+y_hat_test = as.numeric(predict(rf_mod, data.frame(X_test))) - 1
+oos_confusion = table(y_test, y_hat_test)
+oos_confusion
+cat("default RF")
+cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
+cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
+cat("miscl err =", (oos_confusion[2, 1] + oos_confusion[1, 2]) / length(y_test), "\n")
 ```
 
-Lightning fast on $n = 30000$!!! But only a bit more accurate. This leads me to think the error is mostly in delta.
+So it's not so clear who "wins".
 
-We can try playing with the hyperparams. A lot to CV over! You think this is a lot... wait until you see deep learning networks!
+Invert train and test splits and let it train on 28,000 observations.
+
+```{r}
+train_indices = setdiff(1 : nrow(adult), test_indices)
+adult_train = adult[train_indices, ]
+y_train = as.numeric(adult_train$income == ">50K")
+X_train = adult_train
+X_train$income = NULL
+X_train_mm = adult_mm[train_indices, ]
+nrow(X_train_mm)
+
+xgboost_mod = xgboost(
+ data = X_train_mm,
+ label = y_train,
+ objective = "binary:logistic",
+ #######hyperparameters
+ eta = boosting_hyperparams$eta,
+ max_depth = boosting_hyperparams$max_depth,
+ nrounds = 5000,
+ subsample = boosting_hyperparams$subsample,
+ colsample_bytree = boosting_hyperparams$colsample_bytree,
+ nthread = boosting_hyperparams$nthread,
+ print_every_n = boosting_hyperparams$print_every_n
+)
+
+y_hat_test = as.numeric(predict(xgboost_mod, X_test_mm) > 0.5) #default classification rule for probability regression
+oos_confusion = table(y_test, y_hat_test)
+oos_confusion
+cat("default boosting")
+cat("FDR =", oos_confusion[1, 2] / sum(oos_confusion[, 2]), "\n")
+cat("FOR =", oos_confusion[2, 1] / sum(oos_confusion[, 1]), "\n")
+cat("miscl err =", (oos_confusion[2, 1] + oos_confusion[1, 2]) / length(y_test), "\n")
+```
+
+And on letters:
+
+```{r}
+rm(list = ls())
+boosting_hyperparams = list(
+ eta = 0.3, #default step size
+ max_depth = 6, #default 
+ nrounds = 3000, #M, we raise it here for classification
+ subsample = 1, #default 
+ colsample_bytree = 1, #default
+ nthread = 11,
+ print_every_n = 100
+)
+
+pacman::p_load(mlbench, skimr)
+data(LetterRecognition)
+letter = na.omit(LetterRecognition) #kill any observations with missingness
+letter_mm = model.matrix(lettr ~ ., letter)
+
+set.seed(1)
+train_size = 18000
+train_indices = sample(1 : nrow(letter), train_size)
+letter_train = letter[train_indices, ]
+y_train = as.numeric(letter_train$lettr) - 1
+X_train_mm = letter_mm[train_indices, ]
+
+test_size = 2000
+test_indices = sample(setdiff(1 : nrow(letter), train_indices), test_size)
+letter_test = letter[test_indices, ]
+y_test = letter_test$lettr
+X_test_mm = letter_mm[test_indices, ]
+
+xgboost_mod = xgboost(
+ data = X_train_mm,
+ label = y_train,
+ objective = "multi:softmax",
+ num_class = 26,
+ #######hyperparameters
+ eta = boosting_hyperparams$eta,
+ max_depth = boosting_hyperparams$max_depth,
+ nrounds = boosting_hyperparams$nrounds,
+ subsample = boosting_hyperparams$subsample,
+ colsample_bytree = boosting_hyperparams$colsample_bytree,
+ nthread = boosting_hyperparams$nthread,
+ print_every_n = boosting_hyperparams$print_every_n
+)
+
+y_hat_test = predict(xgboost_mod, X_test_mm)
+oos_confusion = table(y_test, LETTERS[y_hat_test + 1])
+oos_confusion
+cat("default boosting")
+cat("miscl err =", (sum(oos_confusion) - sum(diag(oos_confusion))) / length(y_test), "\n")
+```
+
+
+We can try playing with the hyperparams. A lot to CV over! 
+
+You think this is a lot of hyperparameters.. wait until you see deep learning networks!
+
+A few more interesting things:
+
+```{r}
+xgb.ggplot.deepness(xgboost_mod)
+```
+
+This shows you how deep the tree models are.
+
+```{r}
+importance_matrix = xgb.importance(colnames(X_train_mm), model = xgboost_mod)
+pacman::p_load(Ckmeans.1d.dp)
+xgboost::xgb.ggplot.importance(importance_matrix)
+```
+
+The feature importance metrics comes from how much the attribute split points improve performance weighted by the number of observations in the node.
+
+
+```{r}
+pacman::p_load(DiagrammeR)
+gr = xgb.plot.multi.trees(model=xgboost_mod, render=FALSE)
+export_graph(gr, "tree.pdf", width = 1500, height = 1500)
+```
 
 
 
