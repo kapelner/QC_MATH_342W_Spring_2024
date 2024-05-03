@@ -102,7 +102,7 @@ gradient_boost = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_fu
     assert_data_frame(X_star)
     
     y_hat_star = g_0(X_star)
-    for (m in 1 : (M - 1)){
+    for (m in 1 : M){
       y_hat_star = y_hat_star + eta * predict(g_tildes[[m]], X_star)
     } 
     y_hat_star
