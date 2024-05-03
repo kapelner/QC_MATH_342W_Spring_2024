@@ -25,38 +25,111 @@ pacman::p_load(checkmate) #this is a package that enforces arguments are the cor
 
 #' A general gradient boosting algorithm
 #'
-#' @param X                         A model matrix representing the features. It is of size n x p. No need for an intercept column.
+#' @param X                         A data frame representing the features. It is of size n x p. No need for an intercept column.
 #' @param y                         A vector of length n. It either will be real numbers (for regression) or binary (for classification).
 #' @param g_base_learner_alg        A function with arguments X, y and ... and returns a function that takes X as an argument. The default is YARFCART
 #'                                  with nodesize 10% of the total length.
-#' @param grad_objective_function   The gradient of the function to be minimized. It takes arguments y, yhat that returns a scalar. The default is SSE for
+#' @param neg_grad_objective_function   The negative gradient of the function to be minimized. It takes arguments y, yhat that returns a vector. The default objective function is SSE for
 #'                                  regression and logistic loss for classification.
-#' @param M                         The number of base learners to be summed. Default is 500 for regression and 1000 for classification.
+#' @param M                         The number of base learners to be summed. Default is 50 for regression and 100 for classification.
 #' @param eta                       The step size in the gradient descent. Default is 0.3
 #' @param ...                       Optional arguments to be passed into the g_base_learner_alg function.
 #'
 #' @return
-gradient_boost = function(X, y, g_base_learner_alg = NULL, objective_function = NULL, M = NULL, eta = 0.3, ...){
-  assert_matrix(X)
-  p = ncol(X)
+gradient_boost = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_function = NULL, M = NULL, eta = 0.3, ...){
+  assert_data_frame(X)
   n = nrow(X)
   assert_numeric(y)
   assert(length(y) == n)
   assert_function(g_base_learner_alg, args = c("X", "y"), null.ok = TRUE)
-  assert_function(objective_function, args = c("y", "yhat"), null.ok = TRUE)
+  assert_function(neg_grad_objective_function, args = c("y", "yhat"), null.ok = TRUE)
   assert_count(M, positive = TRUE, null.ok = TRUE)
-  assert_numeric(eta, lower = .Machine$double.eps, null.ok = TRUE)
+  assert_numeric(eta, lower = .Machine$double.eps)
+  
+  if(is.null(g_base_learner_alg)){
+    g_base_learner_alg = function(X, y){
+      YARFCART(X, y, nodesize = round(.1 * n), calculate_oob_error = FALSE, bootstrap_indices = list(1 : nrow(X)), verbose = FALSE)
+    }
+  }
   
   if (identical(sort(names(table(y))), c("0", "1"))){
     #classification
-    #TO-DO
+    cat("building gradient boosted trees for probability estimation of two classes\n")
+    if(is.null(M)){
+      M = 100
+    }
+    if(is.null(neg_grad_objective_function)){
+      neg_grad_objective_function = function(y, y_hat){
+        y - exp(y_hat) / (1+exp(y_hat))
+      }
+    }
+    g_0 = function(X_star){
+      rep(exp(mean(y))/ (1 + exp(mean(y))), nrow(X_star)) # convert y_hat, which is in log_odds form, back to the probability  
+    }
   } else {
     #regression
-    #TO-DO
+    cat("building gradient boosted trees for regression\n")
+    if (is.null(M)){
+      M = 50
+    }
+    if (is.null(neg_grad_objective_function)){
+      neg_grad_objective_function = function(y, y_hat){
+        2 * (y - y_hat)
+      }
+    }
+    g_0 = function(X_star){
+      rep(mean(y), nrow(X_star))
+    }
+  }
+  #TO-DO
+  g_tildes = list()
+  y_hat_0 = g_0(X)
+  for (m in 1 : M) {
+    cat("fitting tree", m, "of", M, "\n")
+    y_hat_m = y_hat_0
+    if (m > 1){
+     for (k in 1 : (m - 1)){
+        y_hat_m = y_hat_m + eta * predict(g_tildes[[k]], X)
+      }     
+    }
+    
+    neg_gradient_m = neg_grad_objective_function(y, y_hat_m) # obtain negative gradient 
+    g_tildes[[m]] = g_base_learner_alg(X, neg_gradient_m)
   }
   
-  #TO-DO
+  #now we return the final model which takes in a data.frame X_star and predicts with it
+  function(X_star){
+    assert_data_frame(X_star)
+    
+    y_hat_star = g_0(X_star)
+    for (m in 1 : (M - 1)){
+      y_hat_star = y_hat_star + eta * predict(g_tildes[[m]], X_star)
+    } 
+    y_hat_star
+  }
 }
+```
+
+Now we test the code in-sample:
+
+```{r}
+n = 100
+p = 3
+X = matrix(rnorm(n * p), nrow = n)
+bbeta = seq(-1, 1, length.out = p)
+y = c(X %*% bbeta + rnorm(n))
+y_binary = rbinom(n, 1, 1 / (1 + exp(-X %*% bbeta)))
+X = data.frame(X)
+
+#regression
+g_b = gradient_boost(X, y)
+pacman::p_load(ggplot2)
+ggplot(data.frame(y = y, yhat = g_b(X))) + aes(x = y, y = yhat) + geom_point()
+sqrt(mean((y - g_b(X))^2)) #RMSE
+
+#probability estimation
+g_b = gradient_boost(X, y_binary)
+table(y_binary, g_b(X) > 0)
 ```
 
 
