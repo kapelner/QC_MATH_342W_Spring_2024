@@ -7,12 +7,12 @@
 
 
 
-\title{MATH 342W / 642 / RM 742 Spring \the\year~ HW \#5 INCOMPLETE}
+\title{MATH 342W / 642 / RM 742 Spring \the\year~ HW \#5}
 
 \author{Professor Adam Kapelner} %STUDENTS: write your name here
 
 \iftoggle{professormode}{
-\date{Due 11:59PM May 9 \\ \vspace{0.5cm} \small (this document last updated \currenttime~on \today)}
+\date{Due 11:59PM May 15 \\ \vspace{0.5cm} \small (this document last updated \currenttime~on \today)}
 }
 
 \renewcommand{\abstractname}{Instructions and Philosophy}
@@ -64,11 +64,11 @@ Once you get the answer you can see how this easily goes to $K > 3$ response cat
 
 \easysubproblem{Pick one point on your ROC curve from the previous question. Explain a situation why you would employ this model.}\spc{3}
 
-\easysubproblem{Graph a canonical DET curve and label the axes. Explain very clearly what is measured by the $x$ axis and the $y$ axis.}\spc{7}
+\intermediatesubproblem{Graph a canonical DET curve and label the axes. Explain very clearly what is measured by the $x$ axis and the $y$ axis. Make sure the DET curve's intersections with the axes is correct.}\spc{7}
 
 \easysubproblem{Pick one point on your DET curve from the previous question. Explain a situation why you would employ this model.}\spc{3}
 
-\hardsubproblem{The line of random guessing on the ROC curve is the diagonal line with slope one extending from the origin. What is the corresponding line of random guessing in the DET curve? This is not easy...}\spc{5}
+\hardsubproblem{[MA] The line of random guessing on the ROC curve is the diagonal line with slope one extending from the origin. What is the corresponding line of random guessing in the DET curve? This is not easy...}\spc{5}
 \end{enumerate}
 
 
@@ -92,7 +92,7 @@ Once you get the answer you can see how this easily goes to $K > 3$ response cat
 
 \intermediatesubproblem{Explain why RF reduces MSE atop bagging $M$ trees and specifically mention the target that it attacks in the MSE decomposition formula and why it's able to reduce that target.}\spc{5}
 
-\hardsubproblem{When can RF lose to bagging $M$ trees? Hint: setting this critical hyperparameter too low will do the trick.}\spc{5}
+\hardsubproblem{When can RF lose to bagging $M$ trees? Hint: think hyperparameter choice.}\spc{5}
 \end{enumerate}
 
 
@@ -113,18 +113,18 @@ Once you get the answer you can see how this easily goes to $K > 3$ response cat
 %\end{enumerate}
 %
 %
-%\problem{These are some questions related to missingness.}
-%
-%\begin{enumerate}
-%\easysubproblem{What are the three missing data mechanisms? Provide an example when each occurs (i.e., a real world situation).}\spc{5}
-%
-%\easysubproblem{Why is listwise-deletion a terrible idea to employ in your $\mathbb{D}$ when doing supervised learning?}\spc{3}
-%
-%\easysubproblem{Why is it good practice to augment $\mathbb{D}$ to include missingness dummies? In other words, why would this increase oos predictive accuracy?}\spc{5}
-%
-%\easysubproblem{To impute missing values in $\mathbb{D}$, what is a good default strategy and why?}\spc{5}
-%
-%\end{enumerate}
+\problem{These are some questions related to missingness.}
+
+\begin{enumerate}
+\easysubproblem{[MA] What are the three missing data mechanisms? Provide an example when each occurs (i.e., a real world situation). We didn't really cover this in class so I'm making it a MA question only. This concept will NOT be on the exam.}\spc{4}
+
+\easysubproblem{Why is listwise-deletion a \textit{terrible} idea to employ in your $\mathbb{D}$ when doing supervised learning?}\spc{3}
+
+\easysubproblem{Why is it good practice to augment $\mathbb{D}$ to include missingness dummies? In other words, why would this increase oos predictive accuracy?}\spc{4}
+
+\easysubproblem{To impute missing values in $\mathbb{D}$, what is a good default strategy and why?}\spc{5}
+
+\end{enumerate}
 %
 %\problem{These are some questions related to lasso, ridge and the elastic net.}
 %
@@ -146,6 +146,44 @@ Once you get the answer you can see how this easily goes to $K > 3$ response cat
 %
 %\end{enumerate}
 
+\problem{These are some questions related to gradient boosting. The final gradient boosted model after $M$ iterations is denoted $G_M$ which can be written in a number of equivalent ways (see below). The $g_t$'s denote constituent models and the $G_t$'s denote partial sums of the constituent models up to iteration number $t$. The constituent models are \qu{steps in functional steps} which have a step size $\eta$ and a direction component denoted $\tilde{g}_t$. The directional component is the base learner $\mathcal{A}$ fit to the negative gradient of the objective function $L$ which measures how close the current predictions are to the real values of the responses:
+
+\beqn
+G_M &=& G_{M-1} + g_M \\
+&=& g_0 + g_1 + \ldots + g_M \\
+&=& g_0 + \eta \tilde{g}_1 + \ldots + \eta \tilde{g}_M \\
+&=& g_0 + \eta \mathcal{A}\parens{\left<\X, -\nabla L(\y, \yhat_1)\right>, \mathcal{H}} + \ldots + \eta \mathcal{A}\parens{\left<\X, -\nabla L(\y, \yhat_M)\right>, \mathcal{H}} \\
+&=& g_0 + \eta \mathcal{A}\parens{\left<\X, -\nabla L(\y, g_1(\X))\right>, \mathcal{H}} + \ldots + \eta \mathcal{A}\parens{\left<\X, -\nabla L(\y, g_M(\X))\right>, \mathcal{H}} 
+\eeqn}
+
+\begin{enumerate}
+\easysubproblem{From a perspective of only multivariable calculus, explain gradient descent and why it's a good idea to find the minimum inputs for an objective function $L$ (in English).}\spc{2.5}
+
+\easysubproblem{Write the mathematical steps of gradient boosting for supervised learning below. Use $L$ for the objective function to keep the procedure general. Use notation found in the problem header. 
+}\spc{8}
+
+\easysubproblem{For regression, what is $g_0(\x)$?}\spc{1}
+\easysubproblem{For probability estimation for binary response, what is $g_0(\x)$?}\spc{1}
+
+\intermediatesubproblem{What are all the hyperparameters of gradient boosting? There are more than just two.}\spc{3}
+
+\easysubproblem{For regression, rederive the negative gradient of the objective function $L$.}\spc{2}
+
+\easysubproblem{For probability estimation for binary response, rederive the negative gradient of the objective function $L$.}\spc{12}
+
+\hardsubproblem{For probability estimation for binary response scenarios, what is the unit of the output $G_M(\x_\star)$?}\spc{2}
+
+\easysubproblem{For the base learner algorithm $\mathcal{A}$, why is it a good idea to use shallow CART (which is the recommended default)?}\spc{2}
+
+\hardsubproblem{For the base learner algorithm $\mathcal{A}$, why is it a bad idea to use deep CART?}\spc{2}
+
+\hardsubproblem{For the base learner algorithm $\mathcal{A}$, why is it a bad idea to use OLS for regression (or logistic regression for probability estimation for binary response)?}\spc{2}
+
+\hardsubproblem{If $M$ is very, very large, what is the risk in using gradient boosting even using shallow CART as the base learner (the recommended default)?}\spc{2}
+
+\hardsubproblem{If $\eta$ is very, very large but $M$ reasonably correctly chosen, what is the risk in using gradient boosting even using shallow CART as the base learner (the recommended default)?}\spc{2}
+
+\end{enumerate}
 
 
 
