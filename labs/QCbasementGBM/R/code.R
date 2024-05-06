@@ -1,28 +1,3 @@
----
-title: "Lab 11"
-author: "Your Name Here"
-output: pdf_document
----
-
-#Boosting
-
-We will make use of YARF so here' the boilerplate code.
-
-```{r}
-options(java.parameters = "-Xmx8000m")
-pacman::p_load(rJava)
-if (!pacman::p_isinstalled(YARF)){
-  pacman::p_install_gh("kapelner/YARF/YARFJARs", ref = "dev")
-  pacman::p_install_gh("kapelner/YARF/YARF", ref = "dev", force = TRUE)
-}
-pacman::p_load(YARF)
-```
-
-We will now write a gradient boosting algorithm from scratch. We will make it as general as possible for regression and classification.
-
-```{r}
-pacman::p_load(checkmate) #this is a package that enforces arguments are the correct form
-
 #' Gradient boosting
 #'
 #' Generates a gradient boosting model based on your choices of base learner and objective function
@@ -30,7 +5,7 @@ pacman::p_load(checkmate) #this is a package that enforces arguments are the cor
 #' @param X                         A data frame representing the features. It is of size n x p. No need for an intercept column.
 #' @param y                         A vector of length n. It either will be real numbers (for regression) or binary (for classification).
 #' @param g_base_learner_alg        A function with arguments X, y and ... and returns a function that takes X as an argument. The default is YARFCART
-#'                                  with nodesize 10% of the total length.
+#'                                  with nodesize 10\% of the total length.
 #' @param neg_grad_objective_function   The negative gradient of the function to be minimized. It takes arguments y, yhat that returns a vector. The default objective function is SSE for
 #'                                  regression and logistic loss for classification.
 #' @param M                         The number of base learners to be summed. Default is 50 for regression and 100 for classification.
@@ -39,7 +14,10 @@ pacman::p_load(checkmate) #this is a package that enforces arguments are the cor
 #' @param ...                       Optional arguments to be passed into the g_base_learner_alg function.
 #'
 #' @return                          A "qc_basement_gbm" gradient boosting model which can be used for prediction
-qc_basement_gbm = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_function = NULL, M = NULL, eta = 0.3, verbose = TRUE, ...){
+#'
+#' @author Adam Kapelner
+#' @export
+gbm_fit = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_function = NULL, M = NULL, eta = 0.3, verbose = TRUE, ...){
   assert_data_frame(X)
   n = nrow(X)
   assert_numeric(y)
@@ -58,7 +36,7 @@ qc_basement_gbm = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_f
   
   if (identical(sort(names(table(y))), c("0", "1"))){
     #classification
-    if (verbose){cat("building gradient boosted model for probability estimation of two classes\n")}
+    pred_type = "classification"
     if (is.null(M)){
       M = 100
     }
@@ -72,7 +50,7 @@ qc_basement_gbm = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_f
     }
   } else {
     #regression
-    if (verbose){cat("building gradient boosted model for regression\n")}
+    pred_type = "regression"
     if (is.null(M)){
       M = 50
     }
@@ -85,19 +63,20 @@ qc_basement_gbm = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_f
       rep(mean(y), nrow(X_star))
     }
   }
-
+  if (verbose){cat("building gradient boosted model for", pred_type, "\n")}
+  
   g_tildes = list()
   g_tilde_yhats = matrix(NA, nrow = n, ncol = M + 1) 
   neg_gradient_ms = matrix(NA, nrow = n, ncol = M)
   for (m in 1 : M) {
     if (verbose){cat("fitting base learner", m, "of", M, "\n")}
     cum_y_hat_m = if (m == 1){
-                g_tilde_yhat_m = g_0(X)
-                g_tilde_yhat_m
-              } else {
-                g_tilde_yhat_m = predict(g_tildes[[m - 1]], X)
-                cum_y_hat_m + eta * g_tilde_yhat_m
-              }
+      g_tilde_yhat_m = g_0(X)
+      g_tilde_yhat_m
+    } else {
+      g_tilde_yhat_m = predict(g_tildes[[m - 1]], X)
+      cum_y_hat_m + eta * g_tilde_yhat_m
+    }
     #cat("  cum_y_hat_m: ", head(cum_y_hat_m), "\n")
     neg_gradient_m = neg_grad_objective_function(y, cum_y_hat_m) # obtain negative gradient 
     #cat("    neg_gradient_m: ", head(neg_gradient_m), "\n")
@@ -110,6 +89,7 @@ qc_basement_gbm = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_f
   g_tilde_yhats[, M + 1] = predict(g_tildes[[M]], X)
   
   gbm = list(
+    pred_type = pred_type,
     g_0 = g_0, 
     g_tildes = g_tildes, 
     neg_gradient_ms = neg_gradient_ms,
@@ -136,7 +116,10 @@ qc_basement_gbm = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_f
 #'                predictions across all base learners beginning with g_0. For regression, the
 #'                unit is in the units of the original response. For probability estimation for 
 #'                binary response, the unit is the logit of the probability estimate.
-qc_basement_gbm_all_predictions = function(gbm, X_star){
+#'
+#' @author Adam Kapelner
+#' @export
+gbm_all_predictions = function(gbm, X_star){
   assert_class(gbm, "qc_basement_gbm")
   assert_data_frame(X_star)
   
@@ -159,96 +142,33 @@ qc_basement_gbm_all_predictions = function(gbm, X_star){
 #' @return        A vector of length n_* rows with each row's predictions. For regression, the
 #'                unit is in the units of the original response. For probability estimation for 
 #'                binary response, the unit is the logit of the probability estimate.
-qc_basement_gbm_predict = function(gbm, X_star){
-  qc_basement_gbm_all_predictions(gbm, X_star)[, gbm$M + 1] #simply return the final prediction column
+#' @author Adam Kapelner
+#' @method predict qc_basement_gbm
+#' @export
+predict.qc_basement_gbm = function(gbm, X_star){
+  gbm_all_predictions(gbm, X_star)[, gbm$M + 1] #simply return the final prediction column
 }
-```
 
-Now we test the code in-sample:
+#' Prints a summary of a \code{qc_basement_gbm} object
+#' 
+#' @param object		The \code{qc_basement_gbm} object to be summarized in the console
+#' @param ...			  Other parameters to pass to the default print function
+#' 
+#' @author Adam Kapelner
+#' @method print qc_basement_gbm
+#' @export
+print.qc_basement_gbm = function(x, ...){
+  cat("Gradient boosting model fit with ", x$M, " base learners.\n")
+}
 
-```{r}
-set.seed(1)
-n = 100
-p = 3
-X = matrix(rnorm(n * p), nrow = n)
-bbeta = seq(-1, 1, length.out = p)
-y = c(X %*% bbeta + rnorm(n))
-y_binary = rbinom(n, 1, 1 / (1 + exp(-X %*% bbeta)))
-X = data.frame(X)
-
-#regression
-g_b = qc_basement_gbm(X, y)
-pacman::p_load(ggplot2)
-ggplot(data.frame(y = y, yhat = qc_basement_gbm_predict(g_b, X))) + aes(x = y, y = yhat) + geom_point()
-y_hats_by_m = qc_basement_gbm_all_predictions(g_b, X)
-rmses_by_m = apply(y_hats_by_m, 2, function(y_hat){sqrt(mean((y - y_hat)^2))})
-rmses_by_m
-
-#probability estimation
-g_b = qc_basement_gbm(X, y_binary)
-table(y_binary, as.numeric(qc_basement_gbm_predict(g_b, X) > 0))
-y_hats_by_m = qc_basement_gbm_all_predictions(g_b, X) > 0
-miscl_err_by_m = apply(y_hats_by_m, 2, function(y_hat){mean(y_binary != y_hat)})
-miscl_err_by_m
-```
-
-
-Here is code to split up the diamonds dataset into three subsets:
-
-```{r}
-set.seed(1)
-diamonds = ggplot2::diamonds
-pacman::p_load(tidyverse)
-diamonds = diamonds %>% 
-  mutate(cut = factor(cut, ordered = FALSE)) %>%
-  mutate(color = factor(color, ordered = FALSE)) %>%
-  mutate(clarity = factor(clarity, ordered = FALSE))
-diamonds_mm = model.matrix(price ~ ., diamonds)
-train_size = 2000
-train_indices = sample(1 : nrow(diamonds), train_size)
-
-y_train = diamonds[train_indices, ]$price
-X_train = diamonds_mm[train_indices, ]
-
-validation_size = 2000
-validation_indices = sample(setdiff(1 : nrow(diamonds), train_indices), validation_size)
-y_validation = diamonds[validation_indices, ]$price
-X_validation_mm = diamonds_mm[validation_indices, ]
-
-test_size = 2000
-test_indices = sample(setdiff(1 : nrow(diamonds), c(train_indices, validation_indices)), test_size)
-y_test = diamonds[test_indices, ]$price
-X_test_mm = diamonds_mm[test_indices, ]
-```
-
-Using your new gradient boosting function, optimize the number of base learners, M for the diamonds data using a grid search:
-
-```{r}
-#TO-DO
-```
-
-Now find the error in the test set and comment on its performance:
-
-```{r}
-#TO-DO
-```
-
-Repeat this exercise for the adult dataset. First create the splits:
-
-```{r}
-#TO-DO
-```
-
-Using your new gradient boosting function, optimize the number of base learners, M for the diamonds data using a grid search:
-
-```{r}
-#TO-DO
-```
-
-Now find the error in the test set and comment on its performance:
-
-```{r}
-#TO-DO
-```
-
-
+#' Prints a summary of a \code{qc_basement_gbm} object
+#' 
+#' @param object		The \code{qc_basement_gbm} object to be summarized in the console
+#' @param ...			Other parameters to pass to the default summary function
+#' 
+#' @author Adam Kapelner
+#' @method summary qc_basement_gbm
+#' @export
+summary.qc_basement_gbm = function(object, ...){
+  print(object, ...)
+}

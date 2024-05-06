@@ -1,0 +1,116 @@
+---
+title: "Practice Lecture 24 MATH 342W Queens College"
+author: "Professor Adam Kapelner"
+---
+
+We will examine K-means clustering algorithm (Hartigan and Wong, 1979)
+https://scholar.google.com/scholar?hl=en&as_sdt=7%2C39&q=Algorithm+AS+136%3A+A+k-means+clustering+algorithm&btnG=
+
+using the airbnb listing data found from https://insideairbnb.com/ specifically, the recent
+listings in NYC. We first load the data:
+
+```{r}
+pacman::p_load(tidyverse)
+listings_raw = read_csv("https://data.insideairbnb.com/united-states/ny/new-york-city/2024-04-06/data/listings.csv.gz")
+head(listings)
+```
+
+There are obviously useless variables. And there are textual variables. If we were doing a more complete analysis, we would convert the text into features. We also are interested not grouping by geography (which is trivial) but instead group by type and quality. Thus, for now, we retain only a few features:
+
+```{r}
+#more complicated analysis
+listings = listings_raw %>% select(host_listings_count, host_total_listings_count, host_verifications, host_has_profile_pic, host_identity_verified, room_type, accommodates, bedrooms, beds, number_of_reviews, review_scores_rating, review_scores_accuracy, review_scores_cleanliness, reviews_per_month)
+
+#simpler analysis
+listings = listings_raw %>% select(host_listings_count, host_total_listings_count, review_scores_rating, review_scores_accuracy, review_scores_cleanliness, reviews_per_month)
+```
+
+Now we take a look at the data:
+
+```{r}
+skimr::skim(listings)
+```
+
+Let's convert characters to factors and logicals to numeric:
+
+```{r}
+#for advanced analysis only
+# listings = listings %>% 
+#   mutate(host_verifications = factor(host_verifications)) %>%
+#   mutate(room_type = factor(room_type)) %>%
+#   mutate(host_has_profile_pic = as.numeric(host_has_profile_pic)) %>%
+#   mutate(host_identity_verified = as.numeric(host_identity_verified))
+# skimr::skim(listings)
+```
+
+We've got some missingness. So let's create some dummies:
+
+```{r}
+M = apply(is.na(listings), 2, as.numeric)
+colnames(M) = paste("is_missing_", colnames(listings), sep = "")
+M = M[, colSums(M) > 0]
+```
+
+and do the imputation very approximately (otherwise we'd be here all day)
+
+```{r}
+pacman::p_load(missForest)
+listings_imp = missForest(data.frame(listings), sampsize = rep(500, 100), ntree = 100)$ximp
+```
+
+Now create the design matrix:
+
+```{r}
+X = cbind(
+  model.matrix(~ 0 + ., listings_imp),
+  M
+)
+skimr::skim(X)
+```
+
+Now we normalize the metrics:
+
+```{r}
+Xnorm = apply(X, 2, function(xj){(xj - mean(xj))/ sd (xj)})
+skimr::skim(Xnorm)
+```
+
+Now we're finally ready to roll. `kmeans` is actually included in base R without the need for a package. We'll define Kmax to be 5 for now. We'll let it converge in 300 iterations and we'll only use one starting position:
+
+```{r}
+kmeans_info = kmeans(Xnorm, centers = 5, iter.max = 300, nstart = 1)
+```
+
+Now let's look at the clusters (use X here, not Xnorm to see the real data)
+
+```{r}
+aggr_res = aggregate(X, by = list(cluster = kmeans_info$cluster), mean)
+as_tibble(aggr_res) %>% arrange(host_listings_count)
+```
+
+Let's now try to identify the optimal number of clusters. Here we use nstart = 10 to get a smoother result over K. However, this does take 10x as long to crunch! It will throw some warnings (which we'll ignore).
+
+```{r}
+Kmax = 50
+tot_SSE_by_K = array(NA, Kmax) 
+for (K in 1 : Kmax){
+  tot_SSE_by_K[K] = kmeans(Xnorm, centers = K, iter.max = 300, nstart = 10)$tot.withinss
+}
+
+#"scree" plot
+ggplot(data.frame(K = 1 : Kmax, tot_SSE = tot_SSE_by_K)) +
+  aes(x = K, y = tot_SSE) +
+  geom_point(size = 4) +
+  geom_line() +
+  xlab('Number of clusters (K)') +
+  ylab("total SSE across all K clusters")
+
+ggplot(data.frame(K = 2 : Kmax, tot_SSE = diff(tot_SSE_by_K))) +
+  aes(x = K, y = tot_SSE) +
+  geom_point(size = 4) +
+  geom_line() +
+  ylab("diff SSE between K, K-1 clusters") + 
+  xlab('Number of clusters (K)')
+```
+
+Now we visually pick the point where the derivative is getting noticeably smaller. The diff plot helps. Maybe K = 6? Or K = 8? It's an art, not a science.

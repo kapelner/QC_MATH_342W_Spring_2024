@@ -1,0 +1,13 @@
+Package: QCbasementGBM
+Type: Package
+Title: QC Basement Gradient Boosting Model
+Version: 1.0
+Author: Adam Kapelner (R package)
+Maintainer: Adam Kapelner <kapelner@qc.cuny.edu>
+Description: Creates a gradient boosting model fit and predicts
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 4.0.0)
+Imports: checkmate, YARF, YARFJARs
+RoxygenNote: 7.2.3
