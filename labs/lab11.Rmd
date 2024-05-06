@@ -23,8 +23,10 @@ We will now write a gradient boosting algorithm from scratch. We will make it as
 ```{r}
 pacman::p_load(checkmate) #this is a package that enforces arguments are the correct form
 
-#' A general gradient boosting algorithm
+#' Gradient boosting
 #'
+#' Generates a gradient boosting model based on your choices of base learner and objective function
+#' 
 #' @param X                         A data frame representing the features. It is of size n x p. No need for an intercept column.
 #' @param y                         A vector of length n. It either will be real numbers (for regression) or binary (for classification).
 #' @param g_base_learner_alg        A function with arguments X, y and ... and returns a function that takes X as an argument. The default is YARFCART
@@ -33,10 +35,11 @@ pacman::p_load(checkmate) #this is a package that enforces arguments are the cor
 #'                                  regression and logistic loss for classification.
 #' @param M                         The number of base learners to be summed. Default is 50 for regression and 100 for classification.
 #' @param eta                       The step size in the gradient descent. Default is 0.3
+#' @param verbose                   Messages are printed out during construction. Default is TRUE.
 #' @param ...                       Optional arguments to be passed into the g_base_learner_alg function.
 #'
-#' @return
-gradient_boost = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_function = NULL, M = NULL, eta = 0.3, ...){
+#' @return                          A "qc_basement_gbm" gradient boosting model which can be used for prediction
+qc_basement_gbm = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_function = NULL, M = NULL, eta = 0.3, verbose = TRUE, ...){
   assert_data_frame(X)
   n = nrow(X)
   assert_numeric(y)
@@ -45,20 +48,21 @@ gradient_boost = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_fu
   assert_function(neg_grad_objective_function, args = c("y", "yhat"), null.ok = TRUE)
   assert_count(M, positive = TRUE, null.ok = TRUE)
   assert_numeric(eta, lower = .Machine$double.eps)
+  assert_logical(verbose)
   
-  if(is.null(g_base_learner_alg)){
-    g_base_learner_alg = function(X, y){
-      YARFCART(X, y, nodesize = round(.1 * n), calculate_oob_error = FALSE, bootstrap_indices = list(1 : nrow(X)), verbose = FALSE)
+  if (is.null(g_base_learner_alg)){
+    g_base_learner_alg = function(X0, y0){
+      YARFCART(X0, y0, nodesize = round(.1 * nrow(X0)), calculate_oob_error = FALSE, bootstrap_indices = list(1 : nrow(X0)), verbose = FALSE)
     }
   }
   
   if (identical(sort(names(table(y))), c("0", "1"))){
     #classification
-    cat("building gradient boosted trees for probability estimation of two classes\n")
-    if(is.null(M)){
+    if (verbose){cat("building gradient boosted model for probability estimation of two classes\n")}
+    if (is.null(M)){
       M = 100
     }
-    if(is.null(neg_grad_objective_function)){
+    if (is.null(neg_grad_objective_function)){
       neg_grad_objective_function = function(y, y_hat){
         y - exp(y_hat) / (1+exp(y_hat))
       }
@@ -68,7 +72,7 @@ gradient_boost = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_fu
     }
   } else {
     #regression
-    cat("building gradient boosted trees for regression\n")
+    if (verbose){cat("building gradient boosted model for regression\n")}
     if (is.null(M)){
       M = 50
     }
@@ -81,32 +85,82 @@ gradient_boost = function(X, y, g_base_learner_alg = NULL, neg_grad_objective_fu
       rep(mean(y), nrow(X_star))
     }
   }
-  #TO-DO
+
   g_tildes = list()
-  y_hat_0 = g_0(X)
+  g_tilde_yhats = matrix(NA, nrow = n, ncol = M + 1) 
+  neg_gradient_ms = matrix(NA, nrow = n, ncol = M)
   for (m in 1 : M) {
-    cat("fitting tree", m, "of", M, "\n")
-    y_hat_m = y_hat_0
-    if (m > 1){
-     for (k in 1 : (m - 1)){
-        y_hat_m = y_hat_m + eta * predict(g_tildes[[k]], X)
-      }     
-    }
-    
-    neg_gradient_m = neg_grad_objective_function(y, y_hat_m) # obtain negative gradient 
+    if (verbose){cat("fitting base learner", m, "of", M, "\n")}
+    cum_y_hat_m = if (m == 1){
+                g_tilde_yhat_m = g_0(X)
+                g_tilde_yhat_m
+              } else {
+                g_tilde_yhat_m = predict(g_tildes[[m - 1]], X)
+                cum_y_hat_m + eta * g_tilde_yhat_m
+              }
+    #cat("  cum_y_hat_m: ", head(cum_y_hat_m), "\n")
+    neg_gradient_m = neg_grad_objective_function(y, cum_y_hat_m) # obtain negative gradient 
+    #cat("    neg_gradient_m: ", head(neg_gradient_m), "\n")
     g_tildes[[m]] = g_base_learner_alg(X, neg_gradient_m)
-  }
-  
-  #now we return the final model which takes in a data.frame X_star and predicts with it
-  function(X_star){
-    assert_data_frame(X_star)
+    #cat("    g_tilde_yhat_m", head(g_tilde_yhat_m), "\n")
     
-    y_hat_star = g_0(X_star)
-    for (m in 1 : M){
-      y_hat_star = y_hat_star + eta * predict(g_tildes[[m]], X_star)
-    } 
-    y_hat_star
+    neg_gradient_ms[, m] = neg_gradient_m
+    g_tilde_yhats[, m] = g_tilde_yhat_m
   }
+  g_tilde_yhats[, M + 1] = predict(g_tildes[[M]], X)
+  
+  gbm = list(
+    g_0 = g_0, 
+    g_tildes = g_tildes, 
+    neg_gradient_ms = neg_gradient_ms,
+    X = X, 
+    y = y, 
+    g_base_learner_alg = g_base_learner_alg, 
+    neg_grad_objective_function = neg_grad_objective_function, 
+    g_tilde_yhats = g_tilde_yhats,
+    M = M, 
+    eta = eta
+  )
+  class(gbm) = "qc_basement_gbm"
+  gbm
+}
+
+#' Compute all iterative boosting predictions
+#' 
+#' Returns all predictions for each iteration of the gradient boosting
+#'
+#' @param gbm     A gradient boosting model of class "qc_basement_gbm"
+#' @param X_star  The data to predict for (as a data frame). It has n_* rows and p columns
+#'
+#' @return        A matrix with n_* rows and M+1 columns where each column are the iterative
+#'                predictions across all base learners beginning with g_0. For regression, the
+#'                unit is in the units of the original response. For probability estimation for 
+#'                binary response, the unit is the logit of the probability estimate.
+qc_basement_gbm_all_predictions = function(gbm, X_star){
+  assert_class(gbm, "qc_basement_gbm")
+  assert_data_frame(X_star)
+  
+  all_y_hat_star = matrix(NA, nrow = nrow(X_star), ncol = gbm$M + 1)
+  all_y_hat_star[, 1] = gbm$g_0(X_star)
+  for (m in 1 : gbm$M){
+    all_y_hat_star[, m + 1] = all_y_hat_star[, m] + gbm$eta * predict(gbm$g_tildes[[m]], X_star)
+  } 
+  all_y_hat_star
+}
+
+
+#' GBM Predict
+#' 
+#' Returns final predictions for the gradient boosting model
+#'
+#' @param gbm     A gradient boosting model of class "qc_basement_gbm"
+#' @param X_star  The data to predict for (as a data frame). It has n_* rows and p columns
+#'
+#' @return        A vector of length n_* rows with each row's predictions. For regression, the
+#'                unit is in the units of the original response. For probability estimation for 
+#'                binary response, the unit is the logit of the probability estimate.
+qc_basement_gbm_predict = function(gbm, X_star){
+  qc_basement_gbm_all_predictions(gbm, X_star)[, gbm$M + 1] #simply return the final prediction column
 }
 ```
 
@@ -122,14 +176,19 @@ y_binary = rbinom(n, 1, 1 / (1 + exp(-X %*% bbeta)))
 X = data.frame(X)
 
 #regression
-g_b = gradient_boost(X, y)
+g_b = qc_basement_gbm(X, y)
 pacman::p_load(ggplot2)
-ggplot(data.frame(y = y, yhat = g_b(X))) + aes(x = y, y = yhat) + geom_point()
-sqrt(mean((y - g_b(X))^2)) #RMSE
+ggplot(data.frame(y = y, yhat = qc_basement_gbm_predict(g_b, X))) + aes(x = y, y = yhat) + geom_point()
+y_hats_by_m = qc_basement_gbm_all_predictions(g_b, X)
+rmses_by_m = apply(y_hats_by_m, 2, function(y_hat){sqrt(mean((y - y_hat)^2))})
+rmses_by_m
 
 #probability estimation
-g_b = gradient_boost(X, y_binary)
-table(y_binary, g_b(X) > 0)
+g_b = qc_basement_gbm(X, y_binary)
+table(y_binary, as.numeric(qc_basement_gbm_predict(g_b, X) > 0))
+y_hats_by_m = qc_basement_gbm_all_predictions(g_b, X) > 0
+miscl_err_by_m = apply(y_hats_by_m, 2, function(y_hat){mean(y_binary != y_hat)})
+miscl_err_by_m
 ```
 
 
@@ -148,7 +207,7 @@ train_size = 2000
 train_indices = sample(1 : nrow(diamonds), train_size)
 
 y_train = diamonds[train_indices, ]$price
-X_train_mm = diamonds_mm[train_indices, ]
+X_train = diamonds_mm[train_indices, ]
 
 validation_size = 2000
 validation_indices = sample(setdiff(1 : nrow(diamonds), train_indices), validation_size)
@@ -171,6 +230,8 @@ Now find the error in the test set and comment on its performance:
 
 ```{r}
 #TO-DO
+y_hat = qc_basement_gbm_predict(g_b, data.frame(X_test_mm))
+sqrt(mean((y_test - y_hat)^2))
 ```
 
 Repeat this exercise for the adult dataset. First create the splits:
