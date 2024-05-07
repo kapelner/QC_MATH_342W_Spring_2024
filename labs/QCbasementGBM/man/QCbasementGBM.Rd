@@ -13,7 +13,6 @@ Kapelner, A
 \author{
 Adam Kapelner \email{kapelner@qc.cuny.edu}
 }
-\keyword{inference,}
-\keyword{modeling,}
+\keyword{inference}
+\keyword{modeling}
 \keyword{prediction}
-\keyword{statistical}

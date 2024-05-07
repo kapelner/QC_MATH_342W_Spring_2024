@@ -158,7 +158,7 @@ predict.qc_basement_gbm = function(gbm, X_star){
 #' @method print qc_basement_gbm
 #' @export
 print.qc_basement_gbm = function(x, ...){
-  cat("Gradient boosting model fit with ", x$M, " base learners.\n")
+  cat("Gradient boosting model fit with", x$M, "base learners.\n")
 }
 
 #' Prints a summary of a \code{qc_basement_gbm} object

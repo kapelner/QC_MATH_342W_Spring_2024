@@ -8,6 +8,5 @@ Description: Creates a gradient boosting model fit and predicts
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-Depends: R (>= 4.0.0)
-Imports: checkmate, YARF, YARFJARs
+Depends: R (>= 4.0.0), checkmate, YARF
 RoxygenNote: 7.2.3
