@@ -133,32 +133,32 @@ rm(list = ls())
 pacman::p_install_gh("mlverse/torch")
 pacman::p_install_gh("mlverse/torchdatasets")
 Sys.setenv(CUDA = "cpu")
-install_torch()
 pacman::p_load(torch, torchvision, luz, torchdatasets, tidyverse, pins)
+install_torch()
 ```
 
-Now we download the dog-cat database:
+Now we download the dog-cat database.
 
 ```{r}
 data_dir = "~/Downloads/dogs-vs-cats"
 #do the following once only, then comment out
-dogs_vs_cats_dataset(data_dir, download = TRUE, transform = train_transforms)
+dogs_vs_cats_dataset(data_dir, download = TRUE)
 ```
 
-Now let's download the data then (a) transform its representation to a tensor (b) resize each image to be standard 224x224 and (c) normalize the pixel values.
+After downloading the images, for each image we need to (a) transform its representation to a tensor (b) resize each image to be standard 224x224 and (c) normalize the pixel values.
 
 ```{r}
-mean_intensity = rep(0.5, 3)
-sd_intensity = rep(0.5, 3)
 full_data_set = dogs_vs_cats_dataset(
   data_dir,
   transform = function(img) {
     img %>%
       torchvision::transform_to_tensor() %>%
       torchvision::transform_resize(size = c(224, 224)) %>% 
-      torchvision::transform_normalize(mean_intensity, sd_intensity)
+      torchvision::transform_normalize(mean = rep(0.5, 3), std = rep(0.5, 3))
   },
-  target_transform = function(x) as.double(x) - 1
+  target_transform = function(x){
+    as.double(x) - 1 #this converts y to zero/one
+  }
 )
 ```
 
@@ -173,17 +173,16 @@ test_idx =   setdiff(1 : length(full_data_set), union(train_idx, select_idx))
 D_train =  dataset_subset(full_data_set, indices = train_idx)
 D_select = dataset_subset(full_data_set, indices = select_idx)
 D_test =   dataset_subset(full_data_set, indices = test_idx)
-
-batch_size = 8
-num_workers = 2
-train_batcher =  dataloader(D_train, batch_size = batch_size, shuffle = TRUE, num_workers = num_workers)
 ```
 
 Let's take a look at some images before we begin to do the modeling. To do so, we have to jump through lots of hoops:
 
 ```{r}
+train_batcher =  dataloader(D_train, batch_size = 8, shuffle = TRUE)
 images = aperm(as_array(train_batcher$.iter()$.next()[[1]]), perm = c(1, 3, 4, 2))
-images = mean_intensity + sd_intensity * images + mean
+mean_intensity = rep(0.5, 3)
+sd_intensity   = rep(0.5, 3)
+images = mean_intensity + sd_intensity * images
 images = images * 255
 images[images > 255] = 255
 images[images < 0] = 0
@@ -224,7 +223,7 @@ net = torch::nn_module(
     )
   },
   forward = function(x) {
-    self$model(x)[,1]
+    self$model(x)[, 1]
   }
 )
 ```
@@ -252,7 +251,7 @@ cnn_mod = net %>%
   ) %>%
   set_hparams(output_size = 1) %>%
   set_opt_hparams(lr = eta) %>%
-  fit(D_train, epochs = num_iter, valid_data = D_select)
+  luz::fit(D_train, epochs = num_iter, valid_data = D_select)
 ```
 
 This is going really slow since we are using the CPU (not GPUs). The speedup reported are usually 10x. However, GPUs are more expensive to buy and more expensive to run (they use more electricity).
@@ -279,7 +278,8 @@ for (i in 1 : length(D_test)){
   y_test[i] = D_test[[i]][[2]]
 }
 
-oos_conf_tab = table(y_test, as.numeric(phat) > 0.5)
+y_hat_bin = as.numeric(phat) > 0.5
+oos_conf_tab = table(y_test, y_hat_bin)
 oos_conf_tab
 oos_conf_tab / sum(oos_conf_tab)
 #misclassification error:
@@ -288,39 +288,3 @@ oos_conf_tab / sum(oos_conf_tab)
 
 Note that convolutional layers are not really layers in the traditional sense as we described in class; they're more of a means of "featurizing". Once you use these convolutional computations you eventually wind up with real-valued covariates. You can then feed them into other algorithms e.g. random forest:
 https://www.nature.com/articles/s41598-022-15374-5
-
-But traditionally, 
-
-
-Now we write some helper functions that will transform the image data (it needs to be transformed from an R array representation to a "tensor" representation and the pixels need to be normalized). 
-
-The training data also gets "augmented" meaning we take the original images and manipulate them slightly to broaden the examples e.g. randomly resize them (so dogs and cats appear bigger / smaller), randomly jitter the colors (as lighting will be different), flip the image from left-right
-
-```{r}
-train_transforms = function(img) {
-  img %>%
-    # first convert image to tensor (this is not data augmentation)
-    transform_to_tensor() %>%
-    # data augmentation
-    transform_random_resized_crop(size = c(224, 224)) %>%
-    # data augmentation
-    transform_color_jitter() %>%
-    # data augmentation
-    transform_random_horizontal_flip() %>%
-    # normalize according to what is expected by resnet
-    transform_normalize(mean = c(0.485, 0.456, 0.406), std = c(0.229, 0.224, 0.225))
-}
-```
-
-As for the select and test set, we don't augment, but we still need to do the resize and crop and normalize the pixels.
-
-```{r}
-select_transforms = function(img) {
-  img %>%
-    transform_to_tensor() %>%
-    transform_resize(256) %>%
-    transform_center_crop(224) %>%
-    transform_normalize(mean = c(0.485, 0.456, 0.406), std = c(0.229, 0.224, 0.225))
-}
-test_transforms = select_transforms
-```
