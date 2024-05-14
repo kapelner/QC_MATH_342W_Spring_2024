@@ -65,7 +65,7 @@ My theory lectures are following my previous class notes (see [here](https://git
 ## Exams
 
 * Midterm I is Thursday, March 14 (KY258 3:05PM) [(exam)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/exams/midterm1/midterm1.pdf) [(solutions)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/exams/midterm1/midterm1_solutions.pdf)
-* Midterm II is Tuesday, May 14 (KY258 3:05PM) 
+* Midterm II is Tuesday, May 14 (KY258 3:05PM) [(exam)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/exams/midterm2/midterm2.pdf) [(solutions)](https://github.com/kapelner/QC_Math_342W_Spring_2024/blob/master/exams/midterm2/midterm2_solutions.pdf) 
 * No final exam
 
 ## Practice Exams
