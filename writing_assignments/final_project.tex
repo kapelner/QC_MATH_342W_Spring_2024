@@ -1,6 +1,7 @@
 \documentclass[12pt]{article}
 
 \usepackage[most]{tcolorbox}
+\usepackage[margin=0.9in]{geometry}
 \include{preamble}
 
 
@@ -9,7 +10,7 @@
 \title{Math 342W Final Project \the\year}
 
 \author{Professor Adam Kapelner}
-\date{Writeup due Tuesday, May 24, 11:59PM by email}
+\date{Writeup due May 26, 11:59PM by email}
 
 \begin{document}
 \maketitle
@@ -65,7 +66,7 @@ Consider your reading audience as those who took this class and got an A in it; 
 
 \section*{Deliverables}
 
-You will commit all files used for your project to your github repository under the subfolder \qu{final\_project}. You will also write a formal report to be emailed to me by the due date as a PDF. The formal report should look like below, single-spaced. Each section should address concepts given below. The style should be a professional technical paper or a scientific report. That means no whimsical musings. Please do not use \texttt{knitR} from an Rmd file in RStudio to generate your PDF (it never looks nice). You can work together but please list your collaborators \inred{and you must do your own, individual writeup. No copying from others. No paraphrasing from others.}\\
+You will commit all files used for your project to your github repository under the subfolder \qu{final\_project}. You will also write a formal report to be emailed to me by the due date as a PDF. The formal report should look like below, single-spaced. Each section should address concepts given below. The style should be a professional technical paper or a scientific report. That means no whimsical musings. Please do not use \texttt{knitR} from an Rmd file in RStudio to generate your PDF (it never looks nice). You can work together but please list your collaborators \inred{and you must do your own, individual writeup and individual coding. No copying from others. No paraphrasing from others.}\\
 
 
 \begin{tcolorbox}[breakable, enhanced]
@@ -89,7 +90,7 @@ $\vdots$~~~\\
 A one paragraph summary of the entire writeup that is written to \qu{lure} the reader in.\\
 
 \line(1,0){180} ~~~pagebreak~~~ \line(1,0){180}
-\pagebreak
+
 
 \subsection*{1. Introduction}
 
@@ -125,7 +126,7 @@ Fit a vanilla OLS linear model. Comment on its in-sample error statistics and in
 
 \subsection*{3.3 Random Forest Modeling}
 
-Why should this be your choice of prediction model? Explain the theory as best as you could. Is it parametric / non-parametric? What did you gain by choosing this model? Lose? Was modeling an iterative process in some way? Do you think you underfit? Do you think you overfit? How were you able to know? Which variables do you believe have an effect on sale price that is truly causal, why and would you be able to prove it? (Optional: use the package \texttt{mlr} (or \texttt{mlr3}) to find the best tuning parameters for the RF model and use these parameters to build the production model). If you cannot get \texttt{YARF} to work, use the canonical CRAN package \texttt{randomForest}.
+Why should this be your choice of prediction model? Explain the theory as best as you could. Is it parametric / non-parametric? What did you gain by choosing this model? Lose? Was modeling an iterative process in some way? Do you think you underfit? Do you think you overfit? How were you able to know? (Optional: use the package \texttt{mlr} (or \texttt{mlr3}) to find the best tuning parameters for the RF model and use these parameters to build the production model). If you cannot get \texttt{YARF} to work, use the canonical CRAN package \texttt{randomForest}.
 
 \subsection*{4. Performance Results}
 
