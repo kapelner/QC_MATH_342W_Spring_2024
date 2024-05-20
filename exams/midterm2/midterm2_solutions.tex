@@ -76,7 +76,7 @@ y_test    0    1
 ME = (144+938) / 5000 = 0.216\\
 Recall = 1052 / 1196 = 0.88 \\
 FPR =  938 / (938 + 2866) = 0.25\\
-FP/FN = 938 / 144 = 6.51
+FDR/FOR = 9.85
 }
 \columnbreak
 \begin{center}\fbox{B}\end{center}
@@ -90,7 +90,7 @@ y_test    0    1
 ME = (447+360) / 5000 = 0.161\\
 Recall = 836 / 1196 = 0.70 \\
 FPR =  447 / (447 + 3357) = 0.12\\
-FP/FN = 447/360 = 1.24
+FDR/FOR = 3.60
 }
 \columnbreak
 \begin{center}\fbox{C}\end{center}
@@ -104,7 +104,7 @@ y_test    0    1
 ME = (203+611) / 5000 = 0.163\\
 Recall = 585 / 1196 = 0.49 \\
 FPR =  203 / (203 + 3601) = 0.05\\
-FP/FN = 203 / 611 = 0.33
+FDR/FOR = 1.78
 }
 \columnbreak
 \begin{center}\fbox{D}\end{center}
@@ -118,7 +118,7 @@ y_test    0    1
 ME = (10+1043) / 5000 = 0.211\\
 Recall = 153 / 1196 = 0.13 \\
 FPR =  10 / (10 + 3794) = 0.003\\
-FP/FN = 10 / 1043 = 0.01
+FDR/FOR = 3.51
 }
 \end{multicols}
 \pagebreak
@@ -147,8 +147,10 @@ FP/FN = 10 / 1043 = 0.01
 
 \subquestionwithpoints{2} If false negatives were much more costly than false positives, which one of the four models is best to employ? Circle one: \inred{\fbox{A}} / B / C / D\spc{-0.5}
 
-\subquestionwithpoints{3} If you required a symmetric-cost classifier, which one out of the four models is best to employ? Circle one: A / \inred{\fbox{B}} / C / D\spc{-0.5}
+\subquestionwithpoints{3} If you required a symmetric-cost classifier, which one out of the four models is best to employ? Circle one: \inred{\fbox{A}} / \inred{\fbox{B}} / \inred{\fbox{C}} / D \\
+\inred{The term \qu{symmetric-cost classifier} is ambiguous. It could mean (a) minimize ME, (b) equalize FPR and FNR and (c) equalize FDR and FOR giving the answers B, A and C respectively.}
 
+%\inred{There are two definitions: symmetric cost models should minimize misclassification error since $C = c_{FP} FDR + c_{FN} FOR = c(FDR + FOR)$
 %Assume $p=1$ for the rest of the problem. Displayed below is $\mathbb{D}_{\text{test}}^\top$ with $n_{\text{test}} = 10$ including the probability estimates from $g$ denoted as the vector $\bv{\hat{p}}$ underneath $\mathbb{D}_{\text{test}}^\top$:
 %
 %\begin{table}[ht]
@@ -450,7 +452,7 @@ We now fit a regression tree to the full boston housing dataset. The full tree m
 \subquestionwithpoints{2} What are the two most important variables (defined as variables that can decrease in-sample SSE)?
  \inred{lstat, rm}
 \subquestionwithpoints{2} What is the most precise statement you can make about the value of $N_0$?
- \inred{$N_0 \geq 159$} 
+ \inred{$N_0 \geq 159$ and $N_0 < 206$} 
 \pagebreak
 
 \subquestionwithpoints{2} If the same algorithm that produced the tree visualized above was implemented as base learner for bagging with $M$ sufficiently large, would the the oos error of the bagged model be lower than the oos error of the single tree above in all likelihood? Circle one: \inred{\fbox{Yes}} 
@@ -473,11 +475,11 @@ We now fit a regression tree to the full boston housing dataset. The full tree m
 
 \benum
 
-\subquestionwithpoints{2} In [I], the MSE is taken as an expectation over which random variable(s)? \inred{$\Delta$}
+\subquestionwithpoints{2} In [I], the MSE is taken as an expectation over which random variable(s)? \inred{$\Delta_*$}
 
-\subquestionwithpoints{3} In [II], the MSE is taken as an expectation over which random variable(s)? \inred{$\Delta, \Y$}
+\subquestionwithpoints{3} In [II], the MSE is taken as an expectation over which random variable(s)? \inred{$\Delta_*$ and ($\Delta_1, \ldots, \Delta_n$ or $\Y$)}
 
-\subquestionwithpoints{3} In [III], the MSE is taken as an expectation over which random variable(s)? \inred{$\Delta, \Y, \X_1, \ldots, \X_n, \X_*$}
+\subquestionwithpoints{3} In [III], the MSE is taken as an expectation over which random variable(s)? \inred{$\Delta_*$ and ($\Delta_1, \ldots, \Delta_n$ or $\Y$) and $\X_1, \ldots, \X_n, \X_*$}
 \eenum
 
 \end{document}
